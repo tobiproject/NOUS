@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
   }
 
   const zipped = zipSync(files)
-  const filename = `tradeos-export-${format(new Date(), 'yyyy-MM-dd')}.zip`
+  const filename = `nous-export-${format(new Date(), 'yyyy-MM-dd')}.zip`
 
   return new NextResponse(Buffer.from(zipped), {
     status: 200,

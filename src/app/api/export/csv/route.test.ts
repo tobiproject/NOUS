@@ -119,7 +119,7 @@ describe('GET /api/export/csv', () => {
     const { GET } = await import('./route')
     const res = await GET(makeRequest({ account_id: ACCOUNT_ID }))
     const disposition = res.headers.get('Content-Disposition')
-    expect(disposition).toMatch(/tradeos-export-\d{4}-\d{2}-\d{2}\.csv/)
+    expect(disposition).toMatch(/nous-export-\d{4}-\d{2}-\d{2}\.csv/)
   })
 
   it('escapes cells with commas correctly', async () => {

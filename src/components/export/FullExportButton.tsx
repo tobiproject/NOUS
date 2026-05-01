@@ -24,7 +24,7 @@ export function FullExportButton({ accountId, accountName }: Props) {
       const today = new Date().toISOString().slice(0, 10)
       const a = document.createElement('a')
       a.href = url
-      a.download = `tradeos-export-${today}.zip`
+      a.download = `nous-export-${today}.zip`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

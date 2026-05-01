@@ -49,7 +49,7 @@ export function ExportMenu({ filters }: Props) {
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const today = new Date().toISOString().slice(0, 10)
-      triggerDownload(url, `tradeos-export-${today}.csv`)
+      triggerDownload(url, `nous-export-${today}.csv`)
       URL.revokeObjectURL(url)
       toast.success('CSV-Export erfolgreich')
     } catch {

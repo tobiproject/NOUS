@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
   ]
   const csv = rows.join('\n')
 
-  const filename = `tradeos-export-${format(new Date(), 'yyyy-MM-dd')}.csv`
+  const filename = `nous-export-${format(new Date(), 'yyyy-MM-dd')}.csv`
 
   return new NextResponse(csv, {
     status: 200,

@@ -44,7 +44,7 @@ export function PdfReportButton() {
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
       const monthLabel = format(monthStart, 'MMMM yyyy', { locale: de })
-      const filename = `tradeos-report-${format(monthStart, 'yyyy-MM')}.pdf`
+      const filename = `nous-report-${format(monthStart, 'yyyy-MM')}.pdf`
 
       // ── Title page ────────────────────────────────────────────────────────────
       doc.setFillColor(10, 10, 10)

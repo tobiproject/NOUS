@@ -11,7 +11,7 @@ export interface AnalysisReminder {
   dueAt: string // ISO string
 }
 
-const STORAGE_KEY = 'tradeos-analysis-reminders'
+const STORAGE_KEY = 'nous-analysis-reminders'
 
 export function loadReminders(): AnalysisReminder[] {
   if (typeof window === 'undefined') return []

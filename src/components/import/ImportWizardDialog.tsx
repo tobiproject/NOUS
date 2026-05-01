@@ -32,10 +32,10 @@ const TRADEOS_FIELDS = [
   { key: 'result_currency', label: 'Ergebnis (€/$)', required: true },
 ] as const
 
-type TradeOSKey = typeof TRADEOS_FIELDS[number]['key']
+type NousKey = typeof TRADEOS_FIELDS[number]['key']
 
 // Attempt to auto-detect column mapping for MT4/MT5 exports
-function autoDetectMapping(headers: string[]): Record<TradeOSKey, string> {
+function autoDetectMapping(headers: string[]): Record<NousKey, string> {
   const lower = headers.map(h => h.toLowerCase().trim())
   const find = (patterns: string[]) => {
     for (const p of patterns) {
@@ -136,8 +136,8 @@ function StepMapping({
   onChange,
 }: {
   headers: string[]
-  mapping: Record<TradeOSKey, string>
-  onChange: (mapping: Record<TradeOSKey, string>) => void
+  mapping: Record<NousKey, string>
+  onChange: (mapping: Record<NousKey, string>) => void
 }) {
   return (
     <div className="space-y-3">
@@ -177,7 +177,7 @@ function StepPreview({
   mapping,
 }: {
   rows: RawRow[]
-  mapping: Record<TradeOSKey, string>
+  mapping: Record<NousKey, string>
 }) {
   const preview = rows.slice(0, 10)
   const mappedFields = TRADEOS_FIELDS.filter(f => mapping[f.key])
@@ -287,7 +287,7 @@ export function ImportWizardDialog({ open, onOpenChange, onImported }: Props) {
   const [step, setStep] = useState(0)
   const [headers, setHeaders] = useState<string[]>([])
   const [rows, setRows] = useState<RawRow[]>([])
-  const [mapping, setMapping] = useState<Record<TradeOSKey, string>>({
+  const [mapping, setMapping] = useState<Record<NousKey, string>>({
     traded_at: '', asset: '', direction: '', entry_price: '',
     sl_price: '', tp_price: '', lot_size: '', result_currency: '',
   })

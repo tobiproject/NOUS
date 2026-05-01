@@ -76,7 +76,7 @@ describe('GET /api/export/full', () => {
     const { GET } = await import('./route')
     const res = await GET(makeRequest({ account_id: ACCOUNT_ID }))
     const disposition = res.headers.get('Content-Disposition')
-    expect(disposition).toMatch(/tradeos-export-\d{4}-\d{2}-\d{2}\.zip/)
+    expect(disposition).toMatch(/nous-export-\d{4}-\d{2}-\d{2}\.zip/)
   })
 
   it('returns non-empty binary ZIP response', async () => {

@@ -11,7 +11,7 @@ const badgeVariants = cva(
         secondary:   "border border-border text-muted-foreground",
         destructive: "border-transparent bg-destructive/14 text-destructive",
         outline:     "border border-border text-foreground",
-        /* TradeOS semantic */
+        /* Nous semantic */
         long:  "border-transparent text-[#089981]  bg-[rgba(8,153,129,0.14)]",
         short: "border-transparent text-[#F23645]  bg-[rgba(242,54,69,0.14)]",
         win:   "border-transparent text-[#089981]  bg-[rgba(8,153,129,0.14)]",

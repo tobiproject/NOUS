@@ -61,11 +61,8 @@ interface DrawerProps {
 function GestureDrawer({ open, onClose, children }: DrawerProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const sheetRef  = useRef<HTMLDivElement>(null)
-
-  // track gesture
   const gesture = useRef({ startY: 0, startTime: 0, currentY: 0, dragging: false })
 
-  // apply translateY without React re-render for perf
   function setY(y: number, animated: boolean) {
     const el = sheetRef.current
     if (!el) return
@@ -73,19 +70,32 @@ function GestureDrawer({ open, onClose, children }: DrawerProps) {
     el.style.transform = `translateY(${Math.max(0, y)}px)`
   }
 
-  // overlay opacity
   function setOverlay(progress: number) {
     const el = overlayRef.current
     if (!el) return
     el.style.opacity = String(Math.max(0, Math.min(1, progress)))
   }
 
-  // open / close transitions
+  // Lock body scroll when open, release when closed
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.touchAction = 'none'
+    } else {
+      document.body.style.overflow = ''
+      document.body.style.touchAction = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.touchAction = ''
+    }
+  }, [open])
+
+  // Open / close animation
   useEffect(() => {
     const el = sheetRef.current
     if (!el) return
     if (open) {
-      // start off-screen, then spring in
       el.style.transition = 'none'
       el.style.transform = 'translateY(100%)'
       requestAnimationFrame(() => {
@@ -100,47 +110,57 @@ function GestureDrawer({ open, onClose, children }: DrawerProps) {
     }
   }, [open])
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    gesture.current = {
-      startY: e.touches[0].clientY,
-      startTime: Date.now(),
-      currentY: e.touches[0].clientY,
-      dragging: true,
+  // Native (non-passive) touch listeners so preventDefault() works
+  useEffect(() => {
+    const el = sheetRef.current
+    if (!el) return
+
+    function onStart(e: TouchEvent) {
+      gesture.current = {
+        startY: e.touches[0].clientY,
+        startTime: Date.now(),
+        currentY: e.touches[0].clientY,
+        dragging: true,
+      }
+      setY(0, false)
     }
-    setY(0, false)
-  }, [])
 
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!gesture.current.dragging) return
-    const dy = e.touches[0].clientY - gesture.current.startY
-    gesture.current.currentY = e.touches[0].clientY
-    if (dy < 0) return // don't allow dragging up
-    const h = sheetRef.current?.offsetHeight ?? 400
-    setY(dy, false)
-    setOverlay(1 - dy / h)
-  }, [])
+    function onMove(e: TouchEvent) {
+      if (!gesture.current.dragging) return
+      const dy = e.touches[0].clientY - gesture.current.startY
+      gesture.current.currentY = e.touches[0].clientY
+      if (dy <= 0) return
+      e.preventDefault() // stops page scroll
+      const h = el.offsetHeight ?? 400
+      setY(dy, false)
+      setOverlay(1 - dy / h)
+    }
 
-  const onTouchEnd = useCallback(() => {
-    if (!gesture.current.dragging) return
-    gesture.current.dragging = false
-    const dy = gesture.current.currentY - gesture.current.startY
-    const dt = Date.now() - gesture.current.startTime
-    const velocity = dy / dt // px/ms
-    const h = sheetRef.current?.offsetHeight ?? 400
-
-    if (velocity > VELOCITY_THRESHOLD || dy / h > SNAP_THRESHOLD) {
-      // spring close
-      const el = sheetRef.current
-      if (el) {
+    function onEnd() {
+      if (!gesture.current.dragging) return
+      gesture.current.dragging = false
+      const dy = gesture.current.currentY - gesture.current.startY
+      const dt = Date.now() - gesture.current.startTime
+      const velocity = dy / Math.max(dt, 1)
+      const h = el.offsetHeight ?? 400
+      if (velocity > VELOCITY_THRESHOLD || dy / h > SNAP_THRESHOLD) {
         el.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1)'
         el.style.transform = 'translateY(100%)'
+        setOverlay(0)
+        setTimeout(onClose, 280)
+      } else {
+        setY(0, true)
+        setOverlay(1)
       }
-      setOverlay(0)
-      setTimeout(onClose, 280)
-    } else {
-      // snap back open
-      setY(0, true)
-      setOverlay(1)
+    }
+
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove',  onMove,  { passive: false }) // must be non-passive for preventDefault
+    el.addEventListener('touchend',   onEnd,   { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove',  onMove)
+      el.removeEventListener('touchend',   onEnd)
     }
   }, [onClose])
 

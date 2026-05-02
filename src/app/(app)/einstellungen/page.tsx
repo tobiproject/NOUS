@@ -442,6 +442,18 @@ function KiSystemTab() {
     }
   }
 
+  const sendTestNotification = async () => {
+    if (!('serviceWorker' in navigator)) return
+    const reg = await navigator.serviceWorker.ready
+    await reg.showNotification('NOUS — Test', {
+      body: 'Push-Benachrichtigungen funktionieren! Samstag & Sonntag erhältst du eine Erinnerung.',
+      icon: '/icon.png',
+      badge: '/icon.png',
+      tag: 'nous-test',
+      data: { url: '/wochenvorbereitung' },
+    } as NotificationOptions)
+  }
+
   return (
     <div className="space-y-6">
 
@@ -554,19 +566,30 @@ function KiSystemTab() {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={handlePushToggle}
-              disabled={pushLoading || permission === 'denied' || permission === 'unsupported'}
-              className="h-8 px-3 text-xs font-semibold rounded shrink-0"
-              style={{
-                background: (subscribed || permission === 'granted') ? 'var(--bg-3)' : 'var(--brand-blue)',
-                color: (subscribed || permission === 'granted') ? 'var(--fg-2)' : '#fff',
-                border: (subscribed || permission === 'granted') ? '1px solid var(--border-raw)' : 'none',
-              }}
-            >
-              {pushLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> :
-                (subscribed || permission === 'granted') ? 'Deaktivieren' : 'Aktivieren'}
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              {(subscribed || permission === 'granted') && (
+                <Button
+                  onClick={sendTestNotification}
+                  className="h-8 px-3 text-xs font-semibold rounded"
+                  style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+                >
+                  Test
+                </Button>
+              )}
+              <Button
+                onClick={handlePushToggle}
+                disabled={pushLoading || permission === 'denied' || permission === 'unsupported'}
+                className="h-8 px-3 text-xs font-semibold rounded"
+                style={{
+                  background: (subscribed || permission === 'granted') ? 'var(--bg-3)' : 'var(--brand-blue)',
+                  color: (subscribed || permission === 'granted') ? 'var(--fg-2)' : '#fff',
+                  border: (subscribed || permission === 'granted') ? '1px solid var(--border-raw)' : 'none',
+                }}
+              >
+                {pushLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> :
+                  (subscribed || permission === 'granted') ? 'Deaktivieren' : 'Aktivieren'}
+              </Button>
+            </div>
           </div>
 
           <div style={{ borderTop: '1px solid var(--border-raw)' }} />

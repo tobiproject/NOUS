@@ -72,12 +72,16 @@ export default function WochenvorbereitungPage() {
 
   const save = async () => {
     setSaving(true)
-    await fetch('/api/weekly-plan', {
+    const res = await fetch('/api/weekly-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ week_start: weekStart, ...plan }),
     })
     setSaving(false)
+    if (res.ok) {
+      localStorage.setItem(`nous-weekly-prep-done-${weekStart}`, '1')
+      window.dispatchEvent(new CustomEvent('weekly-prep-changed'))
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }

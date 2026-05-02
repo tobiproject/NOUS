@@ -213,7 +213,7 @@ export function BottomNav() {
   const [editing, setEditing] = useState(false)
   const [primaryIds, setPrimaryIds] = useState<NavId[]>(DEFAULT_PRIMARY)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
-  const hasWeeklyPrepReminder = [0, 6].includes(new Date().getDay())
+  const [hasWeeklyPrepReminder, setHasWeeklyPrepReminder] = useState(false)
 
   useEffect(() => {
     setPrimaryIds(loadPrimary())
@@ -224,6 +224,21 @@ export function BottomNav() {
     const handler = (e: Event) => setHasWatchlistItems((e as CustomEvent).detail.hasItems)
     window.addEventListener('watchlist-changed', handler)
     return () => window.removeEventListener('watchlist-changed', handler)
+  }, [])
+
+  useEffect(() => {
+    function check() {
+      const day = new Date().getDay()
+      if (day !== 0 && day !== 6) { setHasWeeklyPrepReminder(false); return }
+      const today = new Date()
+      const next = new Date(today)
+      next.setDate(today.getDate() + (day === 0 ? 1 : 2))
+      const key = `nous-weekly-prep-done-${next.toISOString().split('T')[0]}`
+      setHasWeeklyPrepReminder(localStorage.getItem(key) !== '1')
+    }
+    check()
+    window.addEventListener('weekly-prep-changed', check)
+    return () => window.removeEventListener('weekly-prep-changed', check)
   }, [])
 
   const primaryTabs = useMemo(

@@ -13,6 +13,7 @@ export const viewport: Viewport = {
   userScalable: false,
   initialScale: 1,
   maximumScale: 1,
+  interactiveWidget: 'resizes-content',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

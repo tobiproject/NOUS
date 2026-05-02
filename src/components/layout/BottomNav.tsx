@@ -131,7 +131,7 @@ function GestureDrawer({ open, onClose, children }: DrawerProps) {
       gesture.current.currentY = e.touches[0].clientY
       if (dy <= 0) return
       e.preventDefault() // stops page scroll
-      const h = el.offsetHeight ?? 400
+      const h = sheetRef.current?.offsetHeight ?? 400
       setY(dy, false)
       setOverlay(1 - dy / h)
     }
@@ -142,10 +142,12 @@ function GestureDrawer({ open, onClose, children }: DrawerProps) {
       const dy = gesture.current.currentY - gesture.current.startY
       const dt = Date.now() - gesture.current.startTime
       const velocity = dy / Math.max(dt, 1)
-      const h = el.offsetHeight ?? 400
+      const h = sheetRef.current?.offsetHeight ?? 400
       if (velocity > VELOCITY_THRESHOLD || dy / h > SNAP_THRESHOLD) {
-        el.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1)'
-        el.style.transform = 'translateY(100%)'
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1)'
+          sheetRef.current.style.transform = 'translateY(100%)'
+        }
         setOverlay(0)
         setTimeout(onClose, 280)
       } else {

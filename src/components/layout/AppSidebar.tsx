@@ -205,7 +205,10 @@ export function AppSidebar() {
 
   useEffect(() => {
     setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
-  }, [pathname])
+    const handler = (e: Event) => setHasWatchlistItems((e as CustomEvent).detail.hasItems)
+    window.addEventListener('watchlist-changed', handler)
+    return () => window.removeEventListener('watchlist-changed', handler)
+  }, [])
 
   // Green dot on Tagesplan = morning briefing fully completed today
   useEffect(() => {

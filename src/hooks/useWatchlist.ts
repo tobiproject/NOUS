@@ -23,11 +23,17 @@ export function useWatchlist() {
       const data = await res.json()
       const loaded = data.items ?? []
       setItems(loaded)
-      // Sync presence flag for sidebar star indicator
-      localStorage.setItem('nous-watchlist-has-items', loaded.length > 0 ? '1' : '0')
     }
     setLoading(false)
   }, [])
+
+  // Sync flag + notify sidebar/bottomnav instantly on every items change
+  useEffect(() => {
+    if (loading) return
+    const hasItems = items.length > 0
+    localStorage.setItem('nous-watchlist-has-items', hasItems ? '1' : '0')
+    window.dispatchEvent(new CustomEvent('watchlist-changed', { detail: { hasItems } }))
+  }, [items, loading])
 
   useEffect(() => { load() }, [load])
 

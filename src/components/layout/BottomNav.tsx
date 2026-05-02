@@ -212,8 +212,12 @@ export function BottomNav() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [primaryIds, setPrimaryIds] = useState<NavId[]>(DEFAULT_PRIMARY)
+  const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
 
-  useEffect(() => { setPrimaryIds(loadPrimary()) }, [])
+  useEffect(() => {
+    setPrimaryIds(loadPrimary())
+    setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
+  }, [])
 
   const primaryTabs = useMemo(
     () => primaryIds.map(id => ALL_ITEMS.find(i => i.id === id)).filter(Boolean) as typeof ALL_ITEMS[number][],
@@ -267,7 +271,12 @@ export function BottomNav() {
               className="flex flex-1 flex-col items-center justify-center gap-0.5"
               style={{ color: active ? '#fff' : 'rgba(255,255,255,0.35)' }}
             >
-              <tab.icon className="h-5 w-5" />
+              <tab.icon
+                className="h-5 w-5"
+                style={tab.id === 'watchlist' && hasWatchlistItems
+                  ? { color: '#F59E0B', fill: '#F59E0B' }
+                  : undefined}
+              />
               <span className="text-[10px] font-medium leading-none">{tab.label}</span>
             </Link>
           )
@@ -361,7 +370,12 @@ export function BottomNav() {
                       minHeight: 48,
                     }}
                   >
-                    <item.icon className="h-5 w-5 shrink-0" style={{ color: active ? '#fff' : 'rgba(255,255,255,0.45)' }} />
+                    <item.icon
+                      className="h-5 w-5 shrink-0"
+                      style={item.id === 'watchlist' && hasWatchlistItems
+                        ? { color: '#F59E0B', fill: '#F59E0B' }
+                        : { color: active ? '#fff' : 'rgba(255,255,255,0.45)' }}
+                    />
                     <span className="text-[15px] font-medium">{item.label}</span>
                   </Link>
                 )

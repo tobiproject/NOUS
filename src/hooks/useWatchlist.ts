@@ -21,7 +21,10 @@ export function useWatchlist() {
     const res = await fetch('/api/watchlist')
     if (res.ok) {
       const data = await res.json()
-      setItems(data.items ?? [])
+      const loaded = data.items ?? []
+      setItems(loaded)
+      // Sync presence flag for sidebar star indicator
+      localStorage.setItem('nous-watchlist-has-items', loaded.length > 0 ? '1' : '0')
     }
     setLoading(false)
   }, [])

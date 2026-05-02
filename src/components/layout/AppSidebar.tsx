@@ -104,10 +104,11 @@ interface NavItemProps {
   item: Extract<NavItem, { isDivider?: false }>
   isActive: boolean
   hasTodayPlan?: boolean
+  hasWatchlistItems?: boolean
   showTooltips?: boolean
 }
 
-function SortableNavItem({ item, isActive, hasTodayPlan, showTooltips }: NavItemProps) {
+function SortableNavItem({ item, isActive, hasTodayPlan, hasWatchlistItems, showTooltips }: NavItemProps) {
   const [hovered, setHovered] = useState(false)
   const {
     attributes,
@@ -125,6 +126,7 @@ function SortableNavItem({ item, isActive, hasTodayPlan, showTooltips }: NavItem
   }
 
   const showTagesplanDot = item.id === 'tagesplan' && hasTodayPlan
+  const watchlistActive = item.id === 'watchlist' && hasWatchlistItems
 
   return (
     <div
@@ -163,7 +165,10 @@ function SortableNavItem({ item, isActive, hasTodayPlan, showTooltips }: NavItem
               color: isActive ? 'var(--fg-1)' : 'var(--fg-2)',
             }}
           >
-            <item.icon className="h-4 w-4 shrink-0" />
+            <item.icon
+              className="h-4 w-4 shrink-0"
+              style={watchlistActive ? { color: '#F59E0B', fill: '#F59E0B' } : undefined}
+            />
             <span className="flex-1">{item.label}</span>
 
             {showTagesplanDot && (
@@ -190,11 +195,13 @@ export function AppSidebar() {
   const { activeAccount } = useAccountContext()
   const [navItems, setNavItems] = useState(DEFAULT_NAV_ITEMS)
   const [hasTodayPlan, setHasTodayPlan] = useState(false)
+  const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
 
   // Restore saved order from localStorage (client-side only)
   useEffect(() => {
     const order = loadOrder()
     if (order.length) setNavItems(applyOrder(DEFAULT_NAV_ITEMS, order))
+    setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
   }, [])
 
   // Green dot on Tagesplan = morning briefing fully completed today
@@ -352,6 +359,7 @@ export function AppSidebar() {
                     item={item}
                     isActive={isActive}
                     hasTodayPlan={hasTodayPlan}
+                    hasWatchlistItems={hasWatchlistItems}
                     showTooltips
                   />
                 )

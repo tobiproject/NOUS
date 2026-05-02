@@ -201,8 +201,11 @@ export function AppSidebar() {
   useEffect(() => {
     const order = loadOrder()
     if (order.length) setNavItems(applyOrder(DEFAULT_NAV_ITEMS, order))
-    setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
   }, [])
+
+  useEffect(() => {
+    setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
+  }, [pathname])
 
   // Green dot on Tagesplan = morning briefing fully completed today
   useEffect(() => {

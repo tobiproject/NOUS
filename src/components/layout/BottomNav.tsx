@@ -216,8 +216,11 @@ export function BottomNav() {
 
   useEffect(() => {
     setPrimaryIds(loadPrimary())
-    setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
   }, [])
+
+  useEffect(() => {
+    setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
+  }, [pathname])
 
   const primaryTabs = useMemo(
     () => primaryIds.map(id => ALL_ITEMS.find(i => i.id === id)).filter(Boolean) as typeof ALL_ITEMS[number][],

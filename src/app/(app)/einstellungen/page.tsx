@@ -514,9 +514,14 @@ function KiSystemTab() {
             <div className="space-y-2">
               <div className="rounded px-4 py-3 flex items-start gap-3" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)' }}>
                 <Brain className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--brand-blue)' }} />
-                <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
-                  Jede KI-Analyse kostet ca. <span style={{ color: 'var(--fg-1)' }}>$0.002–$0.01</span> — bei normalem Nutzungsverhalten unter <span style={{ color: 'var(--fg-1)' }}>$5/Monat</span>.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
+                    Jede KI-Analyse kostet ca. <span style={{ color: 'var(--fg-1)' }}>$0.002–$0.01</span> — bei normalem Nutzungsverhalten unter <span style={{ color: 'var(--fg-1)' }}>$5/Monat</span>.
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--warn)' }}>
+                    Mindest-Aufladung: <span className="font-semibold">$5</span> — Anthropic aktiviert den Key erst ab diesem Betrag.
+                  </p>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Link href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener noreferrer"

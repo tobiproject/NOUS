@@ -90,6 +90,7 @@ function SortableDivider({ id }: { id: string }) {
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
       className="group flex items-center gap-1 px-2 py-0.5 cursor-grab active:cursor-grabbing"
+      suppressHydrationWarning
       {...attributes}
       {...listeners}
     >
@@ -137,6 +138,7 @@ function SortableNavItem({ item, isActive, hasTodayPlan, showTooltips }: NavItem
       <button
         {...attributes}
         {...listeners}
+        suppressHydrationWarning
         tabIndex={-1}
         className="flex items-center justify-center w-4 h-6 shrink-0 cursor-grab active:cursor-grabbing ml-1"
         style={{
@@ -226,8 +228,72 @@ export function AppSidebar() {
   void activeAccount
 
   return (
+    <>
+    {/* ── Collapsed sidebar (tablet 768–1023px) ── */}
     <aside
-      className="w-56 shrink-0 flex flex-col h-screen sticky top-0"
+      className="hidden md:flex lg:hidden w-14 shrink-0 flex-col h-screen sticky top-0 items-center"
+      style={{ background: 'var(--bg-1)', borderRight: '1px solid var(--border-raw)' }}
+    >
+      {/* Logo mark */}
+      <div className="flex items-center justify-center py-4">
+        <Image src="/logo/nous-mark-white.svg" alt="NOUS" width={20} height={20} priority />
+      </div>
+
+      {/* Nav icons */}
+      <nav className="flex-1 flex flex-col items-center gap-1 py-2 overflow-y-auto w-full px-1">
+        <TooltipProvider>
+          {navItems.map(item => {
+            if (item.isDivider) {
+              return <div key={item.id} className="w-6 my-1" style={{ height: '1px', background: 'var(--border-raw)' }} />
+            }
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+            return (
+              <Tooltip key={item.id} delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={item.href}
+                    className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100"
+                    style={{
+                      background: isActive ? 'var(--bg-3)' : 'transparent',
+                      color: isActive ? 'var(--fg-1)' : 'var(--fg-3)',
+                    }}
+                  >
+                    <item.icon className="h-5 w-5" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">{item.label}</TooltipContent>
+              </Tooltip>
+            )
+          })}
+        </TooltipProvider>
+      </nav>
+
+      {/* Bottom: settings + logout */}
+      <div className="flex flex-col items-center gap-1 pb-3 pt-2 w-full px-1" style={{ borderTop: '1px solid var(--border-raw)' }}>
+        <TooltipProvider>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <Link href="/einstellungen" className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100" style={{ color: 'var(--fg-3)' }}>
+                <Settings className="h-5 w-5" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="text-xs">Einstellungen</TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <button onClick={logout} className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100" style={{ color: 'var(--fg-3)' }}>
+                <LogOut className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="text-xs">Abmelden</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </aside>
+
+    {/* ── Full sidebar (desktop ≥1024px) ── */}
+    <aside
+      className="w-56 shrink-0 hidden lg:flex flex-col h-screen sticky top-0"
       style={{
         background: 'var(--bg-1)',
         borderRight: '1px solid var(--border-raw)',
@@ -270,7 +336,7 @@ export function AppSidebar() {
       {/* Navigation — draggable */}
       <nav className="flex-1 flex flex-col gap-0 px-1 overflow-y-auto">
         <TooltipProvider>
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <DndContext id="sidebar-dnd" sensors={sensors} onDragEnd={handleDragEnd}>
             <SortableContext
               items={navItems.map(i => i.id)}
               strategy={verticalListSortingStrategy}
@@ -377,5 +443,6 @@ export function AppSidebar() {
         </div>
       </div>
     </aside>
+    </>
   )
 }

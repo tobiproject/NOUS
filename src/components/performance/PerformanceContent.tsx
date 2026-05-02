@@ -138,7 +138,8 @@ export function PerformanceContent() {
 
       {/* Tabs */}
       <Tabs defaultValue={!isLoading && stats && stats.kpi.totalTrades > 0 ? "overview" : "simulator"}>
-        <TabsList className="mb-4">
+        <div className="overflow-x-auto -mx-1 px-1 mb-4">
+        <TabsList className="w-max min-w-full">
           <TabsTrigger value="overview">Übersicht</TabsTrigger>
           <TabsTrigger value="winrate">Winrate</TabsTrigger>
           <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
@@ -146,6 +147,7 @@ export function PerformanceContent() {
           <TabsTrigger value="news">News-Analyse</TabsTrigger>
           <TabsTrigger value="simulator">RR-Simulator</TabsTrigger>
         </TabsList>
+        </div>
 
         {!isLoading && stats && stats.kpi.totalTrades > 0 ? (
           <>

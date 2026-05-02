@@ -44,10 +44,11 @@
 | PROJ-28 | Trade Milestones & Sidebar Tooltips | Deployed | [PROJ-28-milestones-tooltips.md](PROJ-28-milestones-tooltips.md) | 2026-04-26 |
 | PROJ-29 | Prop-Firm Regelwerk | Deployed | [PROJ-29-prop-firm-rules.md](PROJ-29-prop-firm-rules.md) | 2026-04-26 |
 | PROJ-30 | Multi-AI Provider (Eigener API-Key) | Deployed | [PROJ-30-multi-ai-provider.md](PROJ-30-multi-ai-provider.md) | 2026-04-26 |
+| PROJ-31 | Mobile Responsive Design (Native App) | In Review | [PROJ-31-mobile-responsive.md](PROJ-31-mobile-responsive.md) | 2026-05-01 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-31
+## Next Available ID: PROJ-32
 
 ## Build Order (Empfohlen)
 

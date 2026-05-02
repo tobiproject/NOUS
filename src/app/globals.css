@@ -163,3 +163,26 @@
   .bg-short-soft { background-color: var(--short-soft); }
   .bg-brand-soft { background-color: var(--brand-blue-soft); }
 }
+
+/* ─── Mobile content padding — clears BottomNav + safe area ─────────────── */
+@media (max-width: 767px) {
+  .pb-safe-nav {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ─── Mobile bottom-sheet for Dialogs (<768px) ───────────────────────────── */
+@media (max-width: 767px) {
+  [role="dialog"] {
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 90dvh !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+}

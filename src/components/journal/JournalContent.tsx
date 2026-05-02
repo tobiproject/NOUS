@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useTrades, type Trade, type TradeFilters, type TradesPage } from '@/hooks/useTrades'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { TradeTable } from './TradeTable'
+import { MobileTradeCard } from './MobileTradeCard'
 import { TradeFilters as TradeFiltersBar } from './TradeFilters'
 import { TradeFormSheet } from './TradeFormSheet'
 import { TradeDetailSheet } from './TradeDetailSheet'
@@ -193,7 +194,7 @@ export function JournalContent() {
               {activeAccount ? `Konto: ${activeAccount.name}` : 'Kein aktives Konto'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             <PdfReportButton />
             <ExportMenu filters={filters} />
             <Button variant="outline" onClick={() => setIsImportOpen(true)} disabled={!activeAccount} className="gap-2">
@@ -216,14 +217,41 @@ export function JournalContent() {
           strategyOptions={strategySuggestions}
         />
 
-        {/* Table */}
-        <TradeTable
-          tradesPage={tradesPage}
-          isLoading={isLoading}
-          onRowClick={setDetailTrade}
-          onPageChange={handlePageChange}
-        />
+        {/* Desktop table */}
+        <div className="hidden md:block">
+          <TradeTable
+            tradesPage={tradesPage}
+            isLoading={isLoading}
+            onRowClick={setDetailTrade}
+            onPageChange={handlePageChange}
+          />
+        </div>
+
+        {/* Mobile card list */}
+        <div className="md:hidden">
+          <MobileTradeCard
+            trades={tradesPage?.trades ?? []}
+            isLoading={isLoading}
+            onCardClick={setDetailTrade}
+          />
+        </div>
       </div>
+
+      <button
+        onClick={handleNewTrade}
+        disabled={!activeAccount}
+        className="md:hidden fixed right-4 z-40 flex items-center justify-center rounded-full shadow-lg disabled:opacity-40 transition-opacity active:scale-95"
+        style={{
+          bottom: 'calc(5rem + env(safe-area-inset-bottom))',
+          width: '56px',
+          height: '56px',
+          background: 'var(--fg-1)',
+          color: 'var(--bg-0)',
+        }}
+        aria-label="Neuer Trade"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
 
       {/* Form Sheet */}
       <TradeFormSheet

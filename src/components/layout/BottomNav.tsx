@@ -193,9 +193,6 @@ function GestureDrawer({ open, onClose, children }: DrawerProps) {
           willChange: 'transform',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
       >
         {/* handle */}
         <div className="flex justify-center pt-3 pb-1 cursor-grab">

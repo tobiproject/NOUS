@@ -105,10 +105,11 @@ interface NavItemProps {
   isActive: boolean
   hasTodayPlan?: boolean
   hasWatchlistItems?: boolean
+  hasWeeklyPrepReminder?: boolean
   showTooltips?: boolean
 }
 
-function SortableNavItem({ item, isActive, hasTodayPlan, hasWatchlistItems, showTooltips }: NavItemProps) {
+function SortableNavItem({ item, isActive, hasTodayPlan, hasWatchlistItems, hasWeeklyPrepReminder, showTooltips }: NavItemProps) {
   const [hovered, setHovered] = useState(false)
   const {
     attributes,
@@ -126,6 +127,7 @@ function SortableNavItem({ item, isActive, hasTodayPlan, hasWatchlistItems, show
   }
 
   const showTagesplanDot = item.id === 'tagesplan' && hasTodayPlan
+  const showWeeklyPrepDot = item.id === 'wochenvorbereitung' && hasWeeklyPrepReminder
   const watchlistActive = item.id === 'watchlist' && hasWatchlistItems
 
   return (
@@ -177,6 +179,12 @@ function SortableNavItem({ item, isActive, hasTodayPlan, hasWatchlistItems, show
                 style={{ background: 'var(--long)' }}
               />
             )}
+            {showWeeklyPrepDot && (
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: 'var(--warn)' }}
+              />
+            )}
           </Link>
         </TooltipTrigger>
         {showTooltips && item.tooltip && (
@@ -196,6 +204,7 @@ export function AppSidebar() {
   const [navItems, setNavItems] = useState(DEFAULT_NAV_ITEMS)
   const [hasTodayPlan, setHasTodayPlan] = useState(false)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
+  const hasWeeklyPrepReminder = [0, 6].includes(new Date().getDay()) // Sa=6, So=0
 
   // Restore saved order from localStorage (client-side only)
   useEffect(() => {
@@ -366,6 +375,7 @@ export function AppSidebar() {
                     isActive={isActive}
                     hasTodayPlan={hasTodayPlan}
                     hasWatchlistItems={hasWatchlistItems}
+                    hasWeeklyPrepReminder={hasWeeklyPrepReminder}
                     showTooltips
                   />
                 )

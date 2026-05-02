@@ -213,6 +213,7 @@ export function BottomNav() {
   const [editing, setEditing] = useState(false)
   const [primaryIds, setPrimaryIds] = useState<NavId[]>(DEFAULT_PRIMARY)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
+  const hasWeeklyPrepReminder = [0, 6].includes(new Date().getDay())
 
   useEffect(() => {
     setPrimaryIds(loadPrimary())
@@ -277,12 +278,17 @@ export function BottomNav() {
               className="flex flex-1 flex-col items-center justify-center gap-0.5"
               style={{ color: active ? '#fff' : 'rgba(255,255,255,0.35)' }}
             >
-              <tab.icon
-                className="h-5 w-5"
-                style={tab.id === 'watchlist' && hasWatchlistItems
-                  ? { color: '#F59E0B', fill: '#F59E0B' }
-                  : undefined}
-              />
+              <div className="relative">
+                <tab.icon
+                  className="h-5 w-5"
+                  style={tab.id === 'watchlist' && hasWatchlistItems
+                    ? { color: '#F59E0B', fill: '#F59E0B' }
+                    : undefined}
+                />
+                {tab.id === 'wochenvorbereitung' && hasWeeklyPrepReminder && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: '#FF9800' }} />
+                )}
+              </div>
               <span className="text-[10px] font-medium leading-none">{tab.label}</span>
             </Link>
           )
@@ -382,7 +388,10 @@ export function BottomNav() {
                         ? { color: '#F59E0B', fill: '#F59E0B' }
                         : { color: active ? '#fff' : 'rgba(255,255,255,0.45)' }}
                     />
-                    <span className="text-[15px] font-medium">{item.label}</span>
+                    <span className="flex-1 text-[15px] font-medium">{item.label}</span>
+                    {item.id === 'wochenvorbereitung' && hasWeeklyPrepReminder && (
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: '#FF9800' }} />
+                    )}
                   </Link>
                 )
               })}

@@ -55,9 +55,14 @@ export async function POST(req: NextRequest) {
   if (uploadError) return NextResponse.json({ error: 'Upload fehlgeschlagen: ' + uploadError.message }, { status: 500 })
 
   // Create DB record
+  const cleanName = file.name
+    .replace(/\.pdf$/i, '')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+
   const { data: doc, error: insertError } = await supabase
     .from('knowledge_documents')
-    .insert({ user_id: user.id, name: file.name, file_path: fileName, file_size: file.size, status: 'processing' })
+    .insert({ user_id: user.id, name: cleanName, file_path: fileName, file_size: file.size, status: 'processing' })
     .select('id')
     .single()
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
@@ -79,7 +84,7 @@ export async function POST(req: NextRequest) {
       extracted_text: text.slice(0, 200_000),
     }).eq('id', doc.id)
 
-    return NextResponse.json({ document: { id: doc.id, name: file.name, file_size: file.size, status: 'ready' } })
+    return NextResponse.json({ document: { id: doc.id, name: cleanName, file_size: file.size, status: 'ready' } })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     await supabase.from('knowledge_documents').update({

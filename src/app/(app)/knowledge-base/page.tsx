@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Upload, Trash2, FileText, Loader2, CheckCircle, AlertTriangle, Brain, Type } from 'lucide-react'
+import { Upload, Trash2, FileText, Loader2, CheckCircle, AlertTriangle, Brain, Type, Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
@@ -29,6 +29,8 @@ export default function KnowledgeBasePage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const [tab, setTab] = useState<Tab>('pdf')
   const [textName, setTextName] = useState('')
@@ -98,6 +100,23 @@ export default function KnowledgeBasePage() {
     setTextName('')
     setTextContent('')
     load()
+  }
+
+  const startRename = (doc: KnowledgeDoc) => {
+    setRenamingId(doc.id)
+    setRenameValue(doc.name)
+  }
+
+  const commitRename = async (id: string) => {
+    const name = renameValue.trim()
+    if (!name) { setRenamingId(null); return }
+    await fetch(`/api/knowledge-base/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    setDocs(prev => prev.map(d => d.id === id ? { ...d, name } : d))
+    setRenamingId(null)
   }
 
   const handleDelete = async (id: string, name: string) => {
@@ -279,8 +298,37 @@ export default function KnowledgeBasePage() {
                 <FileText className="h-4 w-4 shrink-0" style={{ color: 'var(--fg-4)' }} />
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: 'var(--fg-1)' }}>{doc.name}</p>
-                  <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
+                  {renamingId === doc.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={e => setRenameValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') commitRename(doc.id)
+                          if (e.key === 'Escape') setRenamingId(null)
+                        }}
+                        onBlur={() => commitRename(doc.id)}
+                        className="flex-1 min-w-0 text-sm font-medium bg-transparent border-b outline-none"
+                        style={{ color: 'var(--fg-1)', borderColor: 'var(--brand-blue)' }}
+                      />
+                      <button onClick={() => commitRename(doc.id)} className="shrink-0">
+                        <Check className="h-3.5 w-3.5" style={{ color: 'var(--long)' }} />
+                      </button>
+                      <button onClick={() => setRenamingId(null)} className="shrink-0">
+                        <X className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startRename(doc)}
+                      className="flex items-center gap-1.5 group/name w-full text-left"
+                    >
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--fg-1)' }}>{doc.name}</p>
+                      <Pencil className="h-3 w-3 shrink-0 opacity-0 group-hover/name:opacity-100 transition-opacity" style={{ color: 'var(--fg-4)' }} />
+                    </button>
+                  )}
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--fg-4)' }}>
                     {formatBytes(doc.file_size)} · {new Date(doc.created_at).toLocaleDateString('de-DE')}
                   </p>
                   {doc.status === 'error' && doc.error_message && (

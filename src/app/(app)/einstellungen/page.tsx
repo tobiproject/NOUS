@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive } from 'lucide-react'
+import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info } from 'lucide-react'
 import Link from 'next/link'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -507,6 +507,26 @@ function KiSystemTab() {
               <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
                 Kein eigener Key — NOUS nutzt den Server-Schlüssel (Shared Budget).
               </p>
+            )}
+            {aiProvider === 'anthropic' && (
+              <div
+                className="flex items-start gap-2 px-3 py-2 rounded text-xs"
+                style={{ background: 'rgba(41,98,255,0.08)', borderLeft: '2px solid var(--brand-blue)' }}
+              >
+                <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: 'var(--brand-blue)' }} />
+                <p style={{ color: 'var(--fg-3)' }}>
+                  Damit alle Funktionen verfügbar sind, lade dein Anthropic-Konto mit mindestens 5 € auf.{' '}
+                  <a
+                    href="https://console.anthropic.com/settings/billing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold hover:opacity-80"
+                    style={{ color: 'var(--brand-blue)' }}
+                  >
+                    Guthaben aufladen →
+                  </a>
+                </p>
+              </div>
             )}
           </div>
 

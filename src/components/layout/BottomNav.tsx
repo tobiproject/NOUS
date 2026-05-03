@@ -6,10 +6,9 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import {
   LayoutDashboard, BookOpen, TrendingUp, ShieldCheck, MoreHorizontal,
   Brain, CalendarDays, ClipboardList, GraduationCap, Star, Map as MapIcon,
-  Telescope, Settings, LogOut, Users, BookMarked as KbIcon, Info,
+  Telescope, ChevronRight,
 } from 'lucide-react'
-import { AccountSwitcher } from '@/components/accounts/AccountSwitcher'
-import { useAuth } from '@/hooks/useAuth'
+import { useAccountContext } from '@/contexts/AccountContext'
 import { cn } from '@/lib/utils'
 
 // ─── Nav catalogue ────────────────────────────────────────────────────────────
@@ -26,9 +25,6 @@ const ALL_ITEMS = [
   { id: 'watchlist',          href: '/watchlist',           label: 'Watchlist',          icon: Star },
   { id: 'roadmap',            href: '/roadmap',             label: 'Roadmap',            icon: MapIcon },
   { id: 'wochenvorbereitung', href: '/wochenvorbereitung',  label: 'Wochenvorbereitung', icon: Telescope },
-  { id: 'einstellungen',      href: '/einstellungen',       label: 'Einstellungen',      icon: Settings },
-  { id: 'knowledge-base',     href: '/knowledge-base',      label: 'Knowledge Base',     icon: KbIcon },
-  { id: 'about',              href: '/about',               label: 'Über NOUS',          icon: Info },
 ] as const
 
 type NavId = typeof ALL_ITEMS[number]['id']
@@ -208,7 +204,7 @@ function GestureDrawer({ open, onClose, children }: DrawerProps) {
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { logout } = useAuth()
+  const { activeAccount } = useAccountContext()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [primaryIds, setPrimaryIds] = useState<NavId[]>(DEFAULT_PRIMARY)
@@ -413,17 +409,32 @@ export function BottomNav() {
             </div>
           )}
 
-          <div className="mx-4 my-2 h-px bg-white/8" />
-          <div className="px-6 pb-2"><AccountSwitcher /></div>
+          <div className="mx-4 my-2 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
           <div className="px-4 pb-6">
-            <button
-              onClick={() => { handleClose(); logout() }}
-              className="flex items-center gap-3 px-3 py-3.5 rounded-xl w-full"
-              style={{ color: 'rgba(255,255,255,0.45)', minHeight: 48 }}
+            <Link
+              href="/einstellungen?tab=konten"
+              onClick={handleClose}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
             >
-              <LogOut className="h-5 w-5 shrink-0" />
-              <span className="text-[15px] font-medium">Abmelden</span>
-            </button>
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                style={{ background: 'rgba(41,98,255,0.18)', color: 'var(--brand-blue)' }}
+              >
+                {activeAccount?.name?.[0]?.toUpperCase() ?? '·'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold truncate" style={{ color: '#fff' }}>
+                  {activeAccount?.name ?? 'Konto anlegen'}
+                </p>
+                {activeAccount && (
+                  <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                    {activeAccount.currency} · Konto wechseln
+                  </p>
+                )}
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
+            </Link>
           </div>
         </div>
       </GestureDrawer>

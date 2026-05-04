@@ -12,20 +12,21 @@ export interface WatchlistItem {
   point_value: number | null
 }
 
-export function useWatchlist() {
+export function useWatchlist(accountId?: string | null) {
   const [items, setItems] = useState<WatchlistItem[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/watchlist')
+    const url = accountId ? `/api/watchlist?account_id=${accountId}` : '/api/watchlist'
+    const res = await fetch(url)
     if (res.ok) {
       const data = await res.json()
       const loaded = data.items ?? []
       setItems(loaded)
     }
     setLoading(false)
-  }, [])
+  }, [accountId])
 
   // Sync flag + notify sidebar/bottomnav instantly on every items change
   useEffect(() => {
@@ -41,7 +42,7 @@ export function useWatchlist() {
     const res = await fetch('/api/watchlist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ symbol, name, category }),
+      body: JSON.stringify({ symbol, name, category, account_id: accountId ?? null }),
     })
     if (res.ok) {
       const data = await res.json()
@@ -50,7 +51,7 @@ export function useWatchlist() {
     }
     const data = await res.json()
     return { error: data.error ?? 'Fehler beim Hinzufügen' }
-  }, [])
+  }, [accountId])
 
   const removeItem = useCallback(async (id: string) => {
     const res = await fetch(`/api/watchlist/${id}`, { method: 'DELETE' })

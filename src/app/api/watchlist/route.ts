@@ -22,18 +22,25 @@ const CME_PRESETS: Record<string, { tick_size: number; tick_value: number; point
   MGC: { tick_size: 0.10, tick_value: 1.00,  point_value: 10.00 },
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data, error } = await supabase
+  const accountId = req.nextUrl.searchParams.get('account_id')
+
+  let query = supabase
     .from('watchlist_items')
     .select('*')
     .eq('user_id', user.id)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
 
+  if (accountId) {
+    query = query.eq('account_id', accountId)
+  }
+
+  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ items: data ?? [] })
 }
@@ -47,10 +54,11 @@ export async function POST(req: NextRequest) {
   const parsed = addSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
+  const { account_id, ...itemData } = body
   const preset = CME_PRESETS[parsed.data.symbol]
   const { data, error } = await supabase
     .from('watchlist_items')
-    .insert({ user_id: user.id, ...parsed.data, ...(preset ?? {}) })
+    .insert({ user_id: user.id, account_id: account_id ?? null, ...itemData, ...(preset ?? {}) })
     .select()
     .single()
 

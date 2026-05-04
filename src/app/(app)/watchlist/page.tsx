@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useWatchlist, type WatchlistItem } from '@/hooks/useWatchlist'
+import { useAccountContext } from '@/contexts/AccountContext'
 import { cn } from '@/lib/utils'
 
 const CATEGORIES = [
@@ -174,7 +175,8 @@ function FuturesTickEditor({ item, onSave }: {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function WatchlistPage() {
-  const { items, loading, addItem, removeItem, updateItem } = useWatchlist()
+  const { activeAccount } = useAccountContext()
+  const { items, loading, addItem, removeItem, updateItem } = useWatchlist(activeAccount?.id)
   const [symbol, setSymbol] = useState('')
   const [name, setName] = useState('')
   const [category, setCategory] = useState('futures')

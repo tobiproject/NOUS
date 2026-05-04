@@ -104,3 +104,23 @@ Gleichzeitig wird der NOUS-Wordmark durch das offizielle SVG-Logo mit Slogan ers
 - Spec: "zeigt erste(n) Buchstaben des display_name"
 - Ist: Initialen aus `activeAccount.name` (Kontoname), Fallback auf E-Mail-Initial
 - Datei: `src/components/layout/MobileHeader.tsx:12`
+
+---
+
+## QA Re-Test — 2026-05-04 (nach Fixes)
+
+**Fixes geprüft:**
+- ✅ FIXED — "Mein Profil" → /einstellungen?tab=profil (war "Einstellungen" → /einstellungen)
+- ✅ FIXED — Logout-Bestätigungs-Dialog via AlertDialog implementiert
+- ✅ FIXED — Initialen jetzt aus display_name via /api/profile (MobileHeader + ProfileSheet)
+- ❌ STILL OPEN — Avatar-Upload weiterhin nicht implementiert
+
+**Status: NOT READY — 1 High bug verbleibend**
+
+| # | Kriterium | Status |
+|---|-----------|--------|
+| 3 | Profilbild hochladen (Supabase Storage, max 2MB) | ❌ FAIL — nicht implementiert |
+| 5 | Sheet: "Mein Profil" vorhanden | ✅ PASS (gefixt) |
+| 6 | "Mein Profil" → /einstellungen?tab=profil | ✅ PASS (gefixt) |
+| 9 | Abmelden mit Bestätigung | ✅ PASS (gefixt) |
+| 2 | Initialen aus display_name | ✅ PASS (gefixt) |

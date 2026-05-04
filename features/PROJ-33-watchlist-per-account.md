@@ -96,3 +96,27 @@ Migration: Bestehende Einträge werden dem zuletzt aktiven Konto zugewiesen.
 - Die `account_id` aus dem Request-Body wird nicht verifiziert, ob sie dem authentifizierten Nutzer gehört.
 - Ein Angreifer könnte Items einer fremden Account-ID zuordnen. Die `user_id` ist korrekt gesetzt, aber die Datenbankintegrität ist gefährdet wenn RLS nicht vollständig greift.
 - Fix: Vor dem Insert prüfen: `SELECT id FROM accounts WHERE id = account_id AND user_id = user.id`
+
+---
+
+## QA Re-Test — 2026-05-04 (nach Fixes)
+
+**Fixes geprüft:**
+- ✅ FIXED — TradeFormSheet: `useWatchlist(activeAccount?.id)` ✅
+- ✅ FIXED — AssetCombobox: `useWatchlist(activeAccount?.id)` ✅
+- ✅ FIXED — AssetMultiPicker: `useWatchlist(activeAccount?.id)` ✅
+- ✅ FIXED — BottomNav: nutzt jetzt `useWatchlist(activeAccount?.id)` direkt (kein localStorage mehr)
+- ✅ FIXED — API POST: account_id wird gegen `accounts WHERE user_id = user.id` validiert
+- ❌ STILL OPEN — AppSidebar: noch altes localStorage/event-Pattern
+
+**Status: NOT READY — 1 High bug verbleibend**
+
+| # | Kriterium | Status |
+|---|-----------|--------|
+| 7 | Watchlist-Stern in **BottomNav** kontoabhängig | ✅ PASS (gefixt) |
+| 7 | Watchlist-Stern in **AppSidebar** kontoabhängig | ❌ FAIL — noch localStorage-basiert |
+| 8 | Stern aktualisiert sich sofort beim Kontowechsel | ❌ FAIL — AppSidebar noch nicht gefixt |
+
+**Verbleibender Bug (HIGH):**
+- `src/components/layout/AppSidebar.tsx:206-219` — `hasWatchlistItems` via `localStorage.getItem('nous-watchlist-has-items')` + `watchlist-changed` Event
+- Fix analog zu BottomNav: `useWatchlist(activeAccount?.id)` direkt verwenden, `hasWatchlistItems = watchlistItems.length > 0`

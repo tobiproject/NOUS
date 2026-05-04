@@ -46,9 +46,9 @@
 | PROJ-30 | Multi-AI Provider (Eigener API-Key) | Deployed | [PROJ-30-multi-ai-provider.md](PROJ-30-multi-ai-provider.md) | 2026-04-26 |
 | PROJ-31 | Mobile Responsive Design (Native App) | Deployed | [PROJ-31-mobile-responsive.md](PROJ-31-mobile-responsive.md) | 2026-05-01 |
 | PROJ-32 | Mobile Profile Header & Avatar | In Review | [PROJ-32-mobile-profile-header.md](PROJ-32-mobile-profile-header.md) | 2026-05-04 |
-| PROJ-33 | Watchlist per Konto | Approved | [PROJ-33-watchlist-per-account.md](PROJ-33-watchlist-per-account.md) | 2026-05-04 |
-| PROJ-34 | Dashboard Loading State (kein Flash) | Approved | [PROJ-34-dashboard-loading-state.md](PROJ-34-dashboard-loading-state.md) | 2026-05-04 |
-| PROJ-35 | Mobile Header Logo mit Slogan | Approved | [PROJ-35-mobile-logo-slogan.md](PROJ-35-mobile-logo-slogan.md) | 2026-05-04 |
+| PROJ-33 | Watchlist per Konto | Deployed | [PROJ-33-watchlist-per-account.md](PROJ-33-watchlist-per-account.md) | 2026-05-04 |
+| PROJ-34 | Dashboard Loading State (kein Flash) | Deployed | [PROJ-34-dashboard-loading-state.md](PROJ-34-dashboard-loading-state.md) | 2026-05-04 |
+| PROJ-35 | Mobile Header Logo mit Slogan | Deployed | [PROJ-35-mobile-logo-slogan.md](PROJ-35-mobile-logo-slogan.md) | 2026-05-04 |
 
 <!-- Add features above this line -->
 

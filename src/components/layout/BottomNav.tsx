@@ -9,6 +9,7 @@ import {
   Telescope, ChevronRight,
 } from 'lucide-react'
 import { useAccountContext } from '@/contexts/AccountContext'
+import { useWatchlist } from '@/hooks/useWatchlist'
 import { cn } from '@/lib/utils'
 
 // ─── Nav catalogue ────────────────────────────────────────────────────────────
@@ -208,18 +209,12 @@ export function BottomNav() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [primaryIds, setPrimaryIds] = useState<NavId[]>(DEFAULT_PRIMARY)
-  const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
   const [hasWeeklyPrepReminder, setHasWeeklyPrepReminder] = useState(false)
+  const { items: watchlistItems } = useWatchlist(activeAccount?.id)
+  const hasWatchlistItems = watchlistItems.length > 0
 
   useEffect(() => {
     setPrimaryIds(loadPrimary())
-  }, [])
-
-  useEffect(() => {
-    setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
-    const handler = (e: Event) => setHasWatchlistItems((e as CustomEvent).detail.hasItems)
-    window.addEventListener('watchlist-changed', handler)
-    return () => window.removeEventListener('watchlist-changed', handler)
   }, [])
 
   useEffect(() => {

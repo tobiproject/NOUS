@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useWatchlist } from '@/hooks/useWatchlist'
+import { useAccountContext } from '@/contexts/AccountContext'
 
 const CAT_LABELS: Record<string, string> = {
   futures: 'Futures',
@@ -29,7 +30,8 @@ interface Props {
 export function AssetMultiPicker({ value, onChange, placeholder = 'Asset hinzufügen…' }: Props) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const { items } = useWatchlist()
+  const { activeAccount } = useAccountContext()
+  const { items } = useWatchlist(activeAccount?.id)
 
   const filtered = search
     ? items.filter(i =>

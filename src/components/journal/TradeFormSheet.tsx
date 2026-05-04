@@ -437,7 +437,7 @@ export function TradeFormSheet({
   const { activeAccount } = useAccountContext()
   const { createTrade, updateTrade, uploadScreenshot, isMutating } = useTrades()
   const { fetchRiskConfig } = useRiskConfig()
-  const { items: watchlistItems } = useWatchlist()
+  const { items: watchlistItems } = useWatchlist(activeAccount?.id)
   const [maxRiskPct, setMaxRiskPct] = useState<number | null>(null)
 
   const [existingUrls, setExistingUrls] = useState<string[]>([])

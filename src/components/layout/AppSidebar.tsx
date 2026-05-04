@@ -30,6 +30,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { AccountSwitcher } from '@/components/accounts/AccountSwitcher'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
+import { useWatchlist } from '@/hooks/useWatchlist'
 import { cn } from '@/lib/utils'
 
 type NavItem =
@@ -203,20 +204,14 @@ export function AppSidebar() {
   const { activeAccount } = useAccountContext()
   const [navItems, setNavItems] = useState(DEFAULT_NAV_ITEMS)
   const [hasTodayPlan, setHasTodayPlan] = useState(false)
-  const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
   const [hasWeeklyPrepReminder, setHasWeeklyPrepReminder] = useState(false)
+  const { items: watchlistItems } = useWatchlist(activeAccount?.id)
+  const hasWatchlistItems = watchlistItems.length > 0
 
   // Restore saved order from localStorage (client-side only)
   useEffect(() => {
     const order = loadOrder()
     if (order.length) setNavItems(applyOrder(DEFAULT_NAV_ITEMS, order))
-  }, [])
-
-  useEffect(() => {
-    setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
-    const handler = (e: Event) => setHasWatchlistItems((e as CustomEvent).detail.hasItems)
-    window.addEventListener('watchlist-changed', handler)
-    return () => window.removeEventListener('watchlist-changed', handler)
   }, [])
 
   useEffect(() => {

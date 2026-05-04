@@ -1,15 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { UserCircle } from 'lucide-react'
-import { useAccountContext } from '@/contexts/AccountContext'
+import { useAuth } from '@/hooks/useAuth'
 import { ProfileSheet } from './ProfileSheet'
 
 export function MobileHeader() {
-  const { activeAccount } = useAccountContext()
+  const { user } = useAuth()
   const [profileOpen, setProfileOpen] = useState(false)
-  const initial = activeAccount?.name?.[0]?.toUpperCase()
+  const [displayName, setDisplayName] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.json())
+      .then(d => setDisplayName(d.display_name ?? null))
+      .catch(() => {})
+  }, [])
+
+  const initial = displayName?.[0]?.toUpperCase()
+    ?? user?.email?.[0]?.toUpperCase()
 
   return (
     <>
@@ -25,8 +35,8 @@ export function MobileHeader() {
         <Image
           src="/logo/nous-logo-slogan.svg"
           alt="NOUS — Turn data into decisions"
-          width={120}
-          height={34}
+          width={112}
+          height={30}
           priority
         />
 
@@ -49,7 +59,11 @@ export function MobileHeader() {
         </button>
       </header>
 
-      <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <ProfileSheet
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        displayName={displayName}
+      />
     </>
   )
 }

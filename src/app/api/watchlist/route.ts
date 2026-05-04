@@ -55,6 +55,17 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
   const { account_id, ...itemData } = body
+
+  if (account_id) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('id', account_id)
+      .eq('user_id', user.id)
+      .single()
+    if (!account) return NextResponse.json({ error: 'Ungültige account_id' }, { status: 403 })
+  }
+
   const preset = CME_PRESETS[parsed.data.symbol]
   const { data, error } = await supabase
     .from('watchlist_items')

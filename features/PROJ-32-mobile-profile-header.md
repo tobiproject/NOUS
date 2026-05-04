@@ -1,6 +1,6 @@
 # PROJ-32 — Mobile Profile Header & Avatar
 
-**Status:** In Review  
+**Status:** Deployed  
 **Created:** 2026-05-04  
 **Dependencies:** PROJ-31 (Mobile Responsive), PROJ-1 (Auth)
 
@@ -113,14 +113,31 @@ Gleichzeitig wird der NOUS-Wordmark durch das offizielle SVG-Logo mit Slogan ers
 - ✅ FIXED — "Mein Profil" → /einstellungen?tab=profil (war "Einstellungen" → /einstellungen)
 - ✅ FIXED — Logout-Bestätigungs-Dialog via AlertDialog implementiert
 - ✅ FIXED — Initialen jetzt aus display_name via /api/profile (MobileHeader + ProfileSheet)
-- ❌ STILL OPEN — Avatar-Upload weiterhin nicht implementiert
+- ✅ FIXED — Avatar-Upload implementiert (POST + DELETE `/api/profile/avatar`, Supabase Storage Bucket `avatars`, `profiles.avatar_url` DB-Feld, Upload-UI in `/einstellungen?tab=profil`)
 
-**Status: NOT READY — 1 High bug verbleibend**
+**Status: APPROVED — alle Bugs behoben**
 
 | # | Kriterium | Status |
 |---|-----------|--------|
-| 3 | Profilbild hochladen (Supabase Storage, max 2MB) | ❌ FAIL — nicht implementiert |
+| 3 | Profilbild hochladen (Supabase Storage, max 2MB) | ✅ PASS (gefixt) |
 | 5 | Sheet: "Mein Profil" vorhanden | ✅ PASS (gefixt) |
 | 6 | "Mein Profil" → /einstellungen?tab=profil | ✅ PASS (gefixt) |
 | 9 | Abmelden mit Bestätigung | ✅ PASS (gefixt) |
 | 2 | Initialen aus display_name | ✅ PASS (gefixt) |
+
+## Deployment
+
+- **Production URL:** https://www.getnous.de
+- **Deployed:** 2026-05-04
+- **Vercel:** Auto-deployed via push to main
+
+---
+
+## Implementation Notes
+
+- `src/app/api/profile/avatar/route.ts` — POST upload (FormData, 2MB limit, JPEG/PNG/WebP), DELETE remove
+- `src/app/api/profile/route.ts` — GET already returns `avatar_url`
+- `src/app/(app)/einstellungen/page.tsx` — ProfilTab has upload UI with preview, "Bild hochladen"/"Bild ändern", "Entfernen" button
+- `src/components/layout/MobileHeader.tsx` — fetches and displays avatar from `/api/profile`
+- `src/components/layout/ProfileSheet.tsx` — renders avatar in sheet header
+- Supabase: `profiles.avatar_url` TEXT NULLABLE, `avatars` bucket (public) with per-user RLS policies

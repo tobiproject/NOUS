@@ -8,11 +8,14 @@ export async function GET() {
 
   const { data } = await supabase
     .from('profiles')
-    .select('display_name')
+    .select('display_name, avatar_url')
     .eq('id', user.id)
     .single()
 
-  return NextResponse.json({ display_name: data?.display_name ?? null })
+  return NextResponse.json({
+    display_name: data?.display_name ?? null,
+    avatar_url: data?.avatar_url ?? null,
+  })
 }
 
 export async function POST(req: NextRequest) {

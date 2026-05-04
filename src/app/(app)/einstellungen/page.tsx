@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info } from 'lucide-react'
+import Image from 'next/image'
+import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -66,6 +67,172 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
         {subtitle && <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>{subtitle}</p>}
       </div>
       {children}
+    </div>
+  )
+}
+
+// ─── Tab: Profil ─────────────────────────────────────────────────────────────
+
+function ProfilTab() {
+  const [displayName, setDisplayName] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [nameSaving, setNameSaving] = useState(false)
+  const [nameSaved, setNameSaved] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.json())
+      .then(d => {
+        setDisplayName(d.display_name ?? '')
+        setAvatarUrl(d.avatar_url ?? null)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const saveName = useCallback(async () => {
+    setNameSaving(true)
+    await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ display_name: displayName }),
+    })
+    setNameSaving(false)
+    setNameSaved(true)
+    setTimeout(() => setNameSaved(false), 2500)
+  }, [displayName])
+
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Datei zu groß — max. 2 MB')
+      return
+    }
+    setPreview(URL.createObjectURL(file))
+    setUploading(true)
+    const fd = new FormData()
+    fd.append('avatar', file)
+    const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd })
+    const data = await res.json()
+    if (res.ok) {
+      setAvatarUrl(data.avatar_url)
+      setPreview(null)
+      toast.success('Profilbild gespeichert')
+    } else {
+      toast.error(data.error ?? 'Upload fehlgeschlagen')
+      setPreview(null)
+    }
+    setUploading(false)
+    if (fileRef.current) fileRef.current.value = ''
+  }, [])
+
+  const removeAvatar = useCallback(async () => {
+    setRemoving(true)
+    const res = await fetch('/api/profile/avatar', { method: 'DELETE' })
+    if (res.ok) {
+      setAvatarUrl(null)
+      toast.success('Profilbild entfernt')
+    } else {
+      toast.error('Entfernen fehlgeschlagen')
+    }
+    setRemoving(false)
+  }, [])
+
+  const initial = displayName?.[0]?.toUpperCase() ?? '?'
+  const displayImg = preview ?? avatarUrl
+
+  if (loading) return (
+    <div className="space-y-4">
+      {[1, 2].map(i => <Skeleton key={i} className="h-20 rounded-lg" />)}
+    </div>
+  )
+
+  return (
+    <div className="space-y-6">
+      {/* Avatar */}
+      <Section title="Profilbild" subtitle="JPEG, PNG oder WebP — max. 2 MB">
+        <div className="flex items-center gap-5">
+          {/* Preview circle */}
+          <div className="relative shrink-0">
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden text-2xl font-bold"
+              style={{ background: 'rgba(41,98,255,0.18)', color: 'var(--brand-blue)' }}
+            >
+              {displayImg ? (
+                <Image
+                  src={displayImg}
+                  alt="Avatar"
+                  width={80}
+                  height={80}
+                  className="object-cover w-full h-full"
+                  unoptimized
+                />
+              ) : initial}
+            </div>
+            {uploading && (
+              <div className="absolute inset-0 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.55)' }}>
+                <Loader2 className="h-5 w-5 animate-spin text-white" />
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="h-8 px-4 text-[13px] font-semibold rounded gap-2"
+              style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+            >
+              <Camera className="h-3.5 w-3.5" />
+              {avatarUrl ? 'Bild ändern' : 'Bild hochladen'}
+            </Button>
+            {avatarUrl && (
+              <Button
+                onClick={removeAvatar}
+                disabled={removing}
+                className="h-8 px-4 text-[13px] font-semibold rounded gap-2"
+                style={{ background: 'transparent', color: 'rgba(255,80,80,0.8)', border: '1px solid rgba(255,80,80,0.25)' }}
+              >
+                {removing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                Entfernen
+              </Button>
+            )}
+          </div>
+        </div>
+      </Section>
+
+      {/* Display name */}
+      <Section title="Anzeigename" subtitle="Wie soll dich NOUS nennen? Wird für Begrüßungen und KI-Kontext verwendet.">
+        <div className="flex gap-2">
+          <Input
+            value={displayName}
+            onChange={e => setDisplayName(e.target.value)}
+            placeholder="z.B. Tobi"
+            className="flex-1"
+          />
+          <Button
+            onClick={saveName}
+            disabled={nameSaving}
+            className="h-8 px-4 text-[13px] font-semibold rounded shrink-0"
+            style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+          >
+            {nameSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : nameSaved ? <Check className="h-4 w-4" /> : 'Speichern'}
+          </Button>
+        </div>
+      </Section>
     </div>
   )
 }
@@ -699,7 +866,7 @@ function KiSystemTab() {
 function EinstellungenInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const tab = (searchParams.get('tab') ?? 'strategie') as 'strategie' | 'konten' | 'ki'
+  const tab = (searchParams.get('tab') ?? 'strategie') as 'profil' | 'strategie' | 'konten' | 'ki'
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -721,10 +888,15 @@ function EinstellungenInner() {
 
       <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList className="mb-6">
+          <TabsTrigger value="profil">Profil</TabsTrigger>
           <TabsTrigger value="strategie">Strategie</TabsTrigger>
           <TabsTrigger value="konten">Konten</TabsTrigger>
           <TabsTrigger value="ki">KI & System</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="profil">
+          <ProfilTab />
+        </TabsContent>
 
         <TabsContent value="strategie">
           <StrategieTab />

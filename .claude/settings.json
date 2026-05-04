@@ -16,7 +16,12 @@
       "Bash(kill:*)",
       "Bash(npx shadcn@latest add:*)",
       "Bash(ls:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(pkill -f \"git\")",
+      "Bash(pkill -f \"npm install\")"
+    ],
+    "additionalDirectories": [
+      "/Users/tobiasmeier/Desktop/NOUS/NOUS WebApp/.git"
     ]
   }
 }

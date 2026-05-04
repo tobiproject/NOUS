@@ -10,11 +10,15 @@ export function MobileHeader() {
   const { user } = useAuth()
   const [profileOpen, setProfileOpen] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/profile')
       .then(r => r.json())
-      .then(d => setDisplayName(d.display_name ?? null))
+      .then(d => {
+        setDisplayName(d.display_name ?? null)
+        setAvatarUrl(d.avatar_url ?? null)
+      })
       .catch(() => {})
   }, [])
 
@@ -43,15 +47,24 @@ export function MobileHeader() {
         <button
           onClick={() => setProfileOpen(true)}
           aria-label="Profil"
-          className="flex items-center justify-center rounded-full transition-opacity active:opacity-70"
+          className="flex items-center justify-center rounded-full transition-opacity active:opacity-70 overflow-hidden"
           style={{
             width: 34,
             height: 34,
-            background: 'rgba(41,98,255,0.16)',
+            background: avatarUrl ? 'transparent' : 'rgba(41,98,255,0.16)',
             color: 'var(--brand-blue)',
           }}
         >
-          {initial ? (
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt="Avatar"
+              width={34}
+              height={34}
+              className="object-cover w-full h-full rounded-full"
+              unoptimized
+            />
+          ) : initial ? (
             <span className="text-sm font-bold">{initial}</span>
           ) : (
             <UserCircle className="h-5 w-5" />
@@ -63,6 +76,7 @@ export function MobileHeader() {
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
         displayName={displayName}
+        avatarUrl={avatarUrl}
       />
     </>
   )

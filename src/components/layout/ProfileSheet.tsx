@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { User, Wallet, Info, LogOut, ChevronRight } from 'lucide-react'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
@@ -16,9 +17,10 @@ interface Props {
   open: boolean
   onClose: () => void
   displayName?: string | null
+  avatarUrl?: string | null
 }
 
-export function ProfileSheet({ open, onClose, displayName }: Props) {
+export function ProfileSheet({ open, onClose, displayName, avatarUrl }: Props) {
   const { user, logout } = useAuth()
   const { activeAccount } = useAccountContext()
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -49,10 +51,19 @@ export function ProfileSheet({ open, onClose, displayName }: Props) {
           {/* Profile header */}
           <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold shrink-0"
-              style={{ background: 'rgba(41,98,255,0.18)', color: 'var(--brand-blue)' }}
+              className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold shrink-0 overflow-hidden"
+              style={{ background: avatarUrl ? 'transparent' : 'rgba(41,98,255,0.18)', color: 'var(--brand-blue)' }}
             >
-              {initial}
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt="Avatar"
+                  width={48}
+                  height={48}
+                  className="object-cover w-full h-full"
+                  unoptimized
+                />
+              ) : initial}
             </div>
             <div className="min-w-0">
               <p className="text-[15px] font-semibold truncate" style={{ color: '#fff' }}>

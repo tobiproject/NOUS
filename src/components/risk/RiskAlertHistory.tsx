@@ -43,7 +43,7 @@ export function RiskAlertHistory({ alerts, isLoading }: Props) {
   return (
     <Card className="border-border/60">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Alert-Historie (letzte 30 Tage)</CardTitle>
+        <CardTitle className="text-base">Ausgelöste Risikoregeln — letzte 30 Tage</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {isLoading ? (
@@ -52,7 +52,7 @@ export function RiskAlertHistory({ alerts, isLoading }: Props) {
           </div>
         ) : alerts.length === 0 ? (
           <p className="text-sm text-muted-foreground px-6 pb-4">
-            Keine Alerts in den letzten 30 Tagen.
+            Keine Risikoregeln in den letzten 30 Tagen ausgelöst.
           </p>
         ) : (
           <Table>

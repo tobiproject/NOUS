@@ -120,3 +120,13 @@ Migration: Bestehende Einträge werden dem zuletzt aktiven Konto zugewiesen.
 **Verbleibender Bug (HIGH):**
 - `src/components/layout/AppSidebar.tsx:206-219` — `hasWatchlistItems` via `localStorage.getItem('nous-watchlist-has-items')` + `watchlist-changed` Event
 - Fix analog zu BottomNav: `useWatchlist(activeAccount?.id)` direkt verwenden, `hasWatchlistItems = watchlistItems.length > 0`
+
+---
+
+## QA Final — 2026-05-04 (AppSidebar Fix)
+
+- ✅ FIXED — AppSidebar nutzt jetzt `useWatchlist(activeAccount?.id)` direkt (localStorage entfernt)
+- ✅ Stern auf Desktop aktualisiert sich sofort beim Kontowechsel
+
+**Verbleibende offene Punkte:** Keine High/Medium Bugs mehr.  
+**Status: APPROVED** — bereit für Deploy.

@@ -1,6 +1,6 @@
 # PROJ-32 — Mobile Profile Header & Avatar
 
-**Status:** Planned  
+**Status:** In Review  
 **Created:** 2026-05-04  
 **Dependencies:** PROJ-31 (Mobile Responsive), PROJ-1 (Auth)
 
@@ -57,3 +57,50 @@ Gleichzeitig wird der NOUS-Wordmark durch das offizielle SVG-Logo mit Slogan ers
 - Bottom Sheet: gleiche GestureDrawer-Komponente wie BottomNav
 - Neues DB-Feld: `profiles.avatar_url` (text, nullable)
 - Logo-SVG: als React-Komponente oder `<Image>` aus `/public`
+
+---
+
+## QA Test Results — 2026-05-04
+
+**Tester:** QA Engineer  
+**Status: NOT READY — 1 High, 2 Medium, 1 Low bug**
+
+### Acceptance Criteria
+
+| # | Kriterium | Status |
+|---|-----------|--------|
+| 1 | NOUS-SVG-Logo mit Slogan erscheint auf Mobile im Header (md:hidden) | ✅ PASS |
+| 2 | Avatar-Kreis (34×34px, rund) zeigt Profilbild / Initialen | ✅ PASS (zeigt Initialen aus account name) |
+| 3 | Profilbild kann hochgeladen werden (Supabase Storage, max 2MB) | ❌ FAIL — nicht implementiert |
+| 4 | Bottom Sheet öffnet sich beim Antippen des Avatars | ✅ PASS |
+| 5 | Sheet enthält: Name + E-Mail, "Mein Profil", "Konten", "Über NOUS", "Abmelden" | ❌ FAIL — "Mein Profil" fehlt, zeigt "Einstellungen" |
+| 6 | "Mein Profil" → /einstellungen?tab=profil | ❌ FAIL — Link geht zu /einstellungen (kein Tab) |
+| 7 | "Konten" → /einstellungen?tab=konten | ✅ PASS |
+| 8 | "Über NOUS" → /about | ✅ PASS |
+| 9 | "Abmelden" → logout() mit Bestätigung | ❌ FAIL — kein Bestätigungs-Dialog, direkt logout() |
+| 10 | Sheet schließt sich beim Navigieren automatisch | ✅ PASS (onClick={onClose}) |
+| 11 | Avatar-Bild wird gecacht (keine Flickering) | N/A — kein Profilbild implementiert |
+
+**Bestanden: 6/10 (11 nicht anwendbar)**
+
+### Bugs
+
+**HIGH — Avatar-Upload nicht implementiert**
+- Spec: Upload zu Supabase Storage Bucket `avatars`, max 2MB, JPEG/PNG/WebP
+- Ist: Kein Upload-Feld in Einstellungen; `profiles.avatar_url` DB-Feld fehlt; immer Initialen-Anzeige
+- Schritte: /einstellungen öffnen → kein Profilbild-Upload vorhanden
+
+**MEDIUM — "Mein Profil" fehlt, falscher Link**
+- Spec: Menüpunkt "Mein Profil" → /einstellungen?tab=profil
+- Ist: Menüpunkt heißt "Einstellungen" und zeigt auf /einstellungen (kein ?tab=profil)
+- Datei: `src/components/layout/ProfileSheet.tsx:26`
+
+**LOW — Kein Logout-Bestätigungs-Dialog**
+- Spec: "Abmelden → logout() mit Bestätigung"
+- Ist: Direktes logout() ohne Bestätigung
+- Datei: `src/components/layout/ProfileSheet.tsx:20-23`
+
+**LOW — Initialen-Quelle ist account name statt display_name**
+- Spec: "zeigt erste(n) Buchstaben des display_name"
+- Ist: Initialen aus `activeAccount.name` (Kontoname), Fallback auf E-Mail-Initial
+- Datei: `src/components/layout/MobileHeader.tsx:12`

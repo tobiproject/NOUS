@@ -1,6 +1,6 @@
 # PROJ-33 — Watchlist per Konto
 
-**Status:** Planned  
+**Status:** In Review  
 **Created:** 2026-05-04  
 **Dependencies:** PROJ-23 (Watchlist), PROJ-1 (Auth & Multi-Account)
 
@@ -53,3 +53,46 @@ Migration: Bestehende Einträge werden dem zuletzt aktiven Konto zugewiesen.
 - RLS Policy muss um account_id-Join erweitert werden
 - `useWatchlist` Hook: Dependency auf `activeAccount.id`, re-fetch bei Wechsel
 - `watchlist-changed` Custom Event bleibt, wird aber kontoabhängig gefeuert
+
+---
+
+## QA Test Results — 2026-05-04
+
+**Tester:** QA Engineer  
+**Status: NOT READY — 2 High, 1 Medium (Security)**
+
+### Acceptance Criteria
+
+| # | Kriterium | Status |
+|---|-----------|--------|
+| 1 | `watchlist_items` erhält Spalte `account_id` (uuid, FK → accounts.id) | ⚠️ NICHT VERIFIZIERBAR (nur zur Laufzeit prüfbar) |
+| 2 | RLS: Nutzer sieht nur Items, bei denen account_id zu einem seiner Konten gehört | ⚠️ NICHT VERIFIZIERBAR |
+| 3 | API GET filtert nach account_id des aktiven Kontos | ✅ PASS (`?account_id=` wird korrekt gefiltert) |
+| 4 | API POST setzt account_id automatisch auf das aktive Konto | ✅ PASS |
+| 5 | `useWatchlist` akzeptiert accountId und lädt neu bei Account-Wechsel | ✅ PASS |
+| 6 | Migration: bestehende Items werden dem ersten aktiven Konto zugewiesen | ⚠️ NICHT VERIFIZIERBAR |
+| 7 | Watchlist-Stern in Sidebar/BottomNav ist kontoabhängig | ❌ FAIL — aktualisiert nur wenn Watchlist-Seite gemountet ist |
+| 8 | Beim Kontowechsel: Watchlist-Stern aktualisiert sich sofort | ❌ FAIL — abhängig von Seite/Kontext |
+
+**Bestanden: 3/5 verifizierbarer Kriterien**
+
+### Bugs
+
+**HIGH — useWatchlist ohne accountId in Komponenten außerhalb der Watchlist-Seite**
+- Betroffene Dateien:
+  - `src/components/journal/TradeFormSheet.tsx:440` — `useWatchlist()` ohne accountId
+  - `src/components/watchlist/AssetCombobox.tsx:33` — `useWatchlist()` ohne accountId
+  - `src/components/watchlist/AssetMultiPicker.tsx:32` — `useWatchlist()` ohne accountId
+- Folge: Beim Hinzufügen eines Trades oder Auswählen eines Assets sieht der Nutzer alle Watchlist-Items über alle Konten — nicht nur die des aktiven Kontos.
+- Reproduktion: Zwei Konten anlegen, Watchlists unterschiedlich befüllen → Trade-Formular öffnen
+
+**HIGH — Sidebar/BottomNav Watchlist-Stern wird nicht kontoabhängig aktualisiert**
+- Der `watchlist-changed` Event wird nur durch `useWatchlist` gefeuert, das nur auf der Watchlist-Seite oder in Journal/Asset-Komponenten gemountet ist.
+- Wenn der Nutzer auf dem Dashboard das Konto wechselt, zeigt der Stern den falschen Zustand aus localStorage — erst bei nächstem Besuch der Watchlist-Seite korrekt.
+- Reproduktion: Konto A (hat Watchlist-Items) → Konto B (leer) wechseln auf Dashboard → Stern bleibt gelb
+
+**MEDIUM (Security) — account_id in POST /api/watchlist nicht validiert**
+- Datei: `src/app/api/watchlist/route.ts:61`
+- Die `account_id` aus dem Request-Body wird nicht verifiziert, ob sie dem authentifizierten Nutzer gehört.
+- Ein Angreifer könnte Items einer fremden Account-ID zuordnen. Die `user_id` ist korrekt gesetzt, aber die Datenbankintegrität ist gefährdet wenn RLS nicht vollständig greift.
+- Fix: Vor dem Insert prüfen: `SELECT id FROM accounts WHERE id = account_id AND user_id = user.id`

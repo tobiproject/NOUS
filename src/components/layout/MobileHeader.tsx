@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { UserCircle } from 'lucide-react'
 import { useAccountContext } from '@/contexts/AccountContext'
@@ -10,33 +11,30 @@ export function MobileHeader() {
 
   return (
     <header
-      className="md:hidden flex items-center justify-between px-4 sticky top-0 z-30"
+      className="md:hidden flex items-center justify-between px-4 sticky top-0 z-30 shrink-0"
       style={{
-        height: 'calc(52px + env(safe-area-inset-top))',
+        height: 'calc(60px + env(safe-area-inset-top))',
         paddingTop: 'env(safe-area-inset-top)',
         background: '#0C0D0F',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      <span
-        className="font-bold text-white"
-        style={{
-          fontFamily: 'Manrope, sans-serif',
-          fontSize: '18px',
-          letterSpacing: '-0.02em',
-        }}
-      >
-        NOUS
-      </span>
+      <Image
+        src="/logo/nous-logo-slogan.svg"
+        alt="NOUS — Turn data into decisions"
+        width={120}
+        height={34}
+        priority
+      />
 
       <Link
         href="/einstellungen"
         aria-label="Einstellungen"
-        className="flex items-center justify-center rounded-full"
+        className="flex items-center justify-center rounded-full transition-opacity active:opacity-70"
         style={{
-          width: 32,
-          height: 32,
-          background: 'rgba(41,98,255,0.18)',
+          width: 34,
+          height: 34,
+          background: 'rgba(41,98,255,0.16)',
           color: 'var(--brand-blue)',
         }}
       >

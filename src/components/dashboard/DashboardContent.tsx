@@ -25,7 +25,7 @@ function filterByPeriod(points: EquityPoint[], days: PeriodDays): EquityPoint[] 
 }
 
 export function DashboardContent() {
-  const { activeAccount } = useAccountContext()
+  const { activeAccount, isLoading: accountLoading } = useAccountContext()
   const { fetchMetrics } = useDashboardMetrics()
   const { fetchTodayAlerts, dismissAlert } = useRiskAlerts()
 
@@ -71,6 +71,23 @@ export function DashboardContent() {
   }
 
   const visibleCurve = metrics ? filterByPeriod(metrics.equityCurve, period) : []
+
+  if (accountLoading) {
+    return (
+      <div className="space-y-5">
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-32 rounded" />
+          <Skeleton className="h-7 w-48 rounded" />
+          <Skeleton className="h-3 w-24 rounded" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
+        </div>
+        <Skeleton className="h-72 rounded-lg" />
+        <Skeleton className="h-56 rounded-lg" />
+      </div>
+    )
+  }
 
   if (!activeAccount) {
     return (

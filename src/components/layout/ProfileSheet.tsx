@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { User, Wallet, Info, LogOut, ChevronRight } from 'lucide-react'
+import { User, Info, LogOut, ChevronRight } from 'lucide-react'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -30,9 +30,8 @@ export function ProfileSheet({ open, onClose, displayName, avatarUrl }: Props) {
     ?? '?'
 
   const menuItems = [
-    { href: '/einstellungen?tab=profil', icon: User,   label: 'Mein Profil' },
-    { href: '/einstellungen?tab=konten', icon: Wallet, label: 'Konten'      },
-    { href: '/about',                    icon: Info,   label: 'Über NOUS'   },
+    { href: '/einstellungen?tab=profil', icon: User, label: 'Mein Profil' },
+    { href: '/about',                    icon: Info, label: 'Über NOUS'   },
   ]
 
   return (

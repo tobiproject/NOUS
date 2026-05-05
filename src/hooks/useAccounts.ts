@@ -67,6 +67,28 @@ export function useAccounts() {
     }
   }
 
+  async function updateAccount(accountId: string, input: Partial<CreateAccountInput>) {
+    setIsMutating(true)
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .update({
+          name: input.name,
+          start_balance: input.start_balance,
+          currency: input.currency,
+          broker: input.broker ?? null,
+          description: input.description ?? null,
+          account_type: input.account_type ?? null,
+        })
+        .eq('id', accountId)
+
+      if (!error) await refreshAccounts()
+      return { error }
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
   async function deleteAccount(accountId: string) {
     setIsMutating(true)
     try {
@@ -85,6 +107,7 @@ export function useAccounts() {
     isMutating,
     setActiveAccount,
     createAccount,
+    updateAccount,
     archiveAccount,
     deleteAccount,
   }

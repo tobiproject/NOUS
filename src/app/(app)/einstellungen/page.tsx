@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X } from 'lucide-react'
+import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -245,15 +245,9 @@ function StrategieTab() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [newRule, setNewRule] = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const [nameSaving, setNameSaving] = useState(false)
-  const [nameSaved, setNameSaved] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/strategy').then(r => r.json()),
-      fetch('/api/profile').then(r => r.json()),
-    ]).then(([stratData, profileData]) => {
+    fetch('/api/strategy').then(r => r.json()).then(stratData => {
       if (stratData.strategy) {
         setStrategy({
           name: stratData.strategy.name || '',
@@ -263,21 +257,8 @@ function StrategieTab() {
           instruments: stratData.strategy.instruments || [],
         })
       }
-      setDisplayName(profileData.display_name ?? '')
     }).finally(() => setLoading(false))
   }, [])
-
-  const saveName = useCallback(async () => {
-    setNameSaving(true)
-    await fetch('/api/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ display_name: displayName }),
-    })
-    setNameSaving(false)
-    setNameSaved(true)
-    setTimeout(() => setNameSaved(false), 2500)
-  }, [displayName])
 
   const save = useCallback(async () => {
     setSaving(true)
@@ -342,25 +323,6 @@ function StrategieTab() {
           </Button>
         </div>
       </div>
-
-      <Section title="Dein Profil" subtitle="Wird für personalisierte Begrüßungen und KI-Kontext verwendet">
-        <div className="flex gap-2">
-          <Input
-            value={displayName}
-            onChange={e => setDisplayName(e.target.value)}
-            placeholder="Wie soll dich NOUS nennen? z.B. Tobi"
-            className="flex-1"
-          />
-          <Button
-            onClick={saveName}
-            disabled={nameSaving}
-            className="h-8 px-4 text-[13px] font-semibold rounded shrink-0"
-            style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
-          >
-            {nameSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : nameSaved ? <Check className="h-4 w-4" /> : 'Speichern'}
-          </Button>
-        </div>
-      </Section>
 
       <Section title="Strategie-Name">
         <Input
@@ -546,28 +508,18 @@ function KontenTab() {
   )
 }
 
-// ─── Tab: KI & System ────────────────────────────────────────────────────────
+// ─── Tab: API Key ─────────────────────────────────────────────────────────────
 
-function KiSystemTab() {
+function ApiKeyTab() {
   const [aiProvider, setAiProvider] = useState<'anthropic' | 'openai'>('anthropic')
   const [aiApiKey, setAiApiKey] = useState('')
   const [aiSaving, setAiSaving] = useState(false)
   const [aiSaved, setAiSaved] = useState(false)
-  const [notifEmail, setNotifEmail] = useState('')
-  const [notifEmailEnabled, setNotifEmailEnabled] = useState(false)
-  const [propFirmReminderEnabled, setPropFirmReminderEnabled] = useState(false)
-  const [notifSaving, setNotifSaving] = useState(false)
-  const { permission, subscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications()
 
   useEffect(() => {
     fetch('/api/ai-settings').then(r => r.json()).then(d => {
       setAiProvider(d.provider ?? 'anthropic')
       setAiApiKey(d.api_key ?? '')
-    })
-    fetch('/api/notifications/settings').then(r => r.json()).then(d => {
-      setNotifEmailEnabled(d.email_enabled ?? false)
-      setNotifEmail(d.email_address ?? '')
-      setPropFirmReminderEnabled(d.prop_firm_reminder_enabled ?? false)
     })
   }, [])
 
@@ -583,48 +535,8 @@ function KiSystemTab() {
     setTimeout(() => setAiSaved(false), 2500)
   }, [aiProvider, aiApiKey])
 
-  const saveNotifSettings = useCallback(async () => {
-    setNotifSaving(true)
-    await fetch('/api/notifications/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email_enabled: notifEmailEnabled,
-        email_address: notifEmail,
-        prop_firm_reminder_enabled: propFirmReminderEnabled,
-      }),
-    })
-    setNotifSaving(false)
-    toast.success('Einstellungen gespeichert')
-  }, [notifEmailEnabled, notifEmail, propFirmReminderEnabled])
-
-  const handlePushToggle = async () => {
-    if (subscribed || permission === 'granted') {
-      await unsubscribe()
-      toast.success('Push-Benachrichtigungen deaktiviert')
-    } else {
-      const ok = await subscribe()
-      if (ok) toast.success('Push-Benachrichtigungen aktiviert')
-      else if (permission === 'denied') toast.error('Browser hat Benachrichtigungen blockiert — bitte in Browser-Einstellungen erlauben')
-    }
-  }
-
-  const sendTestNotification = async () => {
-    if (!('serviceWorker' in navigator)) return
-    const reg = await navigator.serviceWorker.ready
-    await reg.showNotification('NOUS — Test', {
-      body: 'Push-Benachrichtigungen funktionieren! Samstag & Sonntag erhältst du eine Erinnerung.',
-      icon: '/icon.png',
-      badge: '/icon.png',
-      tag: 'nous-test',
-      data: { url: '/wochenvorbereitung' },
-    } as NotificationOptions)
-  }
-
   return (
     <div className="space-y-6">
-
-      {/* KI-Provider */}
       <Section title="KI-Provider" subtitle="Eigenen API-Key hinterlegen — NOUS nutzt dann dein Konto statt des Server-Schlüssels.">
         <div className="space-y-4">
           <div className="flex gap-2">
@@ -733,11 +645,69 @@ function KiSystemTab() {
           )}
         </div>
       </Section>
+    </div>
+  )
+}
 
-      {/* Notifications */}
-      <Section title="Benachrichtigungen" subtitle="Erinnerungen für Wochenvorbereitung — samstags & sonntags 9:00 Uhr">
+// ─── Tab: Benachrichtigungen ──────────────────────────────────────────────────
+
+function BenachrichtigungenTab() {
+  const [notifEmail, setNotifEmail] = useState('')
+  const [notifEmailEnabled, setNotifEmailEnabled] = useState(false)
+  const [propFirmReminderEnabled, setPropFirmReminderEnabled] = useState(false)
+  const [notifSaving, setNotifSaving] = useState(false)
+  const { permission, subscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications()
+
+  useEffect(() => {
+    fetch('/api/notifications/settings').then(r => r.json()).then(d => {
+      setNotifEmailEnabled(d.email_enabled ?? false)
+      setNotifEmail(d.email_address ?? '')
+      setPropFirmReminderEnabled(d.prop_firm_reminder_enabled ?? false)
+    })
+  }, [])
+
+  const saveNotifSettings = useCallback(async () => {
+    setNotifSaving(true)
+    await fetch('/api/notifications/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email_enabled: notifEmailEnabled,
+        email_address: notifEmail,
+        prop_firm_reminder_enabled: propFirmReminderEnabled,
+      }),
+    })
+    setNotifSaving(false)
+    toast.success('Einstellungen gespeichert')
+  }, [notifEmailEnabled, notifEmail, propFirmReminderEnabled])
+
+  const handlePushToggle = async () => {
+    if (subscribed || permission === 'granted') {
+      await unsubscribe()
+      toast.success('Push-Benachrichtigungen deaktiviert')
+    } else {
+      const ok = await subscribe()
+      if (ok) toast.success('Push-Benachrichtigungen aktiviert')
+      else if (permission === 'denied') toast.error('Browser hat Benachrichtigungen blockiert — bitte in Browser-Einstellungen erlauben')
+    }
+  }
+
+  const sendTestNotification = async () => {
+    if (!('serviceWorker' in navigator)) return
+    const reg = await navigator.serviceWorker.ready
+    await reg.showNotification('NOUS — Test', {
+      body: 'Push-Benachrichtigungen funktionieren! Samstag & Sonntag erhältst du eine Erinnerung.',
+      icon: '/icon.png',
+      badge: '/icon.png',
+      tag: 'nous-test',
+      data: { url: '/wochenvorbereitung' },
+    } as NotificationOptions)
+  }
+
+  return (
+    <div className="space-y-6">
+      <Section title="Browser Push" subtitle="Erinnerungen für Wochenvorbereitung — samstags & sonntags 9:00 Uhr">
         <div className="space-y-4">
-          {/* Push */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               {(subscribed || permission === 'granted') ? (
@@ -783,19 +753,15 @@ function KiSystemTab() {
               </Button>
             </div>
           </div>
+        </div>
+      </Section>
 
-          <div style={{ borderTop: '1px solid var(--border-raw)' }} />
-
-          {/* Prop-Firm Regelwerk Erinnerung */}
+      <Section title="Prop-Firm Regelwerk" subtitle="Mo–Fr um 09:00 Uhr — deine Regeln als Push-Erinnerung vor dem Trading">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <Bell className="h-4 w-4" style={{ color: propFirmReminderEnabled ? 'var(--brand-blue)' : 'var(--fg-4)' }} />
-              <div>
-                <p className="text-sm font-medium" style={{ color: 'var(--fg-1)' }}>Prop-Firm Regelwerk</p>
-                <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
-                  Mo–Fr um 09:00 Uhr — deine Regeln als Push-Erinnerung vor dem Trading
-                </p>
-              </div>
+              <p className="text-sm font-medium" style={{ color: 'var(--fg-1)' }}>Täglich erinnern</p>
             </div>
             <button
               onClick={() => setPropFirmReminderEnabled(v => !v)}
@@ -810,42 +776,37 @@ function KiSystemTab() {
             </button>
           </div>
           {propFirmReminderEnabled && !(subscribed || permission === 'granted') && (
-            <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
-              Browser Push muss erst aktiviert sein.
-            </p>
+            <p className="text-xs" style={{ color: 'var(--fg-4)' }}>Browser Push muss erst aktiviert sein.</p>
           )}
+        </div>
+      </Section>
 
-          <div style={{ borderTop: '1px solid var(--border-raw)' }} />
-
-          {/* Email */}
-          <div className="space-y-2.5">
+      <Section title="E-Mail Erinnerung" subtitle="Benötigt einen konfigurierten Resend-Key (RESEND_API_KEY)">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <Mail className="h-4 w-4" style={{ color: notifEmailEnabled ? 'var(--brand-blue)' : 'var(--fg-4)' }} />
-              <div className="flex-1">
-                <p className="text-sm font-medium" style={{ color: 'var(--fg-1)' }}>E-Mail Erinnerung</p>
-                <p className="text-xs" style={{ color: 'var(--fg-4)' }}>Benötigt einen konfigurierten Resend-Key (RESEND_API_KEY)</p>
-              </div>
-              <button
-                onClick={() => setNotifEmailEnabled(v => !v)}
-                className="w-10 h-5 rounded-full transition-colors shrink-0 relative"
-                style={{ background: notifEmailEnabled ? 'var(--brand-blue)' : 'var(--bg-4)' }}
-              >
-                <span
-                  className="absolute top-0.5 w-4 h-4 rounded-full transition-all"
-                  style={{ background: '#fff', left: notifEmailEnabled ? '22px' : '2px' }}
-                />
-              </button>
+              <p className="text-sm font-medium" style={{ color: 'var(--fg-1)' }}>E-Mail aktivieren</p>
             </div>
-            {notifEmailEnabled && (
-              <Input
-                type="email"
-                value={notifEmail}
-                onChange={e => setNotifEmail(e.target.value)}
-                placeholder="deine@email.de"
+            <button
+              onClick={() => setNotifEmailEnabled(v => !v)}
+              className="w-10 h-5 rounded-full transition-colors shrink-0 relative"
+              style={{ background: notifEmailEnabled ? 'var(--brand-blue)' : 'var(--bg-4)' }}
+            >
+              <span
+                className="absolute top-0.5 w-4 h-4 rounded-full transition-all"
+                style={{ background: '#fff', left: notifEmailEnabled ? '22px' : '2px' }}
               />
-            )}
+            </button>
           </div>
-
+          {notifEmailEnabled && (
+            <Input
+              type="email"
+              value={notifEmail}
+              onChange={e => setNotifEmail(e.target.value)}
+              placeholder="deine@email.de"
+            />
+          )}
           <Button
             onClick={saveNotifSettings}
             disabled={notifSaving}
@@ -861,12 +822,289 @@ function KiSystemTab() {
   )
 }
 
+// ─── Tab: Knowledge Base ──────────────────────────────────────────────────────
+
+interface KnowledgeDoc {
+  id: string
+  name: string
+  file_size: number
+  status: 'processing' | 'ready' | 'error'
+  error_message: string | null
+  created_at: string
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function KnowledgeBaseTab() {
+  const [docs, setDocs] = useState<KnowledgeDoc[]>([])
+  const [kbLoading, setKbLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [dragOver, setDragOver] = useState(false)
+  const [kbTab, setKbTab] = useState<'pdf' | 'text'>('pdf')
+  const [textName, setTextName] = useState('')
+  const [textContent, setTextContent] = useState('')
+  const [savingText, setSavingText] = useState(false)
+  const kbInputRef = useRef<HTMLInputElement>(null)
+
+  const loadDocs = useCallback(async () => {
+    const res = await fetch('/api/knowledge-base')
+    const data = await res.json()
+    setDocs(data.documents ?? [])
+    setKbLoading(false)
+  }, [])
+
+  useEffect(() => { loadDocs() }, [loadDocs])
+
+  const uploadFile = async (file: File) => {
+    if (file.type !== 'application/pdf') { toast.error('Nur PDF-Dateien erlaubt'); return }
+    if (file.size > 20 * 1024 * 1024) { toast.error('Datei zu groß (max. 20 MB)'); return }
+    setUploading(true)
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch('/api/knowledge-base', { method: 'POST', body: form })
+    const data = await res.json()
+    setUploading(false)
+    if (!res.ok) { toast.error(data.error ?? 'Upload fehlgeschlagen'); return }
+    if (data.document?.status === 'error') {
+      toast.error(`"${file.name}" konnte nicht gelesen werden — Text einfügen als Alternative`)
+    } else {
+      toast.success(`"${file.name}" hochgeladen`)
+    }
+    loadDocs()
+  }
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files) return
+    Array.from(files).forEach(uploadFile)
+  }
+
+  const handleSaveText = async () => {
+    if (!textName.trim() || !textContent.trim()) { toast.error('Bitte Name und Inhalt ausfüllen'); return }
+    setSavingText(true)
+    const res = await fetch('/api/knowledge-base/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: textName.trim(), text: textContent.trim() }),
+    })
+    const data = await res.json()
+    setSavingText(false)
+    if (!res.ok) { toast.error(data.error ?? 'Fehler beim Speichern'); return }
+    toast.success(`"${textName}" gespeichert`)
+    setTextName('')
+    setTextContent('')
+    loadDocs()
+  }
+
+  const startRename = (doc: KnowledgeDoc) => { setRenamingId(doc.id); setRenameValue(doc.name) }
+
+  const commitRename = async (id: string) => {
+    const name = renameValue.trim()
+    if (!name) { setRenamingId(null); return }
+    await fetch(`/api/knowledge-base/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    setDocs(prev => prev.map(d => d.id === id ? { ...d, name } : d))
+    setRenamingId(null)
+  }
+
+  const handleDelete = async (id: string, name: string) => {
+    setDeletingId(id)
+    const res = await fetch(`/api/knowledge-base/${id}`, { method: 'DELETE' })
+    setDeletingId(null)
+    if (res.ok) {
+      setDocs(prev => prev.filter(d => d.id !== id))
+      toast.success(`"${name}" gelöscht`)
+    } else {
+      toast.error('Löschen fehlgeschlagen')
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div
+        className="rounded-lg px-5 py-4 flex items-start gap-3"
+        style={{ background: 'rgba(41,98,255,0.08)', border: '1px solid rgba(41,98,255,0.2)' }}
+      >
+        <Brain className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--brand-blue)' }} />
+        <p className="text-sm" style={{ color: 'var(--fg-2)' }}>
+          Die KI liest deine hochgeladenen Dokumente und bezieht sich bei Trade-Analysen und der Wochenvorbereitung explizit darauf.
+        </p>
+      </div>
+
+      {/* Upload tabs */}
+      <div className="space-y-3">
+        <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
+          {([
+            { id: 'pdf' as const, label: 'PDF hochladen', icon: Upload },
+            { id: 'text' as const, label: 'Text einfügen', icon: Type },
+          ]).map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setKbTab(id)}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors"
+              style={{
+                background: kbTab === id ? 'var(--bg-3)' : 'transparent',
+                color: kbTab === id ? 'var(--fg-1)' : 'var(--fg-3)',
+              }}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {kbTab === 'pdf' && (
+          <div
+            className="rounded-lg border-2 border-dashed transition-colors"
+            style={{ borderColor: dragOver ? 'var(--brand-blue)' : 'var(--border-raw)' }}
+            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files) }}
+          >
+            <div className="flex flex-col items-center gap-3 py-10 px-6 text-center">
+              {uploading ? (
+                <>
+                  <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--brand-blue)' }} />
+                  <p className="text-sm" style={{ color: 'var(--fg-3)' }}>PDF wird verarbeitet…</p>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-8 w-8 opacity-30" style={{ color: 'var(--fg-3)' }} />
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--fg-2)' }}>PDF hierher ziehen oder</p>
+                    <button onClick={() => kbInputRef.current?.click()} className="text-sm underline" style={{ color: 'var(--brand-blue)' }}>
+                      Datei auswählen
+                    </button>
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--fg-4)' }}>Nur PDF · max. 20 MB · max. 10 Dokumente</p>
+                </>
+              )}
+            </div>
+            <input ref={kbInputRef} type="file" accept="application/pdf" multiple className="hidden" onChange={e => handleFiles(e.target.files)} />
+          </div>
+        )}
+
+        {kbTab === 'text' && (
+          <div className="rounded-lg p-5 space-y-3" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
+            <p className="text-xs" style={{ color: 'var(--fg-3)' }}>Für passwortgeschützte PDFs oder andere Formate: Inhalt direkt einfügen.</p>
+            <Input
+              value={textName}
+              onChange={e => setTextName(e.target.value)}
+              placeholder="Name des Dokuments"
+              style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-1)' }}
+            />
+            <Textarea
+              value={textContent}
+              onChange={e => setTextContent(e.target.value)}
+              placeholder="Inhalt hier einfügen…"
+              rows={10}
+              className="resize-none font-mono text-xs"
+              style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-1)' }}
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs" style={{ color: 'var(--fg-4)' }}>{textContent.length.toLocaleString('de-DE')} / 200.000 Zeichen</span>
+              <Button
+                onClick={handleSaveText}
+                disabled={savingText || !textName.trim() || !textContent.trim()}
+                className="h-8 px-4 text-[13px] font-semibold rounded"
+                style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
+              >
+                {savingText ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : null}
+                Speichern
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Document list */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>
+          Dokumente ({docs.length}/10)
+        </p>
+        {kbLoading ? (
+          <div className="flex items-center gap-2 py-4" style={{ color: 'var(--fg-4)' }}>
+            <Loader2 className="h-4 w-4 animate-spin" /><span className="text-sm">Laden…</span>
+          </div>
+        ) : docs.length === 0 ? (
+          <div className="rounded-lg py-8 text-center" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
+            <FileText className="h-8 w-8 mx-auto mb-2 opacity-20" style={{ color: 'var(--fg-4)' }} />
+            <p className="text-sm" style={{ color: 'var(--fg-4)' }}>Noch keine Dokumente hochgeladen</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {docs.map(doc => (
+              <div key={doc.id} className="flex items-center gap-3 rounded-lg px-4 py-3" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
+                <FileText className="h-4 w-4 shrink-0" style={{ color: 'var(--fg-4)' }} />
+                <div className="flex-1 min-w-0">
+                  {renamingId === doc.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={e => setRenameValue(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') commitRename(doc.id); if (e.key === 'Escape') setRenamingId(null) }}
+                        onBlur={() => commitRename(doc.id)}
+                        className="flex-1 min-w-0 text-sm font-medium bg-transparent border-b outline-none"
+                        style={{ color: 'var(--fg-1)', borderColor: 'var(--brand-blue)' }}
+                      />
+                      <button onClick={() => commitRename(doc.id)}><Check className="h-3.5 w-3.5" style={{ color: 'var(--long)' }} /></button>
+                      <button onClick={() => setRenamingId(null)}><X className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} /></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => startRename(doc)} className="flex items-center gap-1.5 group/name w-full text-left">
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--fg-1)' }}>{doc.name}</p>
+                      <Pencil className="h-3 w-3 shrink-0 opacity-0 group-hover/name:opacity-100 transition-opacity" style={{ color: 'var(--fg-4)' }} />
+                    </button>
+                  )}
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--fg-4)' }}>
+                    {formatBytes(doc.file_size)} · {new Date(doc.created_at).toLocaleDateString('de-DE')}
+                  </p>
+                  {doc.status === 'error' && doc.error_message && (
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--short)' }}>{doc.error_message}</p>
+                  )}
+                </div>
+                <div className="shrink-0">
+                  {doc.status === 'processing' && <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--fg-4)' }}><Loader2 className="h-3 w-3 animate-spin" /> Verarbeitung…</span>}
+                  {doc.status === 'ready' && <CheckCircle className="h-4 w-4" style={{ color: 'var(--long)' }} />}
+                  {doc.status === 'error' && <AlertTriangle className="h-4 w-4" style={{ color: 'var(--short)' }} />}
+                </div>
+                <button
+                  onClick={() => handleDelete(doc.id, doc.name)}
+                  disabled={deletingId === doc.id}
+                  className="shrink-0 p-1 rounded transition-colors"
+                  style={{ color: 'var(--fg-4)' }}
+                  onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = 'var(--short)')}
+                  onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = 'var(--fg-4)')}
+                >
+                  {deletingId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
+
+type TabId = 'profil' | 'strategie' | 'konten' | 'api-key' | 'knowledge-base' | 'benachrichtigungen'
 
 function EinstellungenInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const tab = (searchParams.get('tab') ?? 'strategie') as 'profil' | 'strategie' | 'konten' | 'ki'
+  const tab = (searchParams.get('tab') ?? 'profil') as TabId
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -877,22 +1115,26 @@ function EinstellungenInner() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <div className="eyebrow mb-1">Konfiguration</div>
+        <div className="eyebrow mb-1">Mein Konto</div>
         <h1
           className="text-2xl font-bold tracking-tight"
           style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}
         >
-          Einstellungen
+          Mein Profil
         </h1>
       </div>
 
       <Tabs value={tab} onValueChange={handleTabChange}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="profil">Profil</TabsTrigger>
-          <TabsTrigger value="strategie">Strategie</TabsTrigger>
-          <TabsTrigger value="konten">Konten</TabsTrigger>
-          <TabsTrigger value="ki">KI & System</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto mb-6">
+          <TabsList className="w-max min-w-full">
+            <TabsTrigger value="profil">Profil</TabsTrigger>
+            <TabsTrigger value="strategie">Strategie</TabsTrigger>
+            <TabsTrigger value="konten">Konten</TabsTrigger>
+            <TabsTrigger value="api-key">API Key</TabsTrigger>
+            <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
+            <TabsTrigger value="benachrichtigungen">Benachrichtigungen</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="profil">
           <ProfilTab />
@@ -906,8 +1148,16 @@ function EinstellungenInner() {
           <KontenTab />
         </TabsContent>
 
-        <TabsContent value="ki">
-          <KiSystemTab />
+        <TabsContent value="api-key">
+          <ApiKeyTab />
+        </TabsContent>
+
+        <TabsContent value="knowledge-base">
+          <KnowledgeBaseTab />
+        </TabsContent>
+
+        <TabsContent value="benachrichtigungen">
+          <BenachrichtigungenTab />
         </TabsContent>
       </Tabs>
     </div>

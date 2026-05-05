@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { type Account } from '@/contexts/AccountContext'
 import { cn } from '@/lib/utils'
 import { FullExportButton } from '@/components/export/FullExportButton'
+import { AccountEditDialog } from './AccountEditDialog'
 
 interface AccountCardProps {
   account: Account
@@ -64,6 +65,7 @@ export function AccountCard({ account, isActive, onSelect, onArchive, onDelete }
         )}
 
         <div className="flex gap-2 pt-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
+          <AccountEditDialog account={account} />
           <FullExportButton accountId={account.id} accountName={account.name} />
           <Button
             variant="ghost"

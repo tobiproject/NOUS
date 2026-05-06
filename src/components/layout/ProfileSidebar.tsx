@@ -22,12 +22,12 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 }
 
 const NAV_ITEMS = [
-  { href: '/einstellungen?tab=profil',            icon: User2,    label: 'Mein Profil' },
-  { href: '/einstellungen?tab=strategie',          icon: Target,   label: 'Strategie' },
-  { href: '/einstellungen?tab=konten',             icon: Wallet,   label: 'Konten' },
-  { href: '/einstellungen?tab=api-key',            icon: Key,      label: 'API Key' },
-  { href: '/einstellungen?tab=knowledge-base',     icon: BookOpen, label: 'Knowledge Base' },
-  { href: '/einstellungen?tab=benachrichtigungen', icon: Bell,     label: 'Benachrichtigungen' },
+  { href: '/einstellungen?tab=profil&solo=1',            icon: User2,    label: 'Mein Profil' },
+  { href: '/einstellungen?tab=strategie&solo=1',          icon: Target,   label: 'Strategie' },
+  { href: '/einstellungen?tab=konten&solo=1',             icon: Wallet,   label: 'Konten' },
+  { href: '/einstellungen?tab=api-key&solo=1',            icon: Key,      label: 'API Key' },
+  { href: '/einstellungen?tab=knowledge-base&solo=1',     icon: BookOpen, label: 'Knowledge Base' },
+  { href: '/einstellungen?tab=benachrichtigungen&solo=1', icon: Bell,     label: 'Benachrichtigungen' },
 ]
 
 export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props) {
@@ -43,8 +43,8 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
       <SheetContent
         side="right"
-        className="p-0 border-0 focus:outline-none flex flex-col"
-        style={{ background: '#0F1013', width: 'min(300px, 85vw)' }}
+        className="p-0 border-0 focus:outline-none flex flex-col profile-sidebar-sheet"
+        style={{ background: '#0F1013', width: 'min(270px, 52vw)' }}
       >
         {/* Close */}
         <button

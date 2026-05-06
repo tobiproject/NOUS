@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil } from 'lucide-react'
+import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { applyFontSize, getStoredFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX } from '@/components/layout/FontSizeApplier'
@@ -1169,15 +1169,58 @@ function KnowledgeBaseTab() {
 
 type TabId = 'profil' | 'strategie' | 'konten' | 'api-key' | 'knowledge-base' | 'benachrichtigungen'
 
+const TAB_LABELS: Record<TabId, string> = {
+  'profil':              'Profil',
+  'strategie':           'Strategie',
+  'konten':              'Konten',
+  'api-key':             'API Key',
+  'knowledge-base':      'Knowledge Base',
+  'benachrichtigungen':  'Benachrichtigungen',
+}
+
 function EinstellungenInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const tab = (searchParams.get('tab') ?? 'profil') as TabId
+  const solo = searchParams.get('solo') === '1'
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', value)
     router.replace(`/einstellungen?${params.toString()}`, { scroll: false })
+  }
+
+  const tabContent: Record<TabId, React.ReactNode> = {
+    'profil':             <ProfilTab />,
+    'strategie':          <StrategieTab />,
+    'konten':             <KontenTab />,
+    'api-key':            <ApiKeyTab />,
+    'knowledge-base':     <KnowledgeBaseTab />,
+    'benachrichtigungen': <BenachrichtigungenTab />,
+  }
+
+  if (solo) {
+    return (
+      <div className="space-y-6 max-w-2xl">
+        <div>
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1 text-sm mb-4"
+            style={{ color: 'var(--brand-blue)' }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Zurück
+          </button>
+          <h1
+            className="text-2xl font-bold tracking-tight"
+            style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}
+          >
+            {TAB_LABELS[tab]}
+          </h1>
+        </div>
+        {tabContent[tab]}
+      </div>
+    )
   }
 
   return (
@@ -1204,29 +1247,12 @@ function EinstellungenInner() {
           </TabsList>
         </div>
 
-        <TabsContent value="profil">
-          <ProfilTab />
-        </TabsContent>
-
-        <TabsContent value="strategie">
-          <StrategieTab />
-        </TabsContent>
-
-        <TabsContent value="konten">
-          <KontenTab />
-        </TabsContent>
-
-        <TabsContent value="api-key">
-          <ApiKeyTab />
-        </TabsContent>
-
-        <TabsContent value="knowledge-base">
-          <KnowledgeBaseTab />
-        </TabsContent>
-
-        <TabsContent value="benachrichtigungen">
-          <BenachrichtigungenTab />
-        </TabsContent>
+        <TabsContent value="profil"><ProfilTab /></TabsContent>
+        <TabsContent value="strategie"><StrategieTab /></TabsContent>
+        <TabsContent value="konten"><KontenTab /></TabsContent>
+        <TabsContent value="api-key"><ApiKeyTab /></TabsContent>
+        <TabsContent value="knowledge-base"><KnowledgeBaseTab /></TabsContent>
+        <TabsContent value="benachrichtigungen"><BenachrichtigungenTab /></TabsContent>
       </Tabs>
     </div>
   )

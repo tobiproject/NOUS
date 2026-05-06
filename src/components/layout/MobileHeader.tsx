@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { UserCircle, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
-import { ProfileSheet } from './ProfileSheet'
+import { ProfileSidebar } from './ProfileSidebar'
 import { AccountSwitcherSheet } from './AccountSwitcherSheet'
 
 export function MobileHeader() {
@@ -94,7 +94,7 @@ export function MobileHeader() {
         </button>
       </header>
 
-      <ProfileSheet
+      <ProfileSidebar
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
         displayName={displayName}

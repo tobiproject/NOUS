@@ -157,58 +157,72 @@ function ProfilTab() {
     <div className="space-y-6">
       {/* Avatar */}
       <Section title="Profilbild" subtitle="JPEG, PNG oder WebP — max. 2 MB">
-        <div className="flex items-center gap-5">
-          {/* Preview circle */}
-          <div className="relative shrink-0">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        {/* Centered on mobile, left-aligned on desktop */}
+        <div className="flex flex-col items-center sm:items-start gap-3">
+          {/* Avatar circle with overlay */}
+          <div
+            className="group relative w-24 h-24 rounded-full cursor-pointer shrink-0"
+            onClick={() => !uploading && !removing && fileRef.current?.click()}
+          >
+            {/* Image / initials */}
             <div
-              className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden text-2xl font-bold"
+              className="w-full h-full rounded-full flex items-center justify-center overflow-hidden text-2xl font-bold"
               style={{ background: 'rgba(41,98,255,0.18)', color: 'var(--brand-blue)' }}
             >
               {displayImg ? (
-                <Image
-                  src={displayImg}
-                  alt="Avatar"
-                  width={80}
-                  height={80}
-                  className="object-cover w-full h-full"
-                  unoptimized
-                />
+                <Image src={displayImg} alt="Avatar" width={96} height={96} className="object-cover w-full h-full" unoptimized />
               ) : initial}
             </div>
-            {uploading && (
-              <div className="absolute inset-0 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.55)' }}>
+
+            {/* Hover overlay (desktop) + loading */}
+            {uploading || removing ? (
+              <div className="absolute inset-0 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
                 <Loader2 className="h-5 w-5 animate-spin text-white" />
+              </div>
+            ) : (
+              <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ background: 'rgba(0,0,0,0.55)' }}>
+                <Camera className="h-5 w-5 text-white" />
+              </div>
+            )}
+
+            {/* Mobile: always-visible camera badge */}
+            {!uploading && !removing && (
+              <div className="sm:hidden absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center"
+                style={{ background: 'var(--brand-blue)', border: '2px solid var(--bg-2)' }}>
+                <Camera className="h-3.5 w-3.5 text-white" />
               </div>
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleFileChange}
-            />
+          {/* Action buttons */}
+          <div className="flex gap-2">
             <Button
               onClick={() => fileRef.current?.click()}
-              disabled={uploading}
+              disabled={uploading || removing}
               className="h-8 px-4 text-[13px] font-semibold rounded gap-2"
               style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
             >
               <Camera className="h-3.5 w-3.5" />
-              {avatarUrl ? 'Bild ändern' : 'Bild hochladen'}
+              {avatarUrl ? 'Ändern' : 'Hochladen'}
             </Button>
             {avatarUrl && (
               <Button
                 onClick={removeAvatar}
-                disabled={removing}
+                disabled={removing || uploading}
                 className="h-8 px-4 text-[13px] font-semibold rounded gap-2"
                 style={{ background: 'transparent', color: 'rgba(255,80,80,0.8)', border: '1px solid rgba(255,80,80,0.25)' }}
               >
                 {removing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                Entfernen
+                Löschen
               </Button>
             )}
           </div>

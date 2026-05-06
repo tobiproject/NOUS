@@ -295,7 +295,7 @@ export function BottomNav() {
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: '#FF9800' }} />
                 )}
               </div>
-              <span className="text-[10px] font-medium leading-none">{tab.label}</span>
+              <span className="font-medium leading-none" style={{ fontSize: '0.625rem' }}>{tab.label}</span>
             </Link>
           )
         })}
@@ -305,7 +305,7 @@ export function BottomNav() {
           style={{ color: isMehrActive ? '#fff' : 'rgba(255,255,255,0.35)' }}
         >
           <MoreHorizontal className="h-5 w-5" />
-          <span className="text-[10px] font-medium leading-none">Mehr</span>
+          <span className="font-medium leading-none" style={{ fontSize: '0.625rem' }}>Mehr</span>
         </button>
       </nav>
 

@@ -9,6 +9,8 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { MobileHeader } from '@/components/layout/MobileHeader'
 import { MorningBriefing } from '@/components/layout/MorningBriefing'
 import { AnalysisReminderBanner } from '@/components/layout/AnalysisReminderBanner'
+import { FontSizeApplier } from '@/components/layout/FontSizeApplier'
+import { QuickAddTradeButton } from '@/components/layout/QuickAddTradeButton'
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const supabase = await createServerSupabaseClient()
@@ -20,6 +22,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <AccountProvider>
+      <FontSizeApplier />
       <MorningBriefing />
       <AnalysisReminderBanner />
       <div className="flex flex-col h-screen overflow-hidden" style={{ background: 'var(--bg-0)' }}>
@@ -33,6 +36,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <QuickAddTradeButton />
       <BottomNav />
     </AccountProvider>
   )

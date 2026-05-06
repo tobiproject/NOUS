@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { applyFontSize, type FontSizeKey } from '@/components/layout/FontSizeApplier'
 import { useAccounts } from '@/hooks/useAccounts'
 import { type Account } from '@/contexts/AccountContext'
 import { toast } from 'sonner'
@@ -233,7 +234,57 @@ function ProfilTab() {
           </Button>
         </div>
       </Section>
+
+      {/* Font Size */}
+      <FontSizeSection />
     </div>
+  )
+}
+
+function FontSizeSection() {
+  const [active, setActive] = useState<FontSizeKey>('md')
+
+  useEffect(() => {
+    const stored = (localStorage.getItem('nous-font-size') ?? 'md') as FontSizeKey
+    setActive(stored)
+  }, [])
+
+  const options: { key: FontSizeKey; label: string; preview: string }[] = [
+    { key: 'sm', label: 'Klein',   preview: 'Aa' },
+    { key: 'md', label: 'Normal',  preview: 'Aa' },
+    { key: 'lg', label: 'Groß',    preview: 'Aa' },
+  ]
+
+  return (
+    <Section title="Schriftgröße" subtitle="Texte in der gesamten App vergrößern oder verkleinern">
+      <div className="flex gap-2">
+        {options.map(({ key, label, preview }) => (
+          <button
+            key={key}
+            onClick={() => { setActive(key); applyFontSize(key) }}
+            className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-lg transition-colors"
+            style={{
+              background: active === key ? 'rgba(41,98,255,0.12)' : 'var(--bg-3)',
+              border: `1px solid ${active === key ? 'var(--brand-blue)' : 'var(--border-raw)'}`,
+            }}
+          >
+            <span
+              style={{
+                fontSize: key === 'sm' ? 13 : key === 'md' ? 16 : 20,
+                fontWeight: 600,
+                color: active === key ? 'var(--brand-blue)' : 'var(--fg-2)',
+                lineHeight: 1,
+              }}
+            >
+              {preview}
+            </span>
+            <span className="text-[11px]" style={{ color: active === key ? 'var(--brand-blue)' : 'var(--fg-4)' }}>
+              {label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </Section>
   )
 }
 

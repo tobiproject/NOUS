@@ -1,9 +1,9 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X } from 'lucide-react'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
 
@@ -23,34 +23,93 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 
 const NAV_ITEMS = [
   { href: '/einstellungen?tab=profil&solo=1',            icon: User2,    label: 'Mein Profil' },
-  { href: '/einstellungen?tab=strategie&solo=1',          icon: Target,   label: 'Strategie' },
-  { href: '/einstellungen?tab=konten&solo=1',             icon: Wallet,   label: 'Konten' },
-  { href: '/einstellungen?tab=api-key&solo=1',            icon: Key,      label: 'API Key' },
-  { href: '/einstellungen?tab=knowledge-base&solo=1',     icon: BookOpen, label: 'Knowledge Base' },
-  { href: '/einstellungen?tab=benachrichtigungen&solo=1', icon: Bell,     label: 'Benachrichtigungen' },
+  { href: '/einstellungen?tab=strategie&solo=1',         icon: Target,   label: 'Strategie' },
+  { href: '/einstellungen?tab=konten&solo=1',            icon: Wallet,   label: 'Konten' },
+  { href: '/einstellungen?tab=api-key&solo=1',           icon: Key,      label: 'API Key' },
+  { href: '/einstellungen?tab=knowledge-base&solo=1',    icon: BookOpen, label: 'Knowledge Base' },
+  { href: '/einstellungen?tab=benachrichtigungen&solo=1',icon: Bell,     label: 'Benachrichtigungen' },
 ]
 
 export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props) {
   const { user, logout } = useAuth()
   const { activeAccount } = useAccountContext()
+  const panelRef = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   const initial = displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
   const accountTypeLabel = activeAccount?.account_type
     ? ACCOUNT_TYPE_LABELS[activeAccount.account_type] ?? activeAccount.account_type
     : null
 
+  // Animate in/out
+  useEffect(() => {
+    const panel = panelRef.current
+    const overlay = overlayRef.current
+    if (!panel || !overlay) return
+
+    if (open) {
+      // Start off-screen, then animate in
+      panel.style.transition = 'none'
+      panel.style.transform = 'translateX(100%)'
+      overlay.style.transition = 'none'
+      overlay.style.opacity = '0'
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          panel.style.transition = 'transform 0.34s cubic-bezier(0.23, 1, 0.32, 1)'
+          panel.style.transform = 'translateX(0)'
+          overlay.style.transition = 'opacity 0.34s ease'
+          overlay.style.opacity = '1'
+        })
+      })
+    } else {
+      panel.style.transition = 'transform 0.22s cubic-bezier(0.4, 0, 1, 1)'
+      panel.style.transform = 'translateX(100%)'
+      overlay.style.transition = 'opacity 0.22s ease'
+      overlay.style.opacity = '0'
+    }
+  }, [open])
+
+  // Body scroll lock
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
   return (
-    <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <SheetContent
-        side="right"
-        hideClose
-        className="p-0 border-0 focus:outline-none flex flex-col profile-sidebar-sheet"
-        style={{ background: '#0F1013', width: 'min(270px, 52vw)' }}
+    <div
+      className="fixed inset-0 z-50"
+      style={{ pointerEvents: open ? 'auto' : 'none' }}
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Backdrop */}
+      <div
+        ref={overlayRef}
+        className="absolute inset-0 bg-black/60"
+        style={{ opacity: 0 }}
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        ref={panelRef}
+        className="absolute inset-y-0 right-0 flex flex-col overflow-hidden"
+        style={{
+          background: '#0F1013',
+          width: 'min(270px, 52vw)',
+          transform: 'translateX(100%)',
+          willChange: 'transform',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full transition-opacity active:opacity-60"
+          className="absolute top-4 right-4 p-1.5 rounded-full active:opacity-60"
           style={{ color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', zIndex: 10 }}
           aria-label="Schließen"
         >
@@ -106,7 +165,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors active:bg-white/5"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg active:bg-white/5"
               style={{ minHeight: 44 }}
             >
               <item.icon className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }} />
@@ -122,7 +181,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
           <Link
             href="/about"
             onClick={onClose}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors active:bg-white/5"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg active:bg-white/5"
             style={{ minHeight: 44 }}
           >
             <Info className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }} />
@@ -133,10 +192,10 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
         </div>
 
         {/* Logout */}
-        <div className="px-3 pt-2 pb-8 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="px-3 pt-2 pb-6 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <button
             onClick={async () => { onClose(); await logout() }}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full transition-colors active:bg-white/5"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full active:bg-white/5"
             style={{ minHeight: 44 }}
           >
             <LogOut className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,80,80,0.6)' }} />
@@ -145,7 +204,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
             </span>
           </button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </div>
   )
 }

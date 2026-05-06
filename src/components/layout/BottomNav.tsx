@@ -407,7 +407,7 @@ export function BottomNav() {
           <div className="mx-4 my-2 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
           <div className="px-4 pb-6">
             <Link
-              href="/einstellungen?tab=konten"
+              href="/einstellungen?tab=konten&solo=1"
               onClick={handleClose}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}

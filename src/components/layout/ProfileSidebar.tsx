@@ -43,6 +43,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
       <SheetContent
         side="right"
+        hideClose
         className="p-0 border-0 focus:outline-none flex flex-col profile-sidebar-sheet"
         style={{ background: '#0F1013', width: 'min(270px, 52vw)' }}
       >

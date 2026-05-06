@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
-import { applyFontSize, type FontSizeKey } from '@/components/layout/FontSizeApplier'
+import { applyFontSize, getStoredFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX } from '@/components/layout/FontSizeApplier'
 import { useAccounts } from '@/hooks/useAccounts'
 import { type Account } from '@/contexts/AccountContext'
 import { toast } from 'sonner'
@@ -242,47 +242,50 @@ function ProfilTab() {
 }
 
 function FontSizeSection() {
-  const [active, setActive] = useState<FontSizeKey>('md')
+  const [size, setSize] = useState(16)
 
   useEffect(() => {
-    const stored = (localStorage.getItem('nous-font-size') ?? 'md') as FontSizeKey
-    setActive(stored)
+    setSize(getStoredFontSize())
   }, [])
 
-  const options: { key: FontSizeKey; label: string; preview: string }[] = [
-    { key: 'sm', label: 'Klein',   preview: 'Aa' },
-    { key: 'md', label: 'Normal',  preview: 'Aa' },
-    { key: 'lg', label: 'Groß',    preview: 'Aa' },
-  ]
-
   return (
-    <Section title="Schriftgröße" subtitle="Texte in der gesamten App vergrößern oder verkleinern">
-      <div className="flex gap-2">
-        {options.map(({ key, label, preview }) => (
-          <button
-            key={key}
-            onClick={() => { setActive(key); applyFontSize(key) }}
-            className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-lg transition-colors"
-            style={{
-              background: active === key ? 'rgba(41,98,255,0.12)' : 'var(--bg-3)',
-              border: `1px solid ${active === key ? 'var(--brand-blue)' : 'var(--border-raw)'}`,
-            }}
-          >
-            <span
-              style={{
-                fontSize: key === 'sm' ? 13 : key === 'md' ? 16 : 20,
-                fontWeight: 600,
-                color: active === key ? 'var(--brand-blue)' : 'var(--fg-2)',
-                lineHeight: 1,
-              }}
-            >
-              {preview}
-            </span>
-            <span className="text-[11px]" style={{ color: active === key ? 'var(--brand-blue)' : 'var(--fg-4)' }}>
-              {label}
-            </span>
-          </button>
-        ))}
+    <Section title="Schriftgröße" subtitle="Zieht den Regler — Änderung gilt sofort für die gesamte App">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm" style={{ color: 'var(--fg-3)' }}>Aktuelle Größe</span>
+          <span className="font-mono text-sm font-semibold" style={{ color: 'var(--brand-blue)' }}>{size}px</span>
+        </div>
+
+        <input
+          type="range"
+          min={FONT_SIZE_MIN}
+          max={FONT_SIZE_MAX}
+          step={1}
+          value={size}
+          onChange={e => {
+            const val = parseInt(e.target.value)
+            setSize(val)
+            applyFontSize(val)
+          }}
+          className="w-full h-2 rounded-full appearance-none cursor-pointer"
+          style={{ accentColor: 'var(--brand-blue)' }}
+        />
+
+        <div className="flex justify-between text-[11px]" style={{ color: 'var(--fg-4)' }}>
+          <span>Klein ({FONT_SIZE_MIN}px)</span>
+          <span>Normal (16px)</span>
+          <span>Groß ({FONT_SIZE_MAX}px)</span>
+        </div>
+
+        {/* Live preview */}
+        <div className="rounded-lg px-4 py-3 space-y-1" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)' }}>
+          <p style={{ fontSize: `${size * 0.875}px`, color: 'var(--fg-1)', fontWeight: 500 }}>
+            Dashboard — Heutige Performance
+          </p>
+          <p style={{ fontSize: `${size * 0.75}px`, color: 'var(--fg-3)' }}>
+            +3 Trades · Win Rate 66% · P&L +$142.50
+          </p>
+        </div>
       </div>
     </Section>
   )

@@ -2,17 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { UserCircle, ChevronDown } from 'lucide-react'
+import { UserCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { useAccountContext } from '@/contexts/AccountContext'
 import { ProfileSidebar } from './ProfileSidebar'
-import { AccountSwitcherSheet } from './AccountSwitcherSheet'
 
 export function MobileHeader() {
   const { user } = useAuth()
-  const { activeAccount } = useAccountContext()
   const [profileOpen, setProfileOpen] = useState(false)
-  const [switcherOpen, setSwitcherOpen] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
@@ -47,23 +43,6 @@ export function MobileHeader() {
           height={52}
           priority
         />
-
-        {/* Account Switcher Pill */}
-        {activeAccount && (
-          <button
-            onClick={() => setSwitcherOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full min-w-0 flex-1 max-w-[140px] transition-opacity active:opacity-70"
-            style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            <span className="text-[12px] font-medium truncate" style={{ color: 'rgba(255,255,255,0.7)' }}>
-              {activeAccount.name}
-            </span>
-            <ChevronDown className="h-3 w-3 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
-          </button>
-        )}
 
         {/* Profile Avatar */}
         <button
@@ -106,10 +85,6 @@ export function MobileHeader() {
         avatarUrl={avatarUrl}
       />
 
-      <AccountSwitcherSheet
-        open={switcherOpen}
-        onClose={() => setSwitcherOpen(false)}
-      />
     </>
   )
 }

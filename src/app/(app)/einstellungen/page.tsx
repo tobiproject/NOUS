@@ -157,37 +157,45 @@ function ProfilTab() {
     <div className="space-y-6">
       {/* Avatar */}
       <Section title="Profilbild" subtitle="JPEG, PNG oder WebP — max. 2 MB">
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={handleFileChange}
-        />
+        {/* label wraps the input — reliable file picker trigger on iOS Safari */}
+        <label htmlFor="avatar-file-input" style={{ display: 'none' }}>
+          <input
+            id="avatar-file-input"
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileChange}
+          />
+        </label>
 
         {/* Centered on mobile, left-aligned on desktop */}
         <div className="flex flex-col items-center sm:items-start gap-3">
-          {/* Avatar circle with overlay */}
-          <div
-            className="group relative w-24 h-24 rounded-full cursor-pointer shrink-0"
-            onClick={() => !uploading && !removing && fileRef.current?.click()}
+          {/* Avatar circle — label directly triggers the file input on tap */}
+          <label
+            htmlFor="avatar-file-input"
+            className="group relative w-24 h-24 rounded-full cursor-pointer shrink-0 block"
+            style={{ opacity: uploading || removing ? 0.6 : 1, pointerEvents: uploading || removing ? 'none' : 'auto' }}
           >
             {/* Image / initials */}
             <div
-              className="w-full h-full rounded-full flex items-center justify-center overflow-hidden text-2xl font-bold"
-              style={{ background: 'rgba(41,98,255,0.18)', color: 'var(--brand-blue)' }}
+              className="w-full h-full rounded-full flex items-center justify-center text-2xl font-bold"
+              style={{ background: 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)', overflow: 'hidden' }}
             >
               {displayImg ? (
-                <Image src={displayImg} alt="Avatar" width={96} height={96} className="object-cover w-full h-full" unoptimized />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={displayImg} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
               ) : initial}
             </div>
 
-            {/* Hover overlay (desktop) + loading */}
-            {uploading || removing ? (
+            {/* Loading overlay */}
+            {(uploading || removing) && (
               <div className="absolute inset-0 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
                 <Loader2 className="h-5 w-5 animate-spin text-white" />
               </div>
-            ) : (
+            )}
+
+            {/* Desktop hover overlay */}
+            {!uploading && !removing && (
               <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{ background: 'rgba(0,0,0,0.55)' }}>
                 <Camera className="h-5 w-5 text-white" />
@@ -201,19 +209,18 @@ function ProfilTab() {
                 <Camera className="h-3.5 w-3.5 text-white" />
               </div>
             )}
-          </div>
+          </label>
 
           {/* Action buttons */}
           <div className="flex gap-2">
-            <Button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading || removing}
-              className="h-8 px-4 text-[13px] font-semibold rounded gap-2"
-              style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+            <label
+              htmlFor="avatar-file-input"
+              className="h-8 px-4 text-[13px] font-semibold rounded gap-2 flex items-center cursor-pointer"
+              style={{ background: 'var(--bg-3)', color: uploading || removing ? 'rgba(255,255,255,0.3)' : 'var(--fg-1)', border: '1px solid var(--border-raw)', pointerEvents: uploading || removing ? 'none' : 'auto' }}
             >
               <Camera className="h-3.5 w-3.5" />
               {avatarUrl ? 'Ändern' : 'Hochladen'}
-            </Button>
+            </label>
             {avatarUrl && (
               <Button
                 onClick={removeAvatar}

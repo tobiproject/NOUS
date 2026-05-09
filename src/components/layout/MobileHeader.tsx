@@ -74,13 +74,14 @@ export function MobileHeader() {
             width: 36,
             height: 36,
             borderRadius: '50%',
-            overflow: 'hidden',
             background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)',
             color: 'var(--brand-blue)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
+            padding: 0,
+            border: 'none',
           }}
         >
           {avatarUrl ? (
@@ -88,7 +89,7 @@ export function MobileHeader() {
             <img
               src={avatarUrl}
               alt="Avatar"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: '50%', display: 'block' }}
             />
           ) : initial ? (
             <span className="text-sm font-bold">{initial}</span>

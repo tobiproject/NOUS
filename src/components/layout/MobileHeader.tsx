@@ -34,7 +34,7 @@ export function MobileHeader() {
       <header
         className="md:hidden flex items-center justify-between px-4 sticky top-0 z-30 shrink-0 gap-2"
         style={{
-          height: 'calc(60px + env(safe-area-inset-top))',
+          height: 'calc(68px + env(safe-area-inset-top))',
           paddingTop: 'env(safe-area-inset-top)',
           background: '#0C0D0F',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -43,8 +43,8 @@ export function MobileHeader() {
         <Image
           src="/logo/nous-logo-slogan.svg"
           alt="NOUS — Turn data into decisions"
-          width={120}
-          height={38}
+          width={164}
+          height={52}
           priority
         />
 

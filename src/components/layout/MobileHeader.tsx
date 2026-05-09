@@ -69,22 +69,26 @@ export function MobileHeader() {
         <button
           onClick={() => setProfileOpen(true)}
           aria-label="Profil"
-          className="flex items-center justify-center rounded-full transition-opacity active:opacity-70 overflow-hidden shrink-0"
+          className="shrink-0 transition-opacity active:opacity-70"
           style={{
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            overflow: 'hidden',
             background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)',
             color: 'var(--brand-blue)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
           }}
         >
           {avatarUrl ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={avatarUrl}
               alt="Avatar"
-              width={34}
-              height={34}
-              className="object-cover w-full h-full rounded-full"
-              unoptimized
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           ) : initial ? (
             <span className="text-sm font-bold">{initial}</span>

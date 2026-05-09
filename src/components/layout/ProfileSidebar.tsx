@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
@@ -125,7 +124,8 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
             style={{ background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)' }}
           >
             {avatarUrl ? (
-              <Image src={avatarUrl} alt="Avatar" width={64} height={64} className="object-cover w-full h-full" unoptimized />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             ) : initial}
           </div>
 

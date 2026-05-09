@@ -43,8 +43,8 @@ export function MobileHeader() {
         <Image
           src="/logo/nous-logo-slogan.svg"
           alt="NOUS — Turn data into decisions"
-          width={112}
-          height={30}
+          width={120}
+          height={38}
           priority
         />
 
@@ -73,7 +73,7 @@ export function MobileHeader() {
           style={{
             width: 34,
             height: 34,
-            background: avatarUrl ? 'transparent' : 'rgba(41,98,255,0.16)',
+            background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)',
             color: 'var(--brand-blue)',
           }}
         >

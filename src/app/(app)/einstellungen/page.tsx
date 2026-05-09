@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
+import Cropper from 'react-easy-crop'
+import type { Area } from 'react-easy-crop'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil, ChevronLeft } from 'lucide-react'
@@ -57,6 +59,18 @@ const EXAMPLE_STRATEGY: Strategy = {
 
 const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '30m', '1h', '4h', 'D', 'W']
 
+async function getCroppedBlob(imageSrc: string, pixelCrop: Area): Promise<Blob> {
+  const image = new window.Image()
+  image.src = imageSrc
+  await new Promise<void>(resolve => { image.onload = () => resolve() })
+  const canvas = document.createElement('canvas')
+  canvas.width = pixelCrop.width
+  canvas.height = pixelCrop.height
+  const ctx = canvas.getContext('2d')!
+  ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height)
+  return new Promise(resolve => canvas.toBlob(b => resolve(b!), 'image/jpeg', 0.92))
+}
+
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <div
@@ -82,6 +96,10 @@ function ProfilTab() {
   const [nameSaving, setNameSaving] = useState(false)
   const [nameSaved, setNameSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -106,18 +124,28 @@ function ProfilTab() {
     setTimeout(() => setNameSaved(false), 2500)
   }, [displayName])
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 10 * 1024 * 1024) {
       toast.error('Datei zu groß — max. 10 MB')
       return
     }
-    setPreview(URL.createObjectURL(file))
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
+    setCropSrc(URL.createObjectURL(file))
+    if (fileRef.current) fileRef.current.value = ''
+  }, [])
+
+  const handleCropConfirm = useCallback(async () => {
+    if (!cropSrc || !croppedAreaPixels) return
     setUploading(true)
+    setCropSrc(null)
     try {
+      const blob = await getCroppedBlob(cropSrc, croppedAreaPixels)
+      setPreview(URL.createObjectURL(blob))
       const fd = new FormData()
-      fd.append('avatar', file)
+      fd.append('avatar', blob, 'avatar.jpg')
       const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd })
       const data = await res.json()
       if (res.ok) {
@@ -133,9 +161,8 @@ function ProfilTab() {
       setPreview(null)
     } finally {
       setUploading(false)
-      if (fileRef.current) fileRef.current.value = ''
     }
-  }, [])
+  }, [cropSrc, croppedAreaPixels])
 
   const initial = displayName?.[0]?.toUpperCase() ?? '?'
   const displayImg = preview ?? avatarUrl
@@ -190,6 +217,59 @@ function ProfilTab() {
           )}
         </label>
       </Section>
+
+      {/* Crop overlay */}
+      {cropSrc && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#000' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 shrink-0" style={{ height: 56, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <button
+              onClick={() => setCropSrc(null)}
+              className="text-[15px] font-medium active:opacity-60"
+              style={{ color: 'rgba(255,255,255,0.6)' }}
+            >
+              Abbrechen
+            </button>
+            <p className="text-[15px] font-semibold" style={{ color: '#fff' }}>Zuschneiden</p>
+            <button
+              onClick={handleCropConfirm}
+              className="text-[15px] font-semibold active:opacity-60"
+              style={{ color: 'var(--brand-blue)' }}
+            >
+              Fertig
+            </button>
+          </div>
+
+          {/* Crop area */}
+          <div className="flex-1 relative">
+            <Cropper
+              image={cropSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
+            />
+          </div>
+
+          {/* Zoom slider */}
+          <div className="px-8 py-6 shrink-0" style={{ background: '#000' }}>
+            <p className="text-[11px] uppercase tracking-widest text-center mb-3" style={{ color: 'rgba(255,255,255,0.35)' }}>Zoom</p>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.01}
+              value={zoom}
+              onChange={e => setZoom(Number(e.target.value))}
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Display name */}
       <Section title="Anzeigename" subtitle="Wie soll dich NOUS nennen? Wird für Begrüßungen und KI-Kontext verwendet.">

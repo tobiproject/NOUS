@@ -107,6 +107,16 @@ export function DashboardContent() {
   const greetingBase = now.getHours() < 12 ? 'Guten Morgen' : now.getHours() < 18 ? 'Guten Tag' : 'Guten Abend'
   const greeting = displayName ? `${greetingBase}, ${displayName}` : greetingBase
 
+  const h = now.getHours()
+  const taglines =
+    h >= 5  && h < 9  ? ['Kaffee zuerst.', 'Märkte öffnen bald.', 'Frischer Start.', 'Langsam anlaufen.', 'Früh wach, früh dabei.'] :
+    h >= 9  && h < 12 ? ['London läuft.', 'Was zeigen die Charts?', 'Setups scannen.', 'Frischer Kopf, frische Setups.', 'NY öffnet gleich.'] :
+    h >= 12 && h < 14 ? ['Mittagspause verdient?', 'NY öffnet gleich.', 'Kurze Pause, dann weiter.', 'Wie läuft\'s bisher?', 'Halbe Zeit vorbei.'] :
+    h >= 14 && h < 18 ? ['NY Session läuft.', 'Charts im Blick.', 'Fokus bis Schluss.', 'Hauptzeit des Tages.', 'Noch ein paar Stunden.'] :
+    h >= 18 && h < 22 ? ['Zeit für den Recap.', 'Wie war dein Tag?', 'Trades des Tages?', 'Analyse, dann Feierabend.', 'Heute viel gelernt?'] :
+                        ['Asia Session läuft.', 'Spät unterwegs?', 'Nachtschicht.', 'Ruhige Zeit.', 'Morgen wieder frisch.']
+  const tagline = taglines[(now.getDate() + now.getMonth()) % taglines.length]
+
   return (
     <>
       <div className="space-y-5">
@@ -117,7 +127,7 @@ export function DashboardContent() {
               {greeting}.
             </h1>
             <p className="text-sm mt-0.5" style={{ color: 'var(--fg-3)' }}>
-              {activeAccount.name}
+              {tagline} · {activeAccount.name}
             </p>
           </div>
         </div>

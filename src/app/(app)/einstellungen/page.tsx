@@ -82,7 +82,6 @@ function ProfilTab() {
   const [nameSaving, setNameSaving] = useState(false)
   const [nameSaved, setNameSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [removing, setRemoving] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -110,38 +109,32 @@ function ProfilTab() {
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Datei zu groß — max. 2 MB')
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Datei zu groß — max. 10 MB')
       return
     }
     setPreview(URL.createObjectURL(file))
     setUploading(true)
-    const fd = new FormData()
-    fd.append('avatar', file)
-    const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd })
-    const data = await res.json()
-    if (res.ok) {
-      setAvatarUrl(data.avatar_url)
+    try {
+      const fd = new FormData()
+      fd.append('avatar', file)
+      const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (res.ok) {
+        setAvatarUrl(data.avatar_url)
+        setPreview(null)
+        toast.success('Profilbild gespeichert')
+      } else {
+        toast.error(data.error ?? 'Upload fehlgeschlagen')
+        setPreview(null)
+      }
+    } catch {
+      toast.error('Verbindungsfehler beim Upload')
       setPreview(null)
-      toast.success('Profilbild gespeichert')
-    } else {
-      toast.error(data.error ?? 'Upload fehlgeschlagen')
-      setPreview(null)
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
     }
-    setUploading(false)
-    if (fileRef.current) fileRef.current.value = ''
-  }, [])
-
-  const removeAvatar = useCallback(async () => {
-    setRemoving(true)
-    const res = await fetch('/api/profile/avatar', { method: 'DELETE' })
-    if (res.ok) {
-      setAvatarUrl(null)
-      toast.success('Profilbild entfernt')
-    } else {
-      toast.error('Entfernen fehlgeschlagen')
-    }
-    setRemoving(false)
   }, [])
 
   const initial = displayName?.[0]?.toUpperCase() ?? '?'
@@ -156,7 +149,7 @@ function ProfilTab() {
   return (
     <div className="space-y-6">
       {/* Avatar */}
-      <Section title="Profilbild" subtitle="JPEG, PNG oder WebP — max. 2 MB">
+      <Section title="Profilbild" subtitle="Antippen zum Ändern · JPEG, PNG, WebP · max. 10 MB">
         <input
           id="avatar-file-input"
           ref={fileRef}
@@ -165,73 +158,37 @@ function ProfilTab() {
           className="hidden"
           onChange={handleFileChange}
         />
-
-        {/* Centered on mobile, left-aligned on desktop */}
-        <div className="flex flex-col items-center sm:items-start gap-3">
-          {/* Avatar circle — label directly triggers the file input on tap */}
-          <label
-            htmlFor="avatar-file-input"
-            className="group relative w-24 h-24 rounded-full cursor-pointer shrink-0 block"
-            style={{ opacity: uploading || removing ? 0.6 : 1, pointerEvents: uploading || removing ? 'none' : 'auto' }}
+        <label
+          htmlFor="avatar-file-input"
+          className="group relative w-24 h-24 rounded-full cursor-pointer shrink-0 block"
+          style={{ pointerEvents: uploading ? 'none' : 'auto' }}
+        >
+          <div
+            className="w-full h-full rounded-full flex items-center justify-center text-2xl font-bold"
+            style={{ background: 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)', overflow: 'hidden' }}
           >
-            {/* Image / initials */}
-            <div
-              className="w-full h-full rounded-full flex items-center justify-center text-2xl font-bold"
-              style={{ background: 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)', overflow: 'hidden' }}
-            >
-              {displayImg ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={displayImg} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
-              ) : initial}
+            {displayImg ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={displayImg} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+            ) : initial}
+          </div>
+          {uploading ? (
+            <div className="absolute inset-0 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
+              <Loader2 className="h-5 w-5 animate-spin text-white" />
             </div>
-
-            {/* Loading overlay */}
-            {(uploading || removing) && (
-              <div className="absolute inset-0 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
-                <Loader2 className="h-5 w-5 animate-spin text-white" />
-              </div>
-            )}
-
-            {/* Desktop hover overlay */}
-            {!uploading && !removing && (
+          ) : (
+            <>
               <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{ background: 'rgba(0,0,0,0.55)' }}>
                 <Camera className="h-5 w-5 text-white" />
               </div>
-            )}
-
-            {/* Mobile: always-visible camera badge */}
-            {!uploading && !removing && (
               <div className="sm:hidden absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center"
                 style={{ background: 'var(--brand-blue)', border: '2px solid var(--bg-2)' }}>
                 <Camera className="h-3.5 w-3.5 text-white" />
               </div>
-            )}
-          </label>
-
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            <label
-              htmlFor="avatar-file-input"
-              className="h-8 px-4 text-[13px] font-semibold rounded gap-2 flex items-center cursor-pointer"
-              style={{ background: 'var(--bg-3)', color: uploading || removing ? 'rgba(255,255,255,0.3)' : 'var(--fg-1)', border: '1px solid var(--border-raw)', pointerEvents: uploading || removing ? 'none' : 'auto' }}
-            >
-              <Camera className="h-3.5 w-3.5" />
-              {avatarUrl ? 'Ändern' : 'Hochladen'}
-            </label>
-            {avatarUrl && (
-              <Button
-                onClick={removeAvatar}
-                disabled={removing || uploading}
-                className="h-8 px-4 text-[13px] font-semibold rounded gap-2"
-                style={{ background: 'transparent', color: 'rgba(255,80,80,0.8)', border: '1px solid rgba(255,80,80,0.25)' }}
-              >
-                {removing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                Löschen
-              </Button>
-            )}
-          </div>
-        </div>
+            </>
+          )}
+        </label>
       </Section>
 
       {/* Display name */}

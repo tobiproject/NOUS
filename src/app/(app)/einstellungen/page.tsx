@@ -157,16 +157,14 @@ function ProfilTab() {
     <div className="space-y-6">
       {/* Avatar */}
       <Section title="Profilbild" subtitle="JPEG, PNG oder WebP — max. 2 MB">
-        {/* label wraps the input — reliable file picker trigger on iOS Safari */}
-        <label htmlFor="avatar-file-input" style={{ display: 'none' }}>
-          <input
-            id="avatar-file-input"
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleFileChange}
-          />
-        </label>
+        <input
+          id="avatar-file-input"
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFileChange}
+        />
 
         {/* Centered on mobile, left-aligned on desktop */}
         <div className="flex flex-col items-center sm:items-start gap-3">

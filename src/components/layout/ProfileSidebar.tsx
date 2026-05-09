@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X } from 'lucide-react'
@@ -33,6 +33,7 @@ const NAV_ITEMS = [
 export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props) {
   const { user, logout } = useAuth()
   const { activeAccount } = useAccountContext()
+  const [mounted, setMounted] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -41,14 +42,19 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
     ? ACCOUNT_TYPE_LABELS[activeAccount.account_type] ?? activeAccount.account_type
     : null
 
-  // Animate in/out
+  // Mount immediately when opening; keep mounted while animating closed
   useEffect(() => {
+    if (open) setMounted(true)
+  }, [open])
+
+  // Drive the animation whenever open or mounted changes
+  useEffect(() => {
+    if (!mounted) return
     const panel = panelRef.current
     const overlay = overlayRef.current
     if (!panel || !overlay) return
 
     if (open) {
-      // Start off-screen, then animate in
       panel.style.transition = 'none'
       panel.style.transform = 'translateX(100%)'
       overlay.style.transition = 'none'
@@ -66,26 +72,22 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
       panel.style.transform = 'translateX(100%)'
       overlay.style.transition = 'opacity 0.22s ease'
       overlay.style.opacity = '0'
+      const t = setTimeout(() => setMounted(false), 260)
+      return () => clearTimeout(t)
     }
-  }, [open])
+  }, [open, mounted])
 
   // Body scroll lock
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    document.body.style.overflow = open ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [open])
 
+  // Nothing in DOM when closed — no interference with touch events
+  if (!mounted) return null
+
   return (
-    <div
-      className="fixed inset-0 z-50"
-      style={{ pointerEvents: open ? 'auto' : 'none' }}
-      role="dialog"
-      aria-modal="true"
-    >
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div
         ref={overlayRef}
@@ -100,7 +102,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
         className="absolute inset-y-0 right-0 flex flex-col overflow-hidden"
         style={{
           background: '#0F1013',
-          width: 'min(270px, 52vw)',
+          width: 'min(270px, 75vw)',
           transform: 'translateX(100%)',
           willChange: 'transform',
           paddingBottom: 'env(safe-area-inset-bottom)',
@@ -120,7 +122,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
         <div className="px-5 pt-14 pb-5 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mb-4 overflow-hidden"
-            style={{ background: avatarUrl ? 'transparent' : 'rgba(41,98,255,0.18)', color: 'var(--brand-blue)' }}
+            style={{ background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)' }}
           >
             {avatarUrl ? (
               <Image src={avatarUrl} alt="Avatar" width={64} height={64} className="object-cover w-full h-full" unoptimized />
@@ -135,7 +137,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
               {accountTypeLabel && (
                 <span
                   className="text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0"
-                  style={{ background: 'rgba(41,98,255,0.2)', color: 'var(--brand-blue)' }}
+                  style={{ background: 'rgba(255,130,16,0.2)', color: 'var(--brand-blue)' }}
                 >
                   {accountTypeLabel}
                 </span>

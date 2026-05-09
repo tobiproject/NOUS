@@ -17,7 +17,7 @@
     --popover: 220 14% 12%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 224 100% 57%;          /* #2962FF — brand blue */
+    --primary: 29 100% 54%;            /* #ff8210 — brand orange */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 218 13% 16%;         /* #23272E */
@@ -34,30 +34,30 @@
 
     --border: 218 13% 18%;            /* ~rgba(255,255,255,0.08) on dark */
     --input: 218 13% 18%;
-    --ring: 224 100% 57%;             /* focus ring = brand blue */
+    --ring: 29 100% 54%;              /* focus ring = brand orange */
 
     --radius: 0.375rem;               /* 6px default — cards/panels */
 
     /* chart colors: TradingView semantic */
     --chart-1: 169 91% 32%;           /* #089981 long/win */
     --chart-2: 355 88% 58%;           /* #F23645 short/loss */
-    --chart-3: 224 100% 57%;          /* #2962FF info/neutral */
+    --chart-3: 29 100% 54%;           /* #ff8210 brand orange */
     --chart-4: 37 100% 50%;           /* #FF9800 warn */
     --chart-5: 187 100% 41%;          /* #00BCD4 accent turquoise */
 
     /* sidebar vars */
     --sidebar-background: 225 14% 9%;  /* #131519 */
     --sidebar-foreground: 0 0% 71%;    /* #B4B8BF */
-    --sidebar-primary: 224 100% 57%;
+    --sidebar-primary: 29 100% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 218 13% 16%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 218 13% 18%;
-    --sidebar-ring: 224 100% 57%;
+    --sidebar-ring: 29 100% 54%;
 
     /* TradeOS raw tokens (for direct use in components) */
-    --brand-blue:       #2962FF;
-    --brand-blue-soft:  rgba(41,98,255,0.14);
+    --brand-blue:       #ff8210;
+    --brand-blue-soft:  rgba(255,130,16,0.14);
     --long:             #089981;
     --long-soft:        rgba(8,153,129,0.14);
     --short:            #F23645;

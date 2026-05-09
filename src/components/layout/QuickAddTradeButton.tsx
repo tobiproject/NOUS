@@ -21,7 +21,7 @@ export function QuickAddTradeButton() {
         height: 52,
         background: 'var(--brand-blue)',
         color: '#fff',
-        boxShadow: '0 4px 24px rgba(41,98,255,0.5)',
+        boxShadow: '0 4px 24px rgba(255,130,16,0.5)',
       }}
       aria-label="Trade erfassen"
     >

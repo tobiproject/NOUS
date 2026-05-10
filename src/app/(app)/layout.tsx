@@ -12,6 +12,7 @@ import { AnalysisReminderBanner } from '@/components/layout/AnalysisReminderBann
 import { FontSizeApplier } from '@/components/layout/FontSizeApplier'
 import { QuickAddTradeButton } from '@/components/layout/QuickAddTradeButton'
 import { UpdateBanner } from '@/components/layout/UpdateBanner'
+import { DesktopProfileButton } from '@/components/layout/DesktopProfileButton'
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const supabase = await createServerSupabaseClient()
@@ -40,6 +41,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <QuickAddTradeButton />
       <BottomNav />
       <UpdateBanner />
+      <DesktopProfileButton />
     </AccountProvider>
   )
 }

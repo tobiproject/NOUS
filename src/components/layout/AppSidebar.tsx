@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
-import { ProfileSidebar } from '@/components/layout/ProfileSidebar'
+
 import { cn } from '@/lib/utils'
 
 type NavItem =
@@ -202,7 +202,6 @@ export function AppSidebar() {
   const [navItems, setNavItems] = useState(DEFAULT_NAV_ITEMS)
   const [hasTodayPlan, setHasTodayPlan] = useState(false)
   const [hasWeeklyPrepReminder, setHasWeeklyPrepReminder] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
@@ -316,31 +315,20 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: avatar only */}
+      {/* Bottom: avatar display — Profil trigger via DesktopProfileButton top-right */}
       <div className="flex flex-col items-center pb-3 pt-2 w-full px-1" style={{ borderTop: '1px solid var(--border-raw)' }}>
-        <TooltipProvider>
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => setProfileOpen(true)}
-                className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100"
-                style={{ background: 'transparent' }}
-              >
-                <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
-                  ) : (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-blue)' }}>
-                      {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
-                    </span>
-                  )}
-                </div>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">Profil & Einstellungen</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div
+          style={{ width: 30, height: 30, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
+        >
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+          ) : (
+            <span style={{ fontSize: 12, fontWeight: 700 }}>
+              {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
+            </span>
+          )}
+        </div>
       </div>
     </aside>
 
@@ -407,18 +395,12 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: profile row + version */}
+      {/* Bottom: profile info display only — trigger is DesktopProfileButton top-right */}
       <div
         className="mt-auto px-2 pb-2 pt-2"
         style={{ borderTop: '1px solid var(--border-raw)' }}
       >
-        <button
-          onClick={() => setProfileOpen(true)}
-          className="flex items-center gap-2.5 px-2 py-2 rounded w-full text-left transition-colors duration-100"
-          style={{ background: 'transparent' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-        >
+        <div className="flex items-center gap-2.5 px-2 py-2">
           <div
             style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
@@ -447,19 +429,12 @@ export function AppSidebar() {
               </div>
             )}
           </div>
-        </button>
-        <p className="px-2 pt-1 pb-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
+        </div>
+        <p className="px-2 pt-0 pb-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
           v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}
         </p>
       </div>
     </aside>
-
-    <ProfileSidebar
-      open={profileOpen}
-      onClose={() => setProfileOpen(false)}
-      displayName={displayName}
-      avatarUrl={avatarUrl}
-    />
     </>
   )
 }

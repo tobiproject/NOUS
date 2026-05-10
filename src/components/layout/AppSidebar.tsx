@@ -494,15 +494,11 @@ export function AppSidebar() {
                 Laden
               </button>
             </div>
-            {update.features.slice(0, 2).map((c, i) => (
-              <p key={`f${i}`} className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                + {c}
-              </p>
-            ))}
-            {update.fixes.slice(0, 2).map((c, i) => (
-              <p key={`x${i}`} className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                ~ {c}
-              </p>
+            {[...update.features.slice(0, 2).map(c => ({ t: '+', c })), ...update.fixes.slice(0, 2).map(c => ({ t: '~', c }))].map(({ t, c }, i) => (
+              <div key={i} className="flex items-start gap-1">
+                <span className="text-[10px] shrink-0 leading-relaxed" style={{ color: t === '+' ? 'rgba(255,130,16,0.7)' : 'rgba(255,255,255,0.3)' }}>{t}</span>
+                <span className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>{c}</span>
+              </div>
             ))}
           </div>
         ) : (
@@ -534,9 +530,10 @@ export function AppSidebar() {
               <div className="mb-2">
                 <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--brand-blue)' }}>Neu</p>
                 {CHANGELOG[0].features.map((c, i) => (
-                  <p key={i} className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                    + {c}
-                  </p>
+                  <div key={i} className="flex items-start gap-1.5">
+                    <span className="text-[11px] shrink-0 leading-relaxed" style={{ color: 'var(--brand-blue)' }}>+</span>
+                    <span className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{c}</span>
+                  </div>
                 ))}
               </div>
             )}
@@ -544,9 +541,10 @@ export function AppSidebar() {
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,180,60,0.8)' }}>Gefixt</p>
                 {CHANGELOG[0].fixes.map((c, i) => (
-                  <p key={i} className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    ~ {c}
-                  </p>
+                  <div key={i} className="flex items-start gap-1.5">
+                    <span className="text-[11px] shrink-0 leading-relaxed" style={{ color: 'rgba(255,180,60,0.7)' }}>~</span>
+                    <span className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>{c}</span>
+                  </div>
                 ))}
               </div>
             )}

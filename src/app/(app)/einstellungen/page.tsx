@@ -759,6 +759,42 @@ function ApiKeyTab() {
   )
 }
 
+// ─── Browser detection helper ─────────────────────────────────────────────────
+
+function getBrowserInfo() {
+  if (typeof navigator === 'undefined') return null
+  const ua = navigator.userAgent
+
+  let browser = 'Browser'
+  if (/Edg\//.test(ua)) browser = 'Edge'
+  else if (/Firefox\//.test(ua)) browser = 'Firefox'
+  else if (/Chrome\//.test(ua)) browser = 'Chrome'
+  else if (/Safari\//.test(ua)) browser = 'Safari'
+
+  let os = 'System'
+  if (/iPhone|iPad/.test(ua)) os = 'iOS'
+  else if (/Android/.test(ua)) os = 'Android'
+  else if (/Mac/.test(ua)) os = 'macOS'
+  else if (/Windows/.test(ua)) os = 'Windows'
+  else if (/Linux/.test(ua)) os = 'Linux'
+
+  const instructions: Record<string, string> = {
+    'Chrome-macOS':   'Adressleiste → Schloss-Icon → „Website-Einstellungen" → „Benachrichtigungen" → „Zulassen"',
+    'Chrome-Windows': 'Adressleiste → Schloss-Icon → „Website-Einstellungen" → „Benachrichtigungen" → „Zulassen"',
+    'Chrome-Android': 'Chrome-Menü (⋮) → „Einstellungen" → „Website-Einstellungen" → „Benachrichtigungen" → getnous.de → „Zulassen"',
+    'Safari-macOS':   'Menüleiste → „Safari" → „Einstellungen für diese Website…" → „Benachrichtigungen" → „Erlauben"',
+    'Safari-iOS':     'Einstellungen-App → „Safari" → „Benachrichtigungen" → getnous.de → Erlauben (erfordert iOS 16.4+)',
+    'Firefox-macOS':  'Adressleiste → Schloss-Icon → „Verbindung sicher" → „Berechtigungen" → Benachrichtigungen freigeben',
+    'Firefox-Windows':'Adressleiste → Schloss-Icon → „Verbindung sicher" → „Berechtigungen" → Benachrichtigungen freigeben',
+    'Edge-macOS':     'Adressleiste → Schloss-Icon → „Berechtigungen für diese Website" → „Benachrichtigungen" → „Zulassen"',
+    'Edge-Windows':   'Adressleiste → Schloss-Icon → „Berechtigungen für diese Website" → „Benachrichtigungen" → „Zulassen"',
+  }
+
+  const key = `${browser}-${os}`
+  const fallback = instructions[`${browser}-macOS`] ?? 'Browser-Einstellungen → Benachrichtigungen für getnous.de erlauben'
+  return { browser, os, instructions: instructions[key] ?? fallback }
+}
+
 // ─── Tab: Benachrichtigungen ──────────────────────────────────────────────────
 
 function BenachrichtigungenTab() {
@@ -827,15 +863,27 @@ function BenachrichtigungenTab() {
               )}
               <div>
                 <p className="text-sm font-medium" style={{ color: 'var(--fg-1)' }}>Browser Push</p>
-                <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
-                  {permission === 'denied'
-                    ? 'Vom Browser blockiert — in Browser-Einstellungen erlauben'
-                    : permission === 'unsupported'
-                    ? 'Von diesem Browser nicht unterstützt'
-                    : subscribed || permission === 'granted'
-                    ? 'Aktiv — du erhältst Samstag & Sonntag eine Erinnerung'
-                    : 'Einmalige Browser-Erlaubnis nötig'}
-                </p>
+                {permission === 'denied' ? (() => {
+                  const info = getBrowserInfo()
+                  return (
+                    <div className="mt-1 space-y-1">
+                      <p className="text-xs font-medium" style={{ color: 'rgba(255,80,80,0.85)' }}>
+                        Blockiert in {info?.browser ?? 'Browser'} auf {info?.os ?? 'deinem System'}
+                      </p>
+                      <p className="text-xs leading-relaxed" style={{ color: 'var(--fg-4)' }}>
+                        {info?.instructions}
+                      </p>
+                    </div>
+                  )
+                })() : (
+                  <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
+                    {permission === 'unsupported'
+                      ? 'Von diesem Browser nicht unterstützt'
+                      : subscribed || permission === 'granted'
+                      ? 'Aktiv — du erhältst Samstag & Sonntag eine Erinnerung'
+                      : 'Einmalige Browser-Erlaubnis nötig'}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -876,11 +924,11 @@ function BenachrichtigungenTab() {
             <button
               onClick={() => setPropFirmReminderEnabled(v => !v)}
               disabled={!(subscribed || permission === 'granted')}
-              className="w-10 h-5 rounded-full transition-colors shrink-0 relative disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: propFirmReminderEnabled ? 'var(--brand-blue)' : 'var(--bg-4)' }}
+              className="w-11 h-6 rounded-full transition-colors duration-200 shrink-0 relative disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: propFirmReminderEnabled ? 'var(--brand-blue)' : 'rgba(255,255,255,0.15)' }}
             >
               <span
-                className="absolute top-0.5 w-4 h-4 rounded-full transition-all"
+                className="absolute top-0.5 w-5 h-5 rounded-full shadow-sm transition-all duration-200"
                 style={{ background: '#fff', left: propFirmReminderEnabled ? '22px' : '2px' }}
               />
             </button>
@@ -900,11 +948,11 @@ function BenachrichtigungenTab() {
             </div>
             <button
               onClick={() => setNotifEmailEnabled(v => !v)}
-              className="w-10 h-5 rounded-full transition-colors shrink-0 relative"
-              style={{ background: notifEmailEnabled ? 'var(--brand-blue)' : 'var(--bg-4)' }}
+              className="w-11 h-6 rounded-full transition-colors duration-200 shrink-0 relative"
+              style={{ background: notifEmailEnabled ? 'var(--brand-blue)' : 'rgba(255,255,255,0.15)' }}
             >
               <span
-                className="absolute top-0.5 w-4 h-4 rounded-full transition-all"
+                className="absolute top-0.5 w-5 h-5 rounded-full shadow-sm transition-all duration-200"
                 style={{ background: '#fff', left: notifEmailEnabled ? '22px' : '2px' }}
               />
             </button>

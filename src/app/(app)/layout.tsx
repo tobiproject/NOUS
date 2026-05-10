@@ -9,6 +9,7 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { MobileHeader } from '@/components/layout/MobileHeader'
 import { MorningBriefing } from '@/components/layout/MorningBriefing'
 import { AnalysisReminderBanner } from '@/components/layout/AnalysisReminderBanner'
+import { MobileUpdateModal } from '@/components/layout/MobileUpdateModal'
 import { FontSizeApplier } from '@/components/layout/FontSizeApplier'
 import { QuickAddTradeButton } from '@/components/layout/QuickAddTradeButton'
 
@@ -36,6 +37,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <MobileUpdateModal />
       <QuickAddTradeButton />
       <BottomNav />
     </AccountProvider>

@@ -14,10 +14,26 @@ interface Props {
 }
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
-  futures:     'Eigenhandel Future',
-  prop:        'Fremdkapital Future',
-  cfd:         'Fremdkapital CFD',
-  eigenhandel: 'Eigenhandel CFD',
+  // Legacy values (backward compat)
+  futures:              'Eigenhandel · Futures',
+  cfd:                  'Eigenhandel · CFD',
+  prop:                 'Fremdkapital · Futures',
+  eigenhandel:          'Eigenhandel · CFD',
+  // Eigenhandel
+  eigenhandel_futures:  'Eigenhandel · Futures',
+  eigenhandel_cfd:      'Eigenhandel · CFD',
+  eigenhandel_fx:       'Eigenhandel · FX',
+  eigenhandel_aktien:   'Eigenhandel · Aktien',
+  eigenhandel_optionen: 'Eigenhandel · Optionen',
+  eigenhandel_krypto:   'Eigenhandel · Krypto',
+  eigenhandel_etf:      'Eigenhandel · ETF',
+  // Fremdkapital (Prop Firm)
+  fremdkapital_futures:  'Fremdkapital · Futures',
+  fremdkapital_cfd:      'Fremdkapital · CFD',
+  fremdkapital_fx:       'Fremdkapital · FX',
+  fremdkapital_aktien:   'Fremdkapital · Aktien',
+  fremdkapital_optionen: 'Fremdkapital · Optionen',
+  fremdkapital_krypto:   'Fremdkapital · Krypto',
 }
 
 const NAV_ITEMS = [

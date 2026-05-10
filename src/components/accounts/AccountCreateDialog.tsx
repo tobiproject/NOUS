@@ -20,7 +20,10 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -30,11 +33,23 @@ import { useAccounts } from '@/hooks/useAccounts'
 
 const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'AUD', 'CAD', 'BTC', 'USDT']
 
-const ACCOUNT_TYPES = [
-  { value: 'futures',     label: 'Futures' },
-  { value: 'cfd',         label: 'CFD' },
-  { value: 'prop',        label: 'Prop Firm' },
-  { value: 'eigenhandel', label: 'Eigenhandel' },
+const ACCOUNT_TYPES_EIGENHANDEL = [
+  { value: 'eigenhandel_futures',  label: 'Futures' },
+  { value: 'eigenhandel_cfd',      label: 'CFD' },
+  { value: 'eigenhandel_fx',       label: 'FX / Forex' },
+  { value: 'eigenhandel_aktien',   label: 'Aktien' },
+  { value: 'eigenhandel_optionen', label: 'Optionen' },
+  { value: 'eigenhandel_krypto',   label: 'Krypto' },
+  { value: 'eigenhandel_etf',      label: 'ETF' },
+]
+
+const ACCOUNT_TYPES_FREMDKAPITAL = [
+  { value: 'fremdkapital_futures',  label: 'Futures' },
+  { value: 'fremdkapital_cfd',      label: 'CFD' },
+  { value: 'fremdkapital_fx',       label: 'FX / Forex' },
+  { value: 'fremdkapital_aktien',   label: 'Aktien' },
+  { value: 'fremdkapital_optionen', label: 'Optionen' },
+  { value: 'fremdkapital_krypto',   label: 'Krypto' },
 ]
 
 const schema = z.object({
@@ -188,9 +203,19 @@ export function AccountCreateDialog({ trigger }: AccountCreateDialogProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {ACCOUNT_TYPES.map(t => (
-                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Eigenhandel</SelectLabel>
+                        {ACCOUNT_TYPES_EIGENHANDEL.map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectSeparator />
+                      <SelectGroup>
+                        <SelectLabel>Fremdkapital (Prop Firm)</SelectLabel>
+                        {ACCOUNT_TYPES_FREMDKAPITAL.map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                   <FormMessage />

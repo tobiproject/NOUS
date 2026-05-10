@@ -27,7 +27,6 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
-import { useWatchlist } from '@/hooks/useWatchlist'
 import { ProfileSidebar } from '@/components/layout/ProfileSidebar'
 import { cn } from '@/lib/utils'
 
@@ -206,8 +205,17 @@ export function AppSidebar() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const { items: watchlistItems } = useWatchlist(activeAccount?.id)
-  const hasWatchlistItems = watchlistItems.length > 0
+  const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
+
+  // Sync watchlist indicator via localStorage + cross-component events (no extra API call)
+  useEffect(() => {
+    setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
+    const handle = (e: Event) => {
+      setHasWatchlistItems((e as CustomEvent<{ hasItems: boolean }>).detail.hasItems)
+    }
+    window.addEventListener('watchlist-changed', handle)
+    return () => window.removeEventListener('watchlist-changed', handle)
+  }, [])
 
   useEffect(() => {
     fetch('/api/profile')
@@ -399,9 +407,9 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: profile row only — all settings + logout live inside ProfileSidebar */}
+      {/* Bottom: profile row + version */}
       <div
-        className="mt-auto px-2 pb-3 pt-2"
+        className="mt-auto px-2 pb-2 pt-2"
         style={{ borderTop: '1px solid var(--border-raw)' }}
       >
         <button
@@ -440,6 +448,9 @@ export function AppSidebar() {
             )}
           </div>
         </button>
+        <p className="px-2 pt-1 pb-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
+          v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}
+        </p>
       </div>
     </aside>
 

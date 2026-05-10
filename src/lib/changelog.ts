@@ -17,6 +17,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
 ]
 
+// Returns exact match or falls back to the latest entry —
+// since version now auto-increments per commit, always show the latest changelog.
 export function getChangelogForVersion(version: string): ChangelogEntry | undefined {
-  return CHANGELOG.find(e => e.version === version)
+  return CHANGELOG.find(e => e.version === version) ?? CHANGELOG[0]
 }

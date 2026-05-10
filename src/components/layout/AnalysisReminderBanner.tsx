@@ -31,6 +31,12 @@ export function addReminder(reminder: AnalysisReminder) {
 export function dismissReminder(tradeId: string) {
   const all = loadReminders().filter(r => r.tradeId !== tradeId)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
+  // Also remove from DB so no duplicate push is sent
+  fetch('/api/notifications/analysis-reminder', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tradeId }),
+  }).catch(() => {})
 }
 
 export function AnalysisReminderBanner() {

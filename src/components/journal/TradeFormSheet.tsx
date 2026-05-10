@@ -603,10 +603,16 @@ export function TradeFormSheet({
 
       toast.success('Trade erfasst')
 
-      // Save analysis reminder if set
+      // Save analysis reminder — localStorage (in-app banner) + DB (push notification)
       if (reminderHours !== 'none') {
         const dueAt = new Date(Date.now() + parseInt(reminderHours) * 3600_000).toISOString()
         addReminder({ tradeId: trade.id, asset: values.asset, direction: values.direction, dueAt })
+        // Fire-and-forget: persist in DB so push cron can send the notification
+        fetch('/api/notifications/analysis-reminder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tradeId: trade.id, asset: values.asset, direction: values.direction, dueAt }),
+        }).catch(() => {})
         setReminderHours('none')
       }
 

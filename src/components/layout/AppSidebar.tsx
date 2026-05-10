@@ -6,11 +6,9 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
 import {
   LayoutDashboard, BookOpen, TrendingUp, Brain, ShieldCheck,
-  CalendarDays, ClipboardList, GraduationCap, Settings,
-  LogOut, Plus, GripVertical, Star, Map as MapIcon, Telescope,
-  Info, Users, BookMarked as KbIcon,
+  CalendarDays, ClipboardList, GraduationCap,
+  Plus, GripVertical, Star, Map as MapIcon, Telescope,
 } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   DndContext,
   PointerSensor,
@@ -200,7 +198,7 @@ function SortableNavItem({ item, isActive, hasTodayPlan, hasWatchlistItems, hasW
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const { activeAccount } = useAccountContext()
   const [navItems, setNavItems] = useState(DEFAULT_NAV_ITEMS)
   const [hasTodayPlan, setHasTodayPlan] = useState(false)
@@ -310,8 +308,8 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: avatar + settings + logout */}
-      <div className="flex flex-col items-center gap-1 pb-3 pt-2 w-full px-1" style={{ borderTop: '1px solid var(--border-raw)' }}>
+      {/* Bottom: avatar only */}
+      <div className="flex flex-col items-center pb-3 pt-2 w-full px-1" style={{ borderTop: '1px solid var(--border-raw)' }}>
         <TooltipProvider>
           <Tooltip delayDuration={300}>
             <TooltipTrigger asChild>
@@ -320,35 +318,19 @@ export function AppSidebar() {
                 className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100"
                 style={{ background: 'transparent' }}
               >
-                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="Avatar" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+                    <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
                   ) : (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-blue)' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-blue)' }}>
                       {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
                     </span>
                   )}
                 </div>
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">Profil</TooltipContent>
-          </Tooltip>
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <Link href="/einstellungen" className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100" style={{ color: 'var(--fg-3)' }}>
-                <Settings className="h-5 w-5" />
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">Einstellungen</TooltipContent>
-          </Tooltip>
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <button onClick={logout} className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100" style={{ color: 'var(--fg-3)' }}>
-                <LogOut className="h-5 w-5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">Abmelden</TooltipContent>
+            <TooltipContent side="right" className="text-xs">Profil & Einstellungen</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
@@ -417,12 +399,11 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: profile + settings + logout */}
+      {/* Bottom: profile row only — all settings + logout live inside ProfileSidebar */}
       <div
-        className="mt-auto px-2 pb-3 pt-2 flex flex-col gap-1"
+        className="mt-auto px-2 pb-3 pt-2"
         style={{ borderTop: '1px solid var(--border-raw)' }}
       >
-        {/* Profile row — opens ProfileSidebar */}
         <button
           onClick={() => setProfileOpen(true)}
           className="flex items-center gap-2.5 px-2 py-2 rounded w-full text-left transition-colors duration-100"
@@ -432,7 +413,7 @@ export function AppSidebar() {
         >
           <div
             style={{
-              width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
               background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)',
               color: 'var(--brand-blue)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -441,15 +422,15 @@ export function AppSidebar() {
           >
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="Avatar" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+              <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
             ) : (
-              <span style={{ fontSize: 11, fontWeight: 700 }}>
+              <span style={{ fontSize: 12, fontWeight: 700 }}>
                 {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
               </span>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-semibold truncate" style={{ color: 'var(--fg-1)' }}>
+            <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--fg-1)' }}>
               {displayName ?? user?.email ?? 'Profil'}
             </div>
             {activeAccount && (
@@ -459,79 +440,6 @@ export function AppSidebar() {
             )}
           </div>
         </button>
-
-        <div className="flex items-center gap-1">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                title="Einstellungen"
-                className="flex items-center justify-center w-8 h-8 rounded transition-colors duration-100 shrink-0"
-                style={{ color: 'var(--fg-3)', background: 'transparent' }}
-                onMouseEnter={e => {
-                  ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-3)'
-                  ;(e.currentTarget as HTMLElement).style.color = 'var(--fg-1)'
-                }}
-                onMouseLeave={e => {
-                  ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-                  ;(e.currentTarget as HTMLElement).style.color = 'var(--fg-3)'
-                }}
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent side="top" align="start" className="w-52 p-1.5">
-              <Link
-                href="/einstellungen"
-                className="flex items-center gap-2.5 px-2.5 py-2 rounded text-[13px] transition-colors hover:bg-accent"
-                style={{ color: 'var(--fg-2)' }}
-              >
-                <Settings className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--fg-4)' }} />
-                Einstellungen
-              </Link>
-              <Link
-                href="/einstellungen?tab=konten"
-                className="flex items-center gap-2.5 px-2.5 py-2 rounded text-[13px] transition-colors hover:bg-accent"
-                style={{ color: 'var(--fg-2)' }}
-              >
-                <Users className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--fg-4)' }} />
-                Konten verwalten
-              </Link>
-              <Link
-                href="/knowledge-base"
-                className="flex items-center gap-2.5 px-2.5 py-2 rounded text-[13px] transition-colors hover:bg-accent"
-                style={{ color: 'var(--fg-2)' }}
-              >
-                <KbIcon className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--fg-4)' }} />
-                Knowledge Base
-              </Link>
-              <div className="my-0.5 h-px" style={{ background: 'var(--border-raw)' }} />
-              <Link
-                href="/about"
-                className="flex items-center gap-2.5 px-2.5 py-2 rounded text-[13px] transition-colors hover:bg-accent"
-                style={{ color: 'var(--fg-2)' }}
-              >
-                <Info className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--fg-4)' }} />
-                Über NOUS
-              </Link>
-            </PopoverContent>
-          </Popover>
-          <button
-            onClick={logout}
-            title="Abmelden"
-            className="flex items-center justify-center w-8 h-8 rounded transition-colors duration-100 shrink-0"
-            style={{ color: 'var(--fg-3)', background: 'transparent' }}
-            onMouseEnter={e => {
-              ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-3)'
-              ;(e.currentTarget as HTMLElement).style.color = 'var(--fg-1)'
-            }}
-            onMouseLeave={e => {
-              ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-              ;(e.currentTarget as HTMLElement).style.color = 'var(--fg-3)'
-            }}
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
       </div>
     </aside>
 

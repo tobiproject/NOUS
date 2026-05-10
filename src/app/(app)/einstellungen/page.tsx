@@ -778,21 +778,28 @@ function getBrowserInfo() {
   else if (/Windows/.test(ua)) os = 'Windows'
   else if (/Linux/.test(ua)) os = 'Linux'
 
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+
   const instructions: Record<string, string> = {
     'Chrome-macOS':   'Adressleiste → Schloss-Icon → „Website-Einstellungen" → „Benachrichtigungen" → „Zulassen"',
     'Chrome-Windows': 'Adressleiste → Schloss-Icon → „Website-Einstellungen" → „Benachrichtigungen" → „Zulassen"',
     'Chrome-Android': 'Chrome-Menü (⋮) → „Einstellungen" → „Website-Einstellungen" → „Benachrichtigungen" → getnous.de → „Zulassen"',
-    'Safari-macOS':   'Safari-Menü → „Einstellungen…" (⌘,) → Tab „Websites" → „Benachrichtigungen" → getnous.de → „Erlauben". Falls dort nichts erscheint: Systemeinstellungen → „Mitteilungen" → „Safari" → Mitteilungen erlauben.',
-    'Safari-iOS':     'Nur als installierte App möglich: Safari → Teilen-Icon → „Zum Home-Bildschirm" → App öffnen → Benachrichtigung erlauben. (Erfordert iOS 16.4+)',
+    'Safari-macOS':   'Safari-Menü → „Einstellungen…" (⌘,) → Tab „Websites" → „Benachrichtigungen" → getnous.de → „Erlauben". Falls getnous.de dort fehlt: zuerst im Browser-Tab auf „Aktivieren" klicken.',
+    'Safari-iOS':     'Nur als installierte App möglich (iOS 16.4+): Im Browser auf „Teilen" → „Zum Home-Bildschirm" → App öffnen → dort auf „Aktivieren" tippen.',
     'Firefox-macOS':  'Adressleiste → Schloss-Icon → „Verbindung sicher" → „Berechtigungen" → Benachrichtigungen freigeben',
     'Firefox-Windows':'Adressleiste → Schloss-Icon → „Verbindung sicher" → „Berechtigungen" → Benachrichtigungen freigeben',
     'Edge-macOS':     'Adressleiste → Schloss-Icon → „Berechtigungen für diese Website" → „Benachrichtigungen" → „Zulassen"',
     'Edge-Windows':   'Adressleiste → Schloss-Icon → „Berechtigungen für diese Website" → „Benachrichtigungen" → „Zulassen"',
   }
 
+  // Installed PWA (Dock/Home Screen) has its own permission context separate from the browser
+  const standaloneInstructions = os === 'macOS'
+    ? 'Als installierte App gelten eigene System-Berechtigungen: Systemeinstellungen → „Mitteilungen" → „NOUS" → Mitteilungen erlauben. Danach App neu starten und hier aktivieren.'
+    : 'Als installierte App: Einstellungen → Apps → NOUS → Benachrichtigungen → Erlauben.'
+
   const key = `${browser}-${os}`
   const fallback = instructions[`${browser}-macOS`] ?? 'Browser-Einstellungen → Benachrichtigungen für getnous.de erlauben'
-  return { browser, os, instructions: instructions[key] ?? fallback }
+  return { browser, os, isStandalone, instructions: isStandalone ? standaloneInstructions : (instructions[key] ?? fallback) }
 }
 
 // ─── Tab: Benachrichtigungen ──────────────────────────────────────────────────
@@ -845,6 +852,7 @@ function BenachrichtigungenTab() {
       body: 'Push-Benachrichtigungen funktionieren! Samstag & Sonntag erhältst du eine Erinnerung.',
       icon: '/icon.png',
       badge: '/icon.png',
+      image: '/icon.png',
       tag: 'nous-test',
       data: { url: '/wochenvorbereitung' },
     } as NotificationOptions)

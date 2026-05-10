@@ -52,9 +52,11 @@
 | PROJ-36 | Onboarding Checklist (Dashboard) | Planned | [PROJ-36-onboarding-checklist.md](PROJ-36-onboarding-checklist.md) | 2026-05-09 |
 | PROJ-37 | Anleitung (Permanente App-Erklärungsseite) | Architected | [PROJ-37-anleitung-page.md](PROJ-37-anleitung-page.md) | 2026-05-09 |
 
+| PROJ-38 | Wirtschaftskalender (Custom Design, kein Widget) | Planned | [PROJ-38-wirtschaftskalender.md](PROJ-38-wirtschaftskalender.md) | 2026-05-10 |
+
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-38
+## Next Available ID: PROJ-39
 
 ## Build Order (Empfohlen)
 

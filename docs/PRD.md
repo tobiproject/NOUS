@@ -40,6 +40,7 @@ Das Ziel ist nicht nur Dokumentation — sondern aktive Verbesserung des Traders
 | P3 | Social Trading & Gamification | Planned |
 | P1 | Onboarding Checklist (Dashboard) | Planned |
 | P1 | Anleitung (Permanente App-Erklärungsseite) | Planned |
+| P1 | Wirtschaftskalender (Custom Design, kein Widget) | Planned |
 
 ## Success Metrics
 

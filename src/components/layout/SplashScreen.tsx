@@ -1,19 +1,23 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
 type Phase = 'blocking' | 'animating' | 'exiting' | 'done'
 
 export function SplashScreen() {
-  // Start 'blocking': sofort schwarzer Screen → verhindert Login-Flash
-  const [phase, setPhase] = useState<Phase>('blocking')
+  const pathname = usePathname()
+  const isLogin = pathname === '/login'
+
+  // Nur auf Login-Page blockieren — Dashboard etc. sehen nie einen schwarzen Flash
+  const [phase, setPhase] = useState<Phase>(isLogin ? 'blocking' : 'done')
 
   useEffect(() => {
-    const shown = sessionStorage.getItem('nous-splash-v4')
+    if (!isLogin) return
 
+    const shown = sessionStorage.getItem('nous-splash-v4')
     if (shown) {
-      // Schon gezeigt → sofort wegblenden (kein Flash, kein Delay)
       setPhase('done')
       return
     }
@@ -32,7 +36,7 @@ export function SplashScreen() {
       clearTimeout(exitTimer)
       clearTimeout(doneTimer)
     }
-  }, [])
+  }, [isLogin])
 
   if (phase === 'done') return null
 

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from '@/components/ui/sonner'
+import { SplashScreen } from '@/components/layout/SplashScreen'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de" className="dark">
       <body className="antialiased bg-background text-foreground">
+        <SplashScreen />
         {children}
         <Toaster />
       </body>

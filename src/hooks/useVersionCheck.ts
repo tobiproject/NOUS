@@ -18,12 +18,12 @@ export function useVersionCheck(): UpdateInfo | null {
     try {
       const cached = localStorage.getItem(CACHE_KEY)
       if (cached) {
-        const parsed = JSON.parse(cached) as UpdateInfo
-        // Clear stale cache if user already has this version (reloaded)
-        if (parsed.version === CLIENT_VERSION) {
+        const parsed = JSON.parse(cached)
+        // Clear cache if wrong format (old 'changes' shape), wrong version, or stale
+        if (!parsed?.features || !parsed?.fixes || parsed.version === CLIENT_VERSION) {
           localStorage.removeItem(CACHE_KEY)
         } else {
-          setUpdate(parsed)
+          setUpdate(parsed as UpdateInfo)
         }
       }
     } catch {}

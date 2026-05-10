@@ -1,6 +1,6 @@
 # PROJ-37: Anleitung (Permanente App-Erklärungsseite)
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-05-09
 **Last Updated:** 2026-05-10
 

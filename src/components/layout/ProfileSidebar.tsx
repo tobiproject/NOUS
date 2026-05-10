@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X, Check } from 'lucide-react'
+import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X, Check, HelpCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
 
@@ -11,6 +11,7 @@ interface Props {
   onClose: () => void
   displayName?: string | null
   avatarUrl?: string | null
+  side?: 'left' | 'right'
 }
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
@@ -37,15 +38,16 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 }
 
 const NAV_ITEMS = [
-  { href: '/einstellungen?tab=profil&solo=1',            icon: User2,    label: 'Mein Profil' },
-  { href: '/einstellungen?tab=strategie&solo=1',         icon: Target,   label: 'Strategie' },
-  { href: '/einstellungen?tab=konten&solo=1',            icon: Wallet,   label: 'Konten' },
-  { href: '/einstellungen?tab=api-key&solo=1',           icon: Key,      label: 'API Key' },
-  { href: '/einstellungen?tab=knowledge-base&solo=1',    icon: BookOpen, label: 'Knowledge Base' },
-  { href: '/einstellungen?tab=benachrichtigungen&solo=1',icon: Bell,     label: 'Benachrichtigungen' },
+  { href: '/einstellungen?tab=profil&solo=1',            icon: User2,       label: 'Mein Profil' },
+  { href: '/einstellungen?tab=strategie&solo=1',         icon: Target,      label: 'Strategie' },
+  { href: '/einstellungen?tab=konten&solo=1',            icon: Wallet,      label: 'Konten' },
+  { href: '/einstellungen?tab=api-key&solo=1',           icon: Key,         label: 'API Key' },
+  { href: '/einstellungen?tab=knowledge-base&solo=1',    icon: BookOpen,    label: 'Knowledge Base' },
+  { href: '/einstellungen?tab=benachrichtigungen&solo=1',icon: Bell,        label: 'Benachrichtigungen' },
+  { href: '/anleitung',                                  icon: HelpCircle,  label: 'Anleitung' },
 ]
 
-export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props) {
+export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = 'right' }: Props) {
   const { user, logout } = useAuth()
   const { accounts, activeAccount, setActiveAccount } = useAccountContext()
   const activeAccounts = accounts.filter(a => !a.is_archived)
@@ -70,9 +72,11 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
     const overlay = overlayRef.current
     if (!panel || !overlay) return
 
+    const offscreen = side === 'left' ? 'translateX(-100%)' : 'translateX(100%)'
+
     if (open) {
       panel.style.transition = 'none'
-      panel.style.transform = 'translateX(100%)'
+      panel.style.transform = offscreen
       overlay.style.transition = 'none'
       overlay.style.opacity = '0'
       requestAnimationFrame(() => {
@@ -85,13 +89,13 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
       })
     } else {
       panel.style.transition = 'transform 0.22s cubic-bezier(0.4, 0, 1, 1)'
-      panel.style.transform = 'translateX(100%)'
+      panel.style.transform = offscreen
       overlay.style.transition = 'opacity 0.22s ease'
       overlay.style.opacity = '0'
       const t = setTimeout(() => setMounted(false), 260)
       return () => clearTimeout(t)
     }
-  }, [open, mounted])
+  }, [open, mounted, side])
 
   // Body scroll lock
   useEffect(() => {
@@ -115,11 +119,11 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl }: Props)
       {/* Panel */}
       <div
         ref={panelRef}
-        className="absolute inset-y-0 right-0 flex flex-col overflow-hidden"
+        className={`absolute inset-y-0 ${side === 'left' ? 'left-0' : 'right-0'} flex flex-col overflow-hidden`}
         style={{
           background: '#141417',
           width: 'min(270px, 75vw)',
-          transform: 'translateX(100%)',
+          transform: side === 'left' ? 'translateX(-100%)' : 'translateX(100%)',
           willChange: 'transform',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}

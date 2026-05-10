@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   LayoutDashboard, BookOpen, TrendingUp, Brain, ShieldCheck,
   CalendarDays, ClipboardList, GraduationCap,
-  Plus, GripVertical, Star, Map as MapIcon, Telescope,
+  Plus, GripVertical, Star, Map as MapIcon, Telescope, HelpCircle,
 } from 'lucide-react'
 import {
   DndContext,
@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
+import { ProfileSidebar } from './ProfileSidebar'
 
 import { cn } from '@/lib/utils'
 
@@ -49,6 +50,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: 'lernmodus',          href: '/lernmodus',          label: 'Lernen',             icon: GraduationCap,   kbd: null,  tooltip: 'Quiz, Chart-Replay und KI-Coach zum Verbessern deiner Entscheidungen' },
   { id: 'watchlist',          href: '/watchlist',          label: 'Watchlist',          icon: Star,            kbd: null,  tooltip: 'Deine gehandelten Assets mit Kontraktwerten für die Risikoberechnung' },
   { id: 'roadmap',            href: '/roadmap',            label: 'Roadmap',            icon: MapIcon,         kbd: null,  tooltip: 'Deine Trader-Journey: Level, Stärken/Schwächen und nächste Schritte' },
+  { id: 'anleitung',          href: '/anleitung',          label: 'Anleitung',          icon: HelpCircle,      kbd: null,  tooltip: 'Schritt-für-Schritt-Erklärung aller NOUS-Features — jederzeit abrufbar' },
 ]
 
 const STORAGE_KEY = 'nous-sidebar-order'
@@ -205,6 +207,7 @@ export function AppSidebar() {
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   // Sync watchlist indicator via localStorage + cross-component events (no extra API call)
   useEffect(() => {
@@ -315,10 +318,13 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: avatar display — Profil trigger via DesktopProfileButton top-right */}
+      {/* Bottom: avatar — click opens ProfileSidebar from left */}
       <div className="flex flex-col items-center pb-3 pt-2 w-full px-1" style={{ borderTop: '1px solid var(--border-raw)' }}>
-        <div
-          style={{ width: 30, height: 30, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
+        <button
+          onClick={() => setProfileOpen(true)}
+          aria-label="Profil"
+          className="active:opacity-60"
+          style={{ width: 30, height: 30, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 0, border: 'none', cursor: 'pointer' }}
         >
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -328,7 +334,7 @@ export function AppSidebar() {
               {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
             </span>
           )}
-        </div>
+        </button>
       </div>
     </aside>
 
@@ -395,12 +401,17 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: profile info display only — trigger is DesktopProfileButton top-right */}
+      {/* Bottom: profile info — click opens ProfileSidebar from left */}
       <div
         className="mt-auto px-2 pb-2 pt-2"
         style={{ borderTop: '1px solid var(--border-raw)' }}
       >
-        <div className="flex items-center gap-2.5 px-2 py-2">
+        <button
+          onClick={() => setProfileOpen(true)}
+          aria-label="Profil"
+          className="flex items-center gap-2.5 px-2 py-2 w-full rounded hover:bg-white/5 active:bg-white/5 transition-colors text-left"
+          style={{ cursor: 'pointer', border: 'none', background: 'transparent' }}
+        >
           <div
             style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
@@ -429,12 +440,20 @@ export function AppSidebar() {
               </div>
             )}
           </div>
-        </div>
+        </button>
         <p className="px-2 pt-0 pb-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
           v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}
         </p>
       </div>
     </aside>
+
+    <ProfileSidebar
+      open={profileOpen}
+      onClose={() => setProfileOpen(false)}
+      displayName={displayName}
+      avatarUrl={avatarUrl}
+      side="left"
+    />
     </>
   )
 }

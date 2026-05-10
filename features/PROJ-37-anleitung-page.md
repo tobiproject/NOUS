@@ -1,8 +1,8 @@
 # PROJ-37: Anleitung (Permanente App-Erklärungsseite)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-05-09
-**Last Updated:** 2026-05-09
+**Last Updated:** 2026-05-10
 
 ## Dependencies
 - Requires: PROJ-1 (Auth) — Seite ist nur für eingeloggte User sichtbar

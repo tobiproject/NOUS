@@ -506,7 +506,7 @@ export function AppSidebar() {
             className="px-2 pt-0 pb-1 text-[10px] text-left w-full transition-opacity active:opacity-60"
             style={{ color: 'var(--fg-4)' }}
           >
-            v{CHANGELOG[0].version}
+            v{CHANGELOG[0].version} · {process.env.NEXT_PUBLIC_BUILD_DATE ?? ''}
           </button>
         )}
 

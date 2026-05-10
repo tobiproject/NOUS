@@ -6,7 +6,7 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '1.2.0',
+    version: '1.2',
     date: '2026-05-10',
     changes: [
       'Profil-Sidebar öffnet jetzt von links mit Konto-Schnellwechsel',

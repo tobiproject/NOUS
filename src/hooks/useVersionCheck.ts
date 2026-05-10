@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-const CLIENT_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'
+const CLIENT_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? 'dev'
 const CACHE_KEY = 'nous-update-available'
 
 export interface UpdateInfo {

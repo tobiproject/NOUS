@@ -54,18 +54,23 @@ export default function WochenvorbereitungPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch(`/api/weekly-plan?week=${format(targetMonday, 'yyyy-MM-dd')}`)
-    const data = await res.json()
-    if (data.plan) {
-      setPlan({
-        focus_assets:  data.plan.focus_assets ?? [],
-        weekly_goals:  data.plan.weekly_goals ?? [],
-        max_trades:    data.plan.max_trades ?? null,
-        max_drawdown:  data.plan.max_drawdown ?? null,
-        notes:         data.plan.notes ?? '',
-      })
+    try {
+      const res = await fetch(`/api/weekly-plan?week=${format(targetMonday, 'yyyy-MM-dd')}`)
+      const data = await res.json()
+      if (data.plan) {
+        setPlan({
+          focus_assets:  data.plan.focus_assets ?? [],
+          weekly_goals:  data.plan.weekly_goals ?? [],
+          max_trades:    data.plan.max_trades ?? null,
+          max_drawdown:  data.plan.max_drawdown ?? null,
+          notes:         data.plan.notes ?? '',
+        })
+      }
+    } catch {
+      // show empty form on network error
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [targetMonday])
 
   useEffect(() => { load() }, [load])
@@ -97,12 +102,12 @@ export default function WochenvorbereitungPage() {
     setPlan(p => ({ ...p, weekly_goals: p.weekly_goals.filter((_, j) => j !== i) }))
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div className="space-y-6 max-w-2xl">
       {/* Header */}
-      <div className="flex items-end justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <div className="eyebrow mb-1">Planung</div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
               Wochenvorbereitung
             </h1>
@@ -117,7 +122,7 @@ export default function WochenvorbereitungPage() {
         <Button
           onClick={save}
           disabled={saving}
-          className="h-8 px-4 text-[13px] font-semibold rounded gap-2"
+          className="h-8 px-4 text-[13px] font-semibold rounded gap-2 shrink-0"
           style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -222,9 +227,7 @@ export default function WochenvorbereitungPage() {
           </Section>
 
           {/* KI Weekly Prep */}
-          <Section title="KI-Marktanalyse" subtitle="Lass die KI die Woche für dich vorbereiten">
-            <WeeklyPrepCard />
-          </Section>
+          <WeeklyPrepCard />
 
         </div>
       )}

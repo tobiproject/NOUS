@@ -44,8 +44,8 @@ export function useVersionCheck(): UpdateInfo | null {
       } catch {}
     }
 
-    const t = setTimeout(check, 10_000)
-    const i = setInterval(check, 5 * 60 * 1000)
+    const t = setTimeout(check, 2_000)
+    const i = setInterval(check, 60_000)
     return () => { clearTimeout(t); clearInterval(i) }
   }, [])
 

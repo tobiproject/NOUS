@@ -106,7 +106,63 @@ Kein Datenmodell — vollständig statischer Inhalt im Code.
 Keine neuen Pakete — Accordion, Icons und Tailwind bereits vorhanden.
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA Date:** 2026-05-10  
+**Tester:** QA Engineer (automated + code analysis)  
+**Status:** ✅ Approved — No Critical or High bugs
+
+### Acceptance Criteria Results
+
+| # | Criteria | Result | Notes |
+|---|----------|--------|-------|
+| AC-1 | `/anleitung` route exists + auth-protected | ✅ PASS | 307 redirect confirmed + E2E test passed |
+| AC-2 | Desktop Sidebar entry (HelpCircle icon, "Anleitung") | ✅ PASS | AppSidebar.tsx line 53 |
+| AC-3 | Mobile Navigation erreichbar | ✅ PASS | MobileHeader avatar → ProfileSidebar → "Anleitung" link |
+| AC-4 | Sektionen mit Anchor-Links anspringbar | ✅ PASS | id-Attribute auf allen 10 AccordionItems; TOC scrollTo() |
+| AC-5 | Akkordeon-Abschnitte (kein Fließtext) | ✅ PASS | shadcn Accordion mit `type="multiple"` |
+| AC-6 | Jede Sektion: Was?, Wozu?, Schritt-für-Schritt | ✅ PASS | Alle 10 Sektionen vollständig |
+| AC-7 | Deep Links zu App-Seiten | ✅ PASS | `Öffnen`-Button mit Next.js Link für Steps mit `link`-Prop |
+| AC-8 | "Nach oben"-Link + Desktop TOC | ✅ PASS | "Nach oben"-Button in jeder Section; sticky aside auf Desktop |
+| AC-9 | Mobile (375px) lesbar, kein horizontaler Scroll | ✅ PASS | TOC nur auf lg+, einspaltiges Layout auf Mobile |
+| AC-10 | Statisch gerendert, kein API-Call | ✅ PASS | `page.tsx` Server Component ohne Data Fetching |
+
+### Bugs Found
+
+| # | Severity | Description | Steps to Reproduce |
+|---|----------|-------------|-------------------|
+| BUG-1 | Low | Sektion-Titel verwenden `<div>` statt `<h2>` — semantisches HTML-Problem für Barrierefreiheit. Spec: "klare H2-Überschrift" | Inspect Element auf Sektion-Titel in AccordionTrigger → `div`, nicht `h2` |
+
+### Edge Cases Tested
+
+| Edge Case | Result |
+|-----------|--------|
+| User nicht eingeloggt → Redirect zu `/login` | ✅ PASS (307 redirect bestätigt) |
+| Normale Seitenladung via Onboarding-Link | ✅ PASS (kein Sonderzustand) |
+| Mobile 375px — keine horizontalen Scrollbars | ✅ PASS (code analysis) |
+| Inhalte sind statisch — kein Loading-State | ✅ PASS |
+
+### Security Audit
+
+| Check | Result |
+|-------|--------|
+| Auth-Schutz (unauthentifizierter Zugriff) | ✅ 307 Redirect zu /login |
+| Neue Supabase-Tabellen → RLS | N/A — keine Tabellen |
+| User-Input vorhanden | N/A — reine Content-Seite |
+| Secrets/API-Keys im Code | ✅ Keine |
+| XSS-Risiko durch User-Input | N/A — kein User-Input |
+
+### Automated Tests
+
+**Unit Tests:** Keine neuen Custom-Hooks oder isolierte Logik in PROJ-37 — kein Unit-Test nötig.  
+**Pre-existing failures:** `useAccounts.test.ts` + `trade-display.test.ts` — Vitest Worker Timeout (pre-existing, unrelated to PROJ-37).
+
+**E2E Tests:** `tests/PROJ-37-anleitung-page.spec.ts` — 16 Tests erstellt  
+- 1 passed (Auth-Redirect — ohne Credentials testbar)  
+- 15 skipped (benötigen `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` in `.env.local`)
+
+### Production-Ready Decision
+
+**✅ READY** — Kein Critical oder High Bug. Ein Low-Bug (semantisches `<h2>` statt `<div>`) kann optional nachgezogen werden, blockiert Deployment nicht.
 
 ## Deployment
 _To be added by /deploy_

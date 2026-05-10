@@ -16,8 +16,13 @@ function getWeekBounds(offset: number): { weekStart: string; weekEnd: string } {
   return { weekStart, weekEnd }
 }
 
+function getInitialWeekOffset(): number {
+  // On Sundays, default to next week since the trading week starts Monday
+  return new Date().getDay() === 0 ? 1 : 0
+}
+
 export function useEconomicCalendar() {
-  const [weekOffset, setWeekOffset] = useState(0)
+  const [weekOffset, setWeekOffset] = useState(getInitialWeekOffset)
   const [events, setEvents] = useState<EconomicEvent[]>([])
   const [filters, setFilters] = useState<CalendarFilters>(DEFAULT_FILTERS)
   const [fetchedAt, setFetchedAt] = useState<string | null>(null)

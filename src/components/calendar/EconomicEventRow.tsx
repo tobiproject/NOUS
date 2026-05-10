@@ -1,0 +1,125 @@
+'use client'
+
+import { useState, useCallback } from 'react'
+import { ChevronDown, BarChart2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import type { EconomicEvent } from '@/types/calendar'
+import { ImpactDot } from './ImpactDot'
+import { CountryFlag } from './CountryFlag'
+import { ActualValue } from './ActualValue'
+import { EconomicEventDetail } from './EconomicEventDetail'
+import { format, parseISO } from 'date-fns'
+import { de } from 'date-fns/locale'
+
+interface Props {
+  event: EconomicEvent
+  isPast: boolean
+  userTimezone?: string
+}
+
+function formatEventTime(timeUtc: string | null, userTimezone?: string): string {
+  if (!timeUtc) return 'ganzt.'
+  try {
+    const date = new Date(timeUtc)
+    return new Intl.DateTimeFormat('de-DE', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: userTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }).format(date)
+  } catch {
+    return format(parseISO(timeUtc), 'HH:mm', { locale: de })
+  }
+}
+
+export function EconomicEventRow({ event, isPast, userTimezone }: Props) {
+  const [expanded, setExpanded] = useState(false)
+
+  const toggle = useCallback(() => setExpanded(v => !v), [])
+
+  const timeLabel = formatEventTime(event.time_utc, userTimezone)
+
+  return (
+    <div
+      id={`event-${event.id}`}
+      className={cn(
+        'rounded-md overflow-hidden transition-opacity',
+        isPast && 'opacity-50'
+      )}
+      style={{ border: '1px solid var(--border-raw)', background: 'var(--bg-2)' }}
+    >
+      {/* Main row */}
+      <button
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--bg-3)] transition-colors"
+        onClick={toggle}
+        aria-expanded={expanded}
+      >
+        {/* Impact dot */}
+        <ImpactDot impact={event.impact} className="mt-px" />
+
+        {/* Time */}
+        <span
+          className="text-xs tabular-nums w-10 shrink-0"
+          style={{ color: 'var(--fg-3)', fontFamily: 'JetBrains Mono, monospace' }}
+        >
+          {timeLabel}
+        </span>
+
+        {/* Flag + currency */}
+        <CountryFlag countryCode={event.country_code} currency={event.currency} />
+
+        {/* Event name + trade indicator */}
+        <span className="flex-1 flex items-center gap-1.5 min-w-0">
+          <span
+            className="text-xs font-medium truncate"
+            style={{ color: 'var(--fg-1)' }}
+          >
+            {event.title}
+          </span>
+          {event.trade_indicator && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="shrink-0">
+                    <BarChart2 size={11} style={{ color: 'var(--brand-blue)' }} />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {event.trade_indicator.asset}{' '}
+                  {event.trade_indicator.direction === 'long' ? 'Long' : 'Short'}
+                  {event.trade_indicator.rr_ratio !== null && (
+                    <>, {event.trade_indicator.rr_ratio > 0 ? '+' : ''}{event.trade_indicator.rr_ratio.toFixed(1)}R</>
+                  )}
+                  &nbsp;·&nbsp;{format(parseISO(event.trade_indicator.entry_time), 'HH:mm')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </span>
+
+        {/* Previous / Forecast / Actual */}
+        <span className="hidden sm:flex items-center gap-4 shrink-0">
+          <span className="text-xs tabular-nums w-14 text-right" style={{ color: 'var(--fg-4)' }}>
+            {event.previous ?? '—'}
+          </span>
+          <span className="text-xs tabular-nums w-14 text-right" style={{ color: 'var(--fg-3)' }}>
+            {event.forecast ?? '—'}
+          </span>
+          <span className="w-14 text-right">
+            <ActualValue actual={event.actual} forecast={event.forecast} />
+          </span>
+        </span>
+
+        {/* Expand chevron */}
+        <ChevronDown
+          size={13}
+          className={cn('shrink-0 transition-transform', expanded && 'rotate-180')}
+          style={{ color: 'var(--fg-4)' }}
+        />
+      </button>
+
+      {/* Detail section */}
+      {expanded && <EconomicEventDetail event={event} />}
+    </div>
+  )
+}

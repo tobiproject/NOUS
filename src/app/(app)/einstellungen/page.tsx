@@ -1052,6 +1052,7 @@ function BenachrichtigungenTab() {
   const [notifEmail, setNotifEmail] = useState('')
   const [notifEmailEnabled, setNotifEmailEnabled] = useState(false)
   const [propFirmReminderEnabled, setPropFirmReminderEnabled] = useState(false)
+  const [highImpactAlertsEnabled, setHighImpactAlertsEnabled] = useState(false)
   const [weeklyPrepTime, setWeeklyPrepTime] = useState('09:00')
   const [propFirmTime, setPropFirmTime] = useState('07:00')
   const [notifTimezone, setNotifTimezone] = useState(() => {
@@ -1068,6 +1069,7 @@ function BenachrichtigungenTab() {
       setNotifEmailEnabled(d.email_enabled ?? false)
       setNotifEmail(d.email_address ?? '')
       setPropFirmReminderEnabled(d.prop_firm_reminder_enabled ?? false)
+      setHighImpactAlertsEnabled(d.high_impact_alerts_enabled ?? false)
       setWeeklyPrepTime(d.weekly_prep_time ?? '09:00')
       setPropFirmTime(d.prop_firm_reminder_time ?? '07:00')
       if (d.notification_timezone) setNotifTimezone(normalizeToCurated(d.notification_timezone))
@@ -1083,6 +1085,7 @@ function BenachrichtigungenTab() {
         email_enabled: notifEmailEnabled,
         email_address: notifEmail,
         prop_firm_reminder_enabled: propFirmReminderEnabled,
+        high_impact_alerts_enabled: highImpactAlertsEnabled,
         weekly_prep_time: weeklyPrepTime,
         prop_firm_reminder_time: propFirmTime,
         notification_timezone: notifTimezone,
@@ -1090,7 +1093,7 @@ function BenachrichtigungenTab() {
     })
     setNotifSaving(false)
     toast.success('Einstellungen gespeichert')
-  }, [notifEmailEnabled, notifEmail, propFirmReminderEnabled, weeklyPrepTime, propFirmTime, notifTimezone])
+  }, [notifEmailEnabled, notifEmail, propFirmReminderEnabled, highImpactAlertsEnabled, weeklyPrepTime, propFirmTime, notifTimezone])
 
   const handlePushToggle = async () => {
     if (subscribed || permission === 'granted') {
@@ -1218,6 +1221,35 @@ function BenachrichtigungenTab() {
               onChange={setPropFirmTime}
             />
           )}
+        </div>
+      </Section>
+
+      <Section title="Wirtschaftskalender Alerts" subtitle="30 Minuten vor jedem High-Impact Event — nur wenn Push aktiviert ist">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Bell className="h-4 w-4" style={{ color: highImpactAlertsEnabled ? 'var(--short)' : 'var(--fg-4)' }} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--fg-1)' }}>High-Impact Event Alerts</p>
+                <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
+                  {!(subscribed || permission === 'granted')
+                    ? 'Browser Push muss erst aktiviert sein'
+                    : 'NFP, CPI, Zinsentscheide — 30min vorher'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setHighImpactAlertsEnabled(v => !v)}
+              disabled={!(subscribed || permission === 'granted')}
+              className="w-11 h-6 rounded-full transition-colors duration-200 shrink-0 relative disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: highImpactAlertsEnabled ? 'var(--short)' : 'rgba(255,255,255,0.15)' }}
+            >
+              <span
+                className="absolute top-0.5 w-5 h-5 rounded-full shadow-sm transition-all duration-200"
+                style={{ background: '#fff', left: highImpactAlertsEnabled ? '22px' : '2px' }}
+              />
+            </button>
+          </div>
         </div>
       </Section>
 

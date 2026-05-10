@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from('notification_settings')
-    .select('push_enabled, email_enabled, email_address, prop_firm_reminder_enabled, weekly_prep_time, prop_firm_reminder_time, notification_timezone')
+    .select('push_enabled, email_enabled, email_address, prop_firm_reminder_enabled, weekly_prep_time, prop_firm_reminder_time, notification_timezone, high_impact_alerts_enabled')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -20,6 +20,7 @@ export async function GET() {
     weekly_prep_time: data?.weekly_prep_time ?? '09:00',
     prop_firm_reminder_time: data?.prop_firm_reminder_time ?? '07:00',
     notification_timezone: data?.notification_timezone ?? 'UTC',
+    high_impact_alerts_enabled: data?.high_impact_alerts_enabled ?? false,
   })
 }
 
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
       weekly_prep_time: body.weekly_prep_time ?? '09:00',
       prop_firm_reminder_time: body.prop_firm_reminder_time ?? '07:00',
       notification_timezone: body.notification_timezone ?? 'UTC',
+      high_impact_alerts_enabled: body.high_impact_alerts_enabled ?? false,
     },
     { onConflict: 'user_id' }
   )

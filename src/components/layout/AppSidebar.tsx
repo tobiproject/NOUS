@@ -29,6 +29,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { ProfileSidebar } from './ProfileSidebar'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
+import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY } from '@/lib/anleitung-progress'
 import { RefreshCw, Sparkles } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -182,8 +183,8 @@ function SortableNavItem({ item, isActive, hasTodayPlan, hasWatchlistItems, hasW
             )}
             {showWeeklyPrepDot && (
               <span
-                className="w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ background: 'var(--warn)' }}
+                className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0"
+                style={{ background: 'var(--warn)', boxShadow: '0 0 4px var(--warn)' }}
               />
             )}
           </Link>
@@ -209,7 +210,17 @@ export function AppSidebar() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [anleitungPercent, setAnleitungPercent] = useState(0)
   const update = useVersionCheck()
+
+  // Track anleitung progress for profile dot
+  useEffect(() => {
+    const refresh = () => setAnleitungPercent(getAnleitungProgress().percent)
+    refresh()
+    window.addEventListener('anleitung-progress-changed', refresh)
+    window.addEventListener('storage', (e) => { if (e.key === ANLEITUNG_STORAGE_KEY) refresh() })
+    return () => window.removeEventListener('anleitung-progress-changed', refresh)
+  }, [])
 
   // Sync watchlist indicator via localStorage + cross-component events (no extra API call)
   useEffect(() => {
@@ -338,10 +349,10 @@ export function AppSidebar() {
               </span>
             )}
           </button>
-          {update && (
+          {(update || anleitungPercent < 100 || hasWeeklyPrepReminder) && (
             <span
               className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-pulse border border-[var(--bg-1)]"
-              style={{ background: 'var(--brand-blue)' }}
+              style={{ background: 'var(--brand-blue)', boxShadow: '0 0 5px var(--brand-blue)' }}
             />
           )}
         </div>
@@ -422,22 +433,30 @@ export function AppSidebar() {
           className="flex items-center gap-2.5 px-2 py-2 w-full rounded hover:bg-white/5 active:bg-white/5 transition-colors text-left"
           style={{ cursor: 'pointer', border: 'none', background: 'transparent' }}
         >
-          <div
-            style={{
-              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)',
-              color: 'var(--brand-blue)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              overflow: 'hidden',
-            }}
-          >
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
-            ) : (
-              <span style={{ fontSize: 12, fontWeight: 700 }}>
-                {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
-              </span>
+          <div className="relative shrink-0" style={{ width: 30, height: 30 }}>
+            <div
+              style={{
+                width: 30, height: 30, borderRadius: '50%',
+                background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)',
+                color: 'var(--brand-blue)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+              }}
+            >
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+              ) : (
+                <span style={{ fontSize: 12, fontWeight: 700 }}>
+                  {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
+                </span>
+              )}
+            </div>
+            {(update || anleitungPercent < 100 || hasWeeklyPrepReminder) && (
+              <span
+                className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-pulse border border-[var(--bg-1)]"
+                style={{ background: 'var(--brand-blue)', boxShadow: '0 0 5px var(--brand-blue)' }}
+              />
             )}
           </div>
           <div className="flex-1 min-w-0">

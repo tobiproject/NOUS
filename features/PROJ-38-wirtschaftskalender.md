@@ -1,6 +1,6 @@
 # PROJ-38: Wirtschaftskalender (Custom Design)
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-05-10
 **Last Updated:** 2026-05-10
 
@@ -426,4 +426,9 @@ Jedes Wirtschaftsereignis hat:
 - BUG-9 ✅ Unused `eventRefs` entfernt
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-05-10
+**Production URL:** https://www.getnous.de/kalender
+**Commit:** 6b9ac0f
+**Git Tag:** v1.38.0-PROJ-38
+**Rollback:** Vercel Dashboard → Deployments → previous working deployment → "Promote to Production"

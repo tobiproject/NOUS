@@ -46,7 +46,6 @@
     { "path": "/api/cron/analysis-reminder", "schedule": "0 8 * * *" },
     { "path": "/api/cron/analysis-reminder", "schedule": "0 13 * * *" },
     { "path": "/api/cron/analysis-reminder", "schedule": "0 18 * * *" },
-    { "path": "/api/cron/fetch-economic-events", "schedule": "0 7 * * 1-6" },
-    { "path": "/api/cron/economic-event-alerts", "schedule": "0,30 7-21 * * 1-5" }
+    { "path": "/api/cron/fetch-economic-events", "schedule": "0 7 * * 1-6" }
   ]
 }

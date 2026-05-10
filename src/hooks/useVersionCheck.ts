@@ -16,7 +16,15 @@ export function useVersionCheck(): UpdateInfo | null {
   useEffect(() => {
     try {
       const cached = localStorage.getItem(CACHE_KEY)
-      if (cached) setUpdate(JSON.parse(cached))
+      if (cached) {
+        const parsed = JSON.parse(cached) as UpdateInfo
+        // Clear stale cache if user already has this version (reloaded)
+        if (parsed.version === CLIENT_VERSION) {
+          localStorage.removeItem(CACHE_KEY)
+        } else {
+          setUpdate(parsed)
+        }
+      }
     } catch {}
 
     const check = async () => {
@@ -28,6 +36,10 @@ export function useVersionCheck(): UpdateInfo | null {
           const info: UpdateInfo = { version: data.version, changes: data.changes ?? [] }
           setUpdate(info)
           localStorage.setItem(CACHE_KEY, JSON.stringify(info))
+        } else {
+          // User is on latest version — clear any stale update notification
+          localStorage.removeItem(CACHE_KEY)
+          setUpdate(null)
         }
       } catch {}
     }

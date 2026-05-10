@@ -1,16 +1,18 @@
 import type { NextConfig } from "next";
 import { execSync } from 'child_process'
 
-// Auto-increment version on every deploy using git commit count.
-// Format: 1.0.<commit_count>  →  e.g. 1.0.42, 1.0.43, …
-// No manual version bumping needed — every push gets a new number.
-let buildNumber = '0'
-try {
-  buildNumber = execSync('git rev-list --count HEAD', { stdio: ['pipe', 'pipe', 'ignore'] })
-    .toString()
-    .trim()
-} catch {}
-const APP_VERSION = `1.0.${buildNumber}`
+// Build ID: unique per deploy for update detection.
+// Uses VERCEL_GIT_COMMIT_SHA (always available in Vercel builds),
+// falls back to local git commit count, then timestamp.
+const buildId = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7)
+  ?? (() => {
+    try {
+      return execSync('git rev-list --count HEAD', { stdio: ['pipe', 'pipe', 'ignore'] }).toString().trim()
+    } catch {
+      return String(Date.now())
+    }
+  })()
+const APP_VERSION = `1.0.${buildId}`
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-parse'],

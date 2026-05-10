@@ -30,6 +30,7 @@ import { useAccountContext } from '@/contexts/AccountContext'
 import { ProfileSidebar } from './ProfileSidebar'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
 import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY } from '@/lib/anleitung-progress'
+import { CHANGELOG } from '@/lib/changelog'
 import { RefreshCw, Sparkles } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -480,7 +481,7 @@ export function AppSidebar() {
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3 shrink-0" style={{ color: 'var(--brand-blue)' }} />
                 <span className="text-[11px] font-bold" style={{ color: 'var(--brand-blue)' }}>
-                  v{update.version} verfügbar
+                  v{CHANGELOG[0].version} verfügbar
                 </span>
               </div>
               <button
@@ -500,7 +501,7 @@ export function AppSidebar() {
           </div>
         ) : (
           <p className="px-2 pt-0 pb-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
-            v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}
+            v{CHANGELOG[0].version}
           </p>
         )}
       </div>

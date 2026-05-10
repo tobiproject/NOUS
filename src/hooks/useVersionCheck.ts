@@ -7,7 +7,8 @@ const CACHE_KEY = 'nous-update-available'
 
 export interface UpdateInfo {
   version: string
-  changes: string[]
+  features: string[]
+  fixes: string[]
 }
 
 export function useVersionCheck(): UpdateInfo | null {
@@ -33,7 +34,7 @@ export function useVersionCheck(): UpdateInfo | null {
         if (!res.ok) return
         const data = await res.json()
         if (data.version && data.version !== CLIENT_VERSION) {
-          const info: UpdateInfo = { version: data.version, changes: data.changes ?? [] }
+          const info: UpdateInfo = { version: data.version, features: data.features ?? [], fixes: data.fixes ?? [] }
           setUpdate(info)
           localStorage.setItem(CACHE_KEY, JSON.stringify(info))
         } else {

@@ -494,9 +494,14 @@ export function AppSidebar() {
                 Laden
               </button>
             </div>
-            {update.changes.slice(0, 3).map((c, i) => (
-              <p key={i} className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                · {c}
+            {update.features.slice(0, 2).map((c, i) => (
+              <p key={`f${i}`} className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                + {c}
+              </p>
+            ))}
+            {update.fixes.slice(0, 2).map((c, i) => (
+              <p key={`x${i}`} className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                ~ {c}
               </p>
             ))}
           </div>
@@ -516,20 +521,35 @@ export function AppSidebar() {
             className="absolute bottom-10 left-2 right-2 rounded-lg p-3 shadow-xl z-20"
             style={{ background: '#1E2028', border: '1px solid rgba(255,255,255,0.12)' }}
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] font-bold" style={{ color: 'var(--fg-1)' }}>
-                Was ist neu · v{CHANGELOG[0].version}
+                v{CHANGELOG[0].version}
               </span>
               <button onClick={() => setChangelogOpen(false)}>
                 <X className="h-3 w-3" style={{ color: 'var(--fg-4)' }} />
               </button>
             </div>
-            <p className="text-[10px] mb-2" style={{ color: 'var(--fg-4)' }}>{CHANGELOG[0].date}</p>
-            {CHANGELOG[0].changes.map((c, i) => (
-              <p key={i} className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                · {c}
-              </p>
-            ))}
+            <p className="text-[10px] mb-2.5" style={{ color: 'var(--fg-4)' }}>{CHANGELOG[0].date}</p>
+            {CHANGELOG[0].features && CHANGELOG[0].features.length > 0 && (
+              <div className="mb-2">
+                <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--brand-blue)' }}>Neu</p>
+                {CHANGELOG[0].features.map((c, i) => (
+                  <p key={i} className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                    + {c}
+                  </p>
+                ))}
+              </div>
+            )}
+            {CHANGELOG[0].fixes && CHANGELOG[0].fixes.length > 0 && (
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,180,60,0.8)' }}>Gefixt</p>
+                {CHANGELOG[0].fixes.map((c, i) => (
+                  <p key={i} className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    ~ {c}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

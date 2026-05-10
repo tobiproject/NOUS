@@ -8,6 +8,7 @@ export function GET() {
   const entry = getChangelogForVersion(version)
   return NextResponse.json({
     version,
-    changes: entry?.changes ?? [],
+    features: entry?.features ?? [],
+    fixes: entry?.fixes ?? [],
   })
 }

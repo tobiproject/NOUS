@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -10,9 +11,10 @@ import Link from 'next/link'
 import {
   Rocket, BookOpen, LayoutDashboard, Brain, ShieldCheck,
   TrendingUp, Library, Telescope, Bell, Settings, ArrowUp,
-  ExternalLink,
+  ExternalLink, CheckCircle2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { markSectionRead, getAnleitungProgress, ANLEITUNG_SECTION_IDS } from '@/lib/anleitung-progress'
 
 interface Step {
   title: string
@@ -349,6 +351,25 @@ function scrollTo(id: string) {
 }
 
 export function AnleitungContent() {
+  const [readSections, setReadSections] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    return getAnleitungProgress().read
+  })
+
+  const handleAccordionChange = (openValues: string[]) => {
+    openValues.forEach(id => {
+      if (ANLEITUNG_SECTION_IDS.includes(id) && !readSections.includes(id)) {
+        markSectionRead(id)
+        setReadSections(prev => [...prev, id])
+      }
+    })
+  }
+
+  const progress = getAnleitungProgress()
+  const percent = readSections.length > 0
+    ? Math.round((readSections.length / ANLEITUNG_SECTION_IDS.length) * 100)
+    : progress.percent
+
   return (
     <div id="anleitung-top">
       {/* Page header */}
@@ -362,9 +383,40 @@ export function AnleitungContent() {
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--fg-1)' }}>
           Anleitung
         </h1>
-        <p className="text-[14px]" style={{ color: 'var(--fg-3)' }}>
+        <p className="text-[14px] mb-4" style={{ color: 'var(--fg-3)' }}>
           Alles was du über NOUS wissen musst — von der Ersteinrichtung bis zu den fortgeschrittenen Features.
         </p>
+
+        {/* Progress bar */}
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-lg"
+          style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
+        >
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[12px] font-medium" style={{ color: 'var(--fg-2)' }}>
+                Fortschritt
+              </span>
+              <span className="text-[12px] font-semibold" style={{ color: percent === 100 ? 'rgb(134,239,172)' : 'var(--brand-blue)' }}>
+                {readSections.length}/{ANLEITUNG_SECTION_IDS.length} Abschnitte · {percent}%
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-3)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${percent}%`,
+                  background: percent === 100
+                    ? 'rgb(34,197,94)'
+                    : 'var(--brand-blue)',
+                }}
+              />
+            </div>
+          </div>
+          {percent === 100 && (
+            <CheckCircle2 className="h-5 w-5 shrink-0" style={{ color: 'rgb(134,239,172)' }} />
+          )}
+        </div>
       </div>
 
       {/* Desktop 2-column / Mobile 1-column */}
@@ -405,8 +457,10 @@ export function AnleitungContent() {
 
         {/* Accordion sections */}
         <div>
-          <Accordion type="multiple" className="space-y-2">
-            {sections.map(s => (
+          <Accordion type="multiple" className="space-y-2" onValueChange={handleAccordionChange}>
+            {sections.map(s => {
+              const isRead = readSections.includes(s.id)
+              return (
               <AccordionItem
                 key={s.id}
                 value={s.id}
@@ -414,7 +468,7 @@ export function AnleitungContent() {
                 className="rounded-lg border-0 scroll-mt-4"
                 style={{
                   background: 'var(--bg-2)',
-                  border: '1px solid var(--border-raw)',
+                  border: `1px solid ${isRead ? 'rgba(34,197,94,0.2)' : 'var(--border-raw)'}`,
                 }}
               >
                 <AccordionTrigger
@@ -424,9 +478,12 @@ export function AnleitungContent() {
                   <div className="flex items-center gap-3 text-left flex-1 min-w-0">
                     <div
                       className="h-8 w-8 rounded-md flex items-center justify-center shrink-0"
-                      style={{ background: 'var(--bg-3)' }}
+                      style={{ background: isRead ? 'rgba(34,197,94,0.1)' : 'var(--bg-3)' }}
                     >
-                      <s.icon className="h-4 w-4" style={{ color: 'var(--brand-blue)' }} />
+                      {isRead
+                        ? <CheckCircle2 className="h-4 w-4" style={{ color: 'rgb(134,239,172)' }} />
+                        : <s.icon className="h-4 w-4" style={{ color: 'var(--brand-blue)' }} />
+                      }
                     </div>
                     <div className="min-w-0">
                       <div className="text-[14px] font-semibold leading-tight" style={{ color: 'var(--fg-1)' }}>
@@ -522,7 +579,8 @@ export function AnleitungContent() {
                   </button>
                 </AccordionContent>
               </AccordionItem>
-            ))}
+            )
+          })}
           </Accordion>
         </div>
       </div>

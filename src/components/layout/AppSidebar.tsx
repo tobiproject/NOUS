@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   LayoutDashboard, BookOpen, TrendingUp, Brain, ShieldCheck,
   CalendarDays, ClipboardList, GraduationCap,
-  Plus, GripVertical, Star, Map as MapIcon, Telescope, HelpCircle,
+  Plus, GripVertical, Star, Map as MapIcon, Telescope,
 } from 'lucide-react'
 import {
   DndContext,
@@ -50,7 +50,6 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: 'lernmodus',          href: '/lernmodus',          label: 'Lernen',             icon: GraduationCap,   kbd: null,  tooltip: 'Quiz, Chart-Replay und KI-Coach zum Verbessern deiner Entscheidungen' },
   { id: 'watchlist',          href: '/watchlist',          label: 'Watchlist',          icon: Star,            kbd: null,  tooltip: 'Deine gehandelten Assets mit Kontraktwerten für die Risikoberechnung' },
   { id: 'roadmap',            href: '/roadmap',            label: 'Roadmap',            icon: MapIcon,         kbd: null,  tooltip: 'Deine Trader-Journey: Level, Stärken/Schwächen und nächste Schritte' },
-  { id: 'anleitung',          href: '/anleitung',          label: 'Anleitung',          icon: HelpCircle,      kbd: null,  tooltip: 'Schritt-für-Schritt-Erklärung aller NOUS-Features — jederzeit abrufbar' },
 ]
 
 const STORAGE_KEY = 'nous-sidebar-order'

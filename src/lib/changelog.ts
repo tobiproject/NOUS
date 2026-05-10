@@ -1,0 +1,22 @@
+export interface ChangelogEntry {
+  version: string
+  date: string
+  changes: string[]
+}
+
+export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.2.0',
+    date: '2026-05-10',
+    changes: [
+      'Profil-Sidebar öffnet jetzt von links mit Konto-Schnellwechsel',
+      'Neue Anleitung-Seite mit Schritt-für-Schritt-Erklärungen',
+      'Account-Typen: Eigenhandel & Fremdkapital nach Markt aufgeteilt',
+      'Update-Banner zeigt jetzt was neu ist',
+    ],
+  },
+]
+
+export function getChangelogForVersion(version: string): ChangelogEntry | undefined {
+  return CHANGELOG.find(e => e.version === version)
+}

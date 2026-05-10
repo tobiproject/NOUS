@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X, Check, HelpCircle } from 'lucide-react'
+import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X, Check, HelpCircle, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
+import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY } from '@/lib/anleitung-progress'
 
 interface Props {
   open: boolean
@@ -44,7 +45,7 @@ const NAV_ITEMS = [
   { href: '/einstellungen?tab=api-key&solo=1',           icon: Key,         label: 'API Key' },
   { href: '/einstellungen?tab=knowledge-base&solo=1',    icon: BookOpen,    label: 'Knowledge Base' },
   { href: '/einstellungen?tab=benachrichtigungen&solo=1',icon: Bell,        label: 'Benachrichtigungen' },
-  { href: '/anleitung',                                  icon: HelpCircle,  label: 'Anleitung' },
+  { href: '/anleitung',                                  icon: HelpCircle,  label: 'Anleitung', isAnleitung: true },
 ]
 
 export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = 'right' }: Props) {
@@ -52,6 +53,8 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
   const { accounts, activeAccount, setActiveAccount } = useAccountContext()
   const activeAccounts = accounts.filter(a => !a.is_archived)
   const [mounted, setMounted] = useState(false)
+  const [accountPickerOpen, setAccountPickerOpen] = useState(false)
+  const [anleitungProgress, setAnleitungProgress] = useState({ read: [] as string[], total: 10, percent: 0 })
   const panelRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -59,6 +62,22 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
   const accountTypeLabel = activeAccount?.account_type
     ? ACCOUNT_TYPE_LABELS[activeAccount.account_type] ?? activeAccount.account_type
     : null
+
+  // Read anleitung progress from localStorage, react to updates
+  useEffect(() => {
+    const update = () => setAnleitungProgress(getAnleitungProgress())
+    update()
+    window.addEventListener('anleitung-progress-changed', update)
+    window.addEventListener('storage', (e) => { if (e.key === ANLEITUNG_STORAGE_KEY) update() })
+    return () => {
+      window.removeEventListener('anleitung-progress-changed', update)
+    }
+  }, [])
+
+  // Reset account picker when sidebar closes
+  useEffect(() => {
+    if (!open) setAccountPickerOpen(false)
+  }, [open])
 
   // Mount immediately when opening; keep mounted while animating closed
   useEffect(() => {
@@ -103,8 +122,9 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  // Nothing in DOM when closed — no interference with touch events
   if (!mounted) return null
+
+  const showAnleitungDot = anleitungProgress.percent < 100
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
@@ -119,13 +139,15 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
       {/* Panel */}
       <div
         ref={panelRef}
-        className={`absolute inset-y-0 ${side === 'left' ? 'left-0' : 'right-0'} flex flex-col overflow-hidden`}
+        className={`absolute inset-y-0 ${side === 'left' ? 'left-0' : 'right-0'} flex flex-col`}
         style={{
           background: '#141417',
           width: 'min(270px, 75vw)',
           transform: side === 'left' ? 'translateX(-100%)' : 'translateX(100%)',
           willChange: 'transform',
           paddingBottom: 'env(safe-area-inset-bottom)',
+          overflowX: 'hidden',
+          overflowY: 'hidden',
         }}
       >
         {/* Close */}
@@ -139,9 +161,9 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
         </button>
 
         {/* Profile header */}
-        <div className="px-5 pt-14 pb-5 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <div className="px-5 pt-14 pb-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mb-4 overflow-hidden"
+            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold mb-3 overflow-hidden"
             style={{ background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)' }}
           >
             {avatarUrl ? (
@@ -150,42 +172,48 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
             ) : initial}
           </div>
 
-          <div className="space-y-1">
-            <p className="text-[17px] font-bold leading-tight" style={{ color: '#fff' }}>
-              {displayName ?? 'Mein Profil'}
-            </p>
-            {activeAccount?.name && (
-              <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          <p className="text-[17px] font-bold leading-tight mb-1" style={{ color: '#fff' }}>
+            {displayName ?? 'Mein Profil'}
+          </p>
+
+          {/* Account quick-switch trigger */}
+          {activeAccount && (
+            <button
+              onClick={() => setAccountPickerOpen(v => !v)}
+              className="flex items-center gap-1 rounded active:opacity-70 transition-opacity"
+              style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '100%' }}
+            >
+              <span className="text-[12px] truncate">
                 {activeAccount.name}
                 {accountTypeLabel && (
-                  <span style={{ color: 'rgba(255,255,255,0.45)' }}> ({accountTypeLabel})</span>
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}> · {accountTypeLabel}</span>
                 )}
-              </p>
-            )}
-          </div>
-        </div>
+              </span>
+              <ChevronDown
+                className="h-3 w-3 shrink-0 transition-transform duration-200"
+                style={{ transform: accountPickerOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              />
+            </button>
+          )}
 
-        {/* Account switcher */}
-        {activeAccounts.length > 0 && (
-          <div className="px-3 py-3 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-            <p className="text-[10px] font-semibold uppercase tracking-widest px-1 mb-1.5" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              Konto
-            </p>
-            <div className="space-y-0.5">
+          {/* Inline account picker */}
+          {accountPickerOpen && activeAccounts.length > 0 && (
+            <div
+              className="mt-2 rounded-lg overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
               {activeAccounts.map(account => {
                 const isActive = account.id === activeAccount?.id
+                const label = account.account_type ? (ACCOUNT_TYPE_LABELS[account.account_type] ?? account.account_type) : null
                 return (
                   <button
                     key={account.id}
-                    onClick={() => setActiveAccount(account)}
-                    className="flex items-center gap-2.5 w-full px-2 py-2 rounded-lg active:bg-white/5"
-                    style={{
-                      background: isActive ? 'rgba(255,130,16,0.1)' : 'transparent',
-                      minHeight: 40,
-                    }}
+                    onClick={() => { setActiveAccount(account); setAccountPickerOpen(false) }}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 active:bg-white/5 transition-colors"
+                    style={{ background: isActive ? 'rgba(255,130,16,0.1)' : 'transparent' }}
                   >
                     <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
                       style={{
                         background: isActive ? 'rgba(255,130,16,0.25)' : 'rgba(255,255,255,0.12)',
                         color: isActive ? 'var(--brand-blue)' : 'rgba(255,255,255,0.7)',
@@ -193,16 +221,21 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
                     >
                       {account.name[0]?.toUpperCase()}
                     </div>
-                    <span className="flex-1 text-[13px] font-medium truncate text-left" style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.8)' }}>
-                      {account.name}
-                    </span>
-                    {isActive && <Check className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--brand-blue)' }} />}
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="text-[12px] font-medium truncate" style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.75)' }}>
+                        {account.name}
+                      </div>
+                      {label && (
+                        <div className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</div>
+                      )}
+                    </div>
+                    {isActive && <Check className="h-3 w-3 shrink-0" style={{ color: 'var(--brand-blue)' }} />}
                   </button>
                 )
               })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Nav */}
         <div className="flex-1 overflow-y-auto px-3 py-3">
@@ -218,11 +251,37 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg active:bg-white/5"
               style={{ minHeight: 44 }}
             >
-              <item.icon className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,255,255,0.6)' }} />
+              <div className="relative shrink-0">
+                <item.icon className="h-4 w-4" style={{ color: 'rgba(255,255,255,0.6)' }} />
+                {/* Pulsing attention dot for Anleitung when not completed */}
+                {item.isAnleitung && showAnleitungDot && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-pulse"
+                    style={{ background: 'var(--brand-blue)', boxShadow: '0 0 4px var(--brand-blue)' }}
+                  />
+                )}
+              </div>
               <span className="flex-1 text-[14px] font-medium" style={{ color: '#fff' }}>
                 {item.label}
               </span>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }} />
+              {/* Anleitung progress badge */}
+              {item.isAnleitung ? (
+                <span
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0"
+                  style={{
+                    background: anleitungProgress.percent === 100
+                      ? 'rgba(34,197,94,0.15)'
+                      : 'rgba(41,98,255,0.15)',
+                    color: anleitungProgress.percent === 100
+                      ? 'rgb(134,239,172)'
+                      : 'var(--brand-blue)',
+                  }}
+                >
+                  {anleitungProgress.read.length}/{anleitungProgress.total}
+                </span>
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }} />
+              )}
             </Link>
           ))}
 
@@ -241,15 +300,14 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
           </Link>
         </div>
 
-        {/* Logout */}
-        <div className="px-3 pt-2 pb-6 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        {/* Logout — small/subtle */}
+        <div className="px-3 pt-1 pb-5 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <button
             onClick={async () => { onClose(); await logout() }}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full active:bg-white/5"
-            style={{ minHeight: 44 }}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg w-full active:bg-white/5"
           >
-            <LogOut className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,80,80,0.8)' }} />
-            <span className="text-[14px] font-medium" style={{ color: 'rgba(255,80,80,0.9)' }}>
+            <LogOut className="h-3.5 w-3.5 shrink-0" style={{ color: 'rgba(255,80,80,0.65)' }} />
+            <span className="text-[12px] font-medium" style={{ color: 'rgba(255,80,80,0.75)' }}>
               Abmelden
             </span>
           </button>

@@ -53,6 +53,40 @@ export function AnalysisReminderBanner() {
     return () => clearInterval(interval)
   }, [])
 
+  // Client-side push via Service Worker setTimeout — fires when browser is open.
+  // Covers the gap when cron hasn't run yet (cron runs 3×/day as fallback).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) return
+    if (Notification.permission !== 'granted') return
+
+    const pending = loadReminders()
+    const now = Date.now()
+    const timers: ReturnType<typeof setTimeout>[] = []
+
+    pending.forEach(reminder => {
+      const delayMs = new Date(reminder.dueAt).getTime() - now
+      if (delayMs <= 0 || delayMs > 24 * 3600_000) return
+
+      const t = setTimeout(async () => {
+        try {
+          const reg = await navigator.serviceWorker.ready
+          const dirIcon = reminder.direction === 'long' ? '↗' : '↘'
+          await reg.showNotification(`📊 Trade analysieren — ${reminder.asset}`, {
+            body: `${dirIcon} ${reminder.asset} — Zeit für deine Nachanalyse. Was lief gut, was würdest du anders machen?`,
+            icon: '/icons/icon-192x192.png',
+            tag: `analysis-${reminder.tradeId}`,
+            data: { url: `/journal?highlight=${reminder.tradeId}` },
+          } as NotificationOptions)
+        } catch {}
+      }, delayMs)
+
+      timers.push(t)
+    })
+
+    return () => timers.forEach(clearTimeout)
+  }, [])
+
   if (dueReminders.length === 0) return null
 
   return (

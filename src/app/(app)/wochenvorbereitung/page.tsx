@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Plus, X, Loader2, Save, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,10 +47,12 @@ export default function WochenvorbereitungPage() {
   const [saved, setSaved] = useState(false)
   const [newGoal, setNewGoal] = useState('')
 
-  const targetMonday = getTargetWeekMonday()
-  const weekStart = format(targetMonday, 'yyyy-MM-dd')
-  const weekLabel = buildWeekLabel(targetMonday)
-  const isNextWeek = new Date().getDay() === 6 || new Date().getDay() === 0
+  // useMemo keeps these stable across re-renders — without it, new Date()
+  // objects on every render would cause an infinite useEffect/fetch loop.
+  const targetMonday = useMemo(() => getTargetWeekMonday(), [])
+  const weekStart = useMemo(() => format(targetMonday, 'yyyy-MM-dd'), [targetMonday])
+  const weekLabel = useMemo(() => buildWeekLabel(targetMonday), [targetMonday])
+  const isNextWeek = useMemo(() => { const d = new Date().getDay(); return d === 6 || d === 0 }, [])
 
   const load = useCallback(async () => {
     setLoading(true)

@@ -31,7 +31,7 @@ import { ProfileSidebar } from './ProfileSidebar'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
 import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY } from '@/lib/anleitung-progress'
 import { CHANGELOG } from '@/lib/changelog'
-import { RefreshCw, Sparkles } from 'lucide-react'
+import { RefreshCw, Sparkles, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -211,6 +211,7 @@ export function AppSidebar() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [changelogOpen, setChangelogOpen] = useState(false)
   const [anleitungPercent, setAnleitungPercent] = useState(0)
   const update = useVersionCheck()
 
@@ -425,7 +426,7 @@ export function AppSidebar() {
 
       {/* Bottom: profile info — click opens ProfileSidebar from left */}
       <div
-        className="mt-auto px-2 pb-2 pt-2"
+        className="relative mt-auto px-2 pb-2 pt-2"
         style={{ borderTop: '1px solid var(--border-raw)' }}
       >
         <button
@@ -500,9 +501,36 @@ export function AppSidebar() {
             ))}
           </div>
         ) : (
-          <p className="px-2 pt-0 pb-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
+          <button
+            onClick={() => setChangelogOpen(v => !v)}
+            className="px-2 pt-0 pb-1 text-[10px] text-left w-full transition-opacity active:opacity-60"
+            style={{ color: 'var(--fg-4)' }}
+          >
             v{CHANGELOG[0].version}
-          </p>
+          </button>
+        )}
+
+        {/* Changelog popup */}
+        {changelogOpen && !update && (
+          <div
+            className="absolute bottom-10 left-2 right-2 rounded-lg p-3 shadow-xl z-20"
+            style={{ background: '#1E2028', border: '1px solid rgba(255,255,255,0.12)' }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold" style={{ color: 'var(--fg-1)' }}>
+                Was ist neu · v{CHANGELOG[0].version}
+              </span>
+              <button onClick={() => setChangelogOpen(false)}>
+                <X className="h-3 w-3" style={{ color: 'var(--fg-4)' }} />
+              </button>
+            </div>
+            <p className="text-[10px] mb-2" style={{ color: 'var(--fg-4)' }}>{CHANGELOG[0].date}</p>
+            {CHANGELOG[0].changes.map((c, i) => (
+              <p key={i} className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                · {c}
+              </p>
+            ))}
+          </div>
         )}
       </div>
     </aside>

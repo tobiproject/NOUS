@@ -6,7 +6,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '1.2',
+    version: '1.2.1',
+    date: '2026-05-10',
+    changes: [
+      'Wochenvorbereitung lädt jetzt korrekt',
+      'Versionsanzeige in Sidebar zeigt Datum und Changelog',
+      'Update-Erkennung funktioniert jetzt zuverlässig',
+    ],
+  },
+  {
+    version: '1.2.0',
     date: '2026-05-10',
     changes: [
       'Profil-Sidebar öffnet jetzt von links mit Konto-Schnellwechsel',

@@ -25,18 +25,25 @@ export async function GET(req: NextRequest) {
   // Fetch users with prop-firm reminder enabled + push subscription
   const { data: settings } = await supabase
     .from('notification_settings')
-    .select('user_id, push_subscription, prop_firm_reminder_time')
+    .select('user_id, push_subscription, prop_firm_reminder_time, notification_timezone')
     .eq('prop_firm_reminder_enabled', true)
     .eq('push_enabled', true)
     .not('push_subscription', 'is', null)
 
   if (!settings?.length) return NextResponse.json({ sent: 0 })
 
-  // Only send to users whose preferred UTC hour matches current hour
-  const currentUtcHour = new Date().getUTCHours()
+  // Only send to users whose preferred local time matches the current UTC time
+  const now = new Date()
   const dueSettings = settings.filter(s => {
+    const tz = s.notification_timezone ?? 'UTC'
     const preferredHour = parseInt((s.prop_firm_reminder_time ?? '07:00').split(':')[0], 10)
-    return preferredHour === currentUtcHour
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false }).formatToParts(now)
+      const localHour = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0', 10)
+      return localHour === preferredHour
+    } catch {
+      return now.getUTCHours() === preferredHour
+    }
   })
   if (!dueSettings.length) return NextResponse.json({ sent: 0, skipped: settings.length })
 

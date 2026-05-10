@@ -34,16 +34,23 @@ export async function GET(req: NextRequest) {
   // Get all users with notifications enabled
   const { data: settings } = await supabase
     .from('notification_settings')
-    .select('user_id, push_enabled, push_subscription, email_enabled, email_address, weekly_prep_time')
+    .select('user_id, push_enabled, push_subscription, email_enabled, email_address, weekly_prep_time, notification_timezone')
     .or('push_enabled.eq.true,email_enabled.eq.true')
 
   if (!settings?.length) return NextResponse.json({ sent: 0 })
 
-  // Only send to users whose preferred UTC hour matches the current hour
-  const currentUtcHour = new Date().getUTCHours()
+  // Only send to users whose preferred local time matches the current UTC time
+  const now = new Date()
   const dueSettings = settings.filter(s => {
+    const tz = s.notification_timezone ?? 'UTC'
     const preferredHour = parseInt((s.weekly_prep_time ?? '09:00').split(':')[0], 10)
-    return preferredHour === currentUtcHour
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false }).formatToParts(now)
+      const localHour = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0', 10)
+      return localHour === preferredHour
+    } catch {
+      return now.getUTCHours() === preferredHour
+    }
   })
   if (!dueSettings.length) return NextResponse.json({ sent: 0, skipped: settings.length })
 

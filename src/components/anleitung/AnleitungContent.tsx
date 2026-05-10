@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -14,7 +14,7 @@ import {
   ExternalLink, CheckCircle2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { markSectionRead, getAnleitungProgress, ANLEITUNG_SECTION_IDS } from '@/lib/anleitung-progress'
+import { markSectionRead, getAnleitungProgress, ANLEITUNG_SECTION_IDS, fetchProgressFromServer, setProgressFromServer } from '@/lib/anleitung-progress'
 
 interface Step {
   title: string
@@ -355,6 +355,19 @@ export function AnleitungContent() {
     if (typeof window === 'undefined') return []
     return getAnleitungProgress().read
   })
+
+  // Sync from server on mount — merges server state with localStorage so all devices stay in sync
+  useEffect(() => {
+    fetchProgressFromServer().then(serverSections => {
+      if (serverSections.length === 0) return
+      const local = getAnleitungProgress().read
+      const merged = Array.from(new Set([...local, ...serverSections]))
+      if (merged.length !== local.length) {
+        setProgressFromServer(merged)
+        setReadSections(merged)
+      }
+    })
+  }, [])
 
   const handleAccordionChange = (openValues: string[]) => {
     openValues.forEach(id => {

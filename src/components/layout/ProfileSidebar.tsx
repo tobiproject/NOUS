@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X, Check, HelpCircle, ChevronDown, Camera, Trash2 } from 'lucide-react'
+import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X, Check, HelpCircle, ChevronDown, Camera, Trash2, Sparkles, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
-import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY } from '@/lib/anleitung-progress'
+import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY, fetchProgressFromServer, setProgressFromServer } from '@/lib/anleitung-progress'
+import { CHANGELOG } from '@/lib/changelog'
+import { useVersionCheck } from '@/hooks/useVersionCheck'
 
 interface Props {
   open: boolean
@@ -60,6 +62,8 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
   const [avatarHovered, setAvatarHovered] = useState(false)
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
+  const [changelogOpen, setChangelogOpen] = useState(false)
+  const update = useVersionCheck()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -109,9 +113,16 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
     }
   }, [])
 
-  // Reset account picker when sidebar closes
+  // Sync anleitung progress from server whenever sidebar opens
   useEffect(() => {
-    if (!open) setAccountPickerOpen(false)
+    if (!open) { setAccountPickerOpen(false); return }
+    fetchProgressFromServer().then(serverSections => {
+      if (serverSections.length === 0) return
+      const local = getAnleitungProgress().read
+      const merged = Array.from(new Set([...local, ...serverSections]))
+      if (merged.length !== local.length) setProgressFromServer(merged)
+      setAnleitungProgress(getAnleitungProgress())
+    }).catch(() => {})
   }, [open])
 
   // Mount immediately when opening; keep mounted while animating closed
@@ -339,7 +350,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
         </div>
 
         {/* Nav */}
-        <div className="flex-1 overflow-y-auto px-3 py-3">
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest px-3 mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
             Einstellungen
           </p>
@@ -401,8 +412,86 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
           </Link>
         </div>
 
+        {/* Version / Update display */}
+        <div className="relative px-3 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          {update ? (
+            <div className="mx-0 my-2 rounded-lg px-3 py-2.5" style={{ background: 'rgba(255,130,16,0.07)', border: '1px solid rgba(255,130,16,0.25)' }}>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3 shrink-0" style={{ color: 'var(--brand-blue)' }} />
+                  <span className="text-[11px] font-bold" style={{ color: 'var(--brand-blue)' }}>
+                    v{CHANGELOG[0].version} verfügbar
+                  </span>
+                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-opacity active:opacity-70 shrink-0"
+                  style={{ background: 'var(--brand-blue)', color: '#fff' }}
+                >
+                  <RefreshCw className="h-2.5 w-2.5" />
+                  Laden
+                </button>
+              </div>
+              {[...update.features.slice(0, 2).map(c => ({ t: '+', c })), ...update.fixes.slice(0, 2).map(c => ({ t: '~', c }))].map(({ t, c }, i) => (
+                <div key={i} className="flex items-start gap-1">
+                  <span className="text-[10px] shrink-0 leading-relaxed" style={{ color: t === '+' ? 'rgba(255,130,16,0.7)' : 'rgba(255,255,255,0.3)' }}>{t}</span>
+                  <span className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>{c}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <button
+              onClick={() => setChangelogOpen(v => !v)}
+              className="pt-2 pb-1 text-[10px] text-left w-full transition-opacity active:opacity-60"
+              style={{ color: 'rgba(255,255,255,0.35)' }}
+            >
+              v{CHANGELOG[0].version} · {process.env.NEXT_PUBLIC_BUILD_DATE ?? ''}
+            </button>
+          )}
+
+          {/* Changelog popup */}
+          {changelogOpen && !update && (
+            <div
+              className="absolute bottom-8 left-2 right-2 rounded-lg p-3 shadow-xl z-20"
+              style={{ background: '#1E2028', border: '1px solid rgba(255,255,255,0.12)' }}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-bold" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                  v{CHANGELOG[0].version}
+                </span>
+                <button onClick={() => setChangelogOpen(false)}>
+                  <X className="h-3 w-3" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                </button>
+              </div>
+              <p className="text-[10px] mb-2.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{CHANGELOG[0].date}</p>
+              {CHANGELOG[0].features && CHANGELOG[0].features.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--brand-blue)' }}>Neu</p>
+                  {CHANGELOG[0].features.map((c, i) => (
+                    <div key={i} className="flex items-start gap-1.5">
+                      <span className="text-[11px] shrink-0 leading-relaxed" style={{ color: 'var(--brand-blue)' }}>+</span>
+                      <span className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{c}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {CHANGELOG[0].fixes && CHANGELOG[0].fixes.length > 0 && (
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,180,60,0.8)' }}>Gefixt</p>
+                  {CHANGELOG[0].fixes.map((c, i) => (
+                    <div key={i} className="flex items-start gap-1.5">
+                      <span className="text-[11px] shrink-0 leading-relaxed" style={{ color: 'rgba(255,180,60,0.7)' }}>~</span>
+                      <span className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>{c}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Logout — small/subtle */}
-        <div className="px-3 pt-1 pb-5 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="px-3 pt-1 pb-5 shrink-0">
           <button
             onClick={async () => { onClose(); await logout() }}
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg w-full active:bg-white/5"

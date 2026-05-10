@@ -114,6 +114,63 @@ function TimePickerRow({ label, value, onChange }: { label: string; value: strin
   )
 }
 
+// All IANA timezone identifiers with UTC offset labels, grouped for readability
+const TIMEZONE_OPTIONS: { value: string; label: string }[] = (() => {
+  const ids: string[] = typeof Intl !== 'undefined' && 'supportedValuesOf' in Intl
+    ? (Intl as unknown as { supportedValuesOf: (key: string) => string[] }).supportedValuesOf('timeZone')
+    : ['UTC', 'Europe/Berlin', 'Europe/London', 'America/New_York', 'America/Los_Angeles', 'Asia/Tokyo', 'Asia/Singapore', 'Australia/Sydney']
+
+  const now = new Date()
+  return ids
+    .map(id => {
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', { timeZone: id, timeZoneName: 'shortOffset' }).formatToParts(now)
+        const offset = parts.find(p => p.type === 'timeZoneName')?.value ?? 'UTC'
+        return { value: id, label: `(${offset}) ${id.replace(/_/g, ' ')}`, sortKey: offset }
+      } catch {
+        return null
+      }
+    })
+    .filter((x): x is { value: string; label: string; sortKey: string } => x !== null)
+    .sort((a, b) => {
+      const toMinutes = (s: string) => {
+        const m = s.match(/GMT([+-])(\d+)(?::(\d+))?/)
+        if (!m) return 0
+        return (parseInt(m[2]) * 60 + parseInt(m[3] ?? '0')) * (m[1] === '+' ? 1 : -1)
+      }
+      const diff = toMinutes(a.sortKey) - toMinutes(b.sortKey)
+      return diff !== 0 ? diff : a.value.localeCompare(b.value)
+    })
+    .map(({ value, label }) => ({ value, label }))
+})()
+
+function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex items-center justify-between pt-1">
+      <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>Zeitzone</span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          background: 'var(--bg-3)',
+          border: '1px solid var(--border-raw)',
+          color: 'var(--fg-1)',
+          borderRadius: 8,
+          padding: '4px 8px',
+          fontSize: 13,
+          cursor: 'pointer',
+          outline: 'none',
+          maxWidth: 220,
+        }}
+      >
+        {TIMEZONE_OPTIONS.map(tz => (
+          <option key={tz.value} value={tz.value}>{tz.label}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <div
@@ -853,6 +910,12 @@ function BenachrichtigungenTab() {
   const [propFirmReminderEnabled, setPropFirmReminderEnabled] = useState(false)
   const [weeklyPrepTime, setWeeklyPrepTime] = useState('09:00')
   const [propFirmTime, setPropFirmTime] = useState('07:00')
+  const [notifTimezone, setNotifTimezone] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone
+    }
+    return 'UTC'
+  })
   const [notifSaving, setNotifSaving] = useState(false)
   const { permission, subscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications()
 
@@ -863,6 +926,7 @@ function BenachrichtigungenTab() {
       setPropFirmReminderEnabled(d.prop_firm_reminder_enabled ?? false)
       setWeeklyPrepTime(d.weekly_prep_time ?? '09:00')
       setPropFirmTime(d.prop_firm_reminder_time ?? '07:00')
+      if (d.notification_timezone) setNotifTimezone(d.notification_timezone)
     })
   }, [])
 
@@ -877,11 +941,12 @@ function BenachrichtigungenTab() {
         prop_firm_reminder_enabled: propFirmReminderEnabled,
         weekly_prep_time: weeklyPrepTime,
         prop_firm_reminder_time: propFirmTime,
+        notification_timezone: notifTimezone,
       }),
     })
     setNotifSaving(false)
     toast.success('Einstellungen gespeichert')
-  }, [notifEmailEnabled, notifEmail, propFirmReminderEnabled])
+  }, [notifEmailEnabled, notifEmail, propFirmReminderEnabled, weeklyPrepTime, propFirmTime, notifTimezone])
 
   const handlePushToggle = async () => {
     if (subscribed || permission === 'granted') {
@@ -1009,6 +1074,12 @@ function BenachrichtigungenTab() {
               onChange={setPropFirmTime}
             />
           )}
+        </div>
+      </Section>
+
+      <Section title="Zeitzone" subtitle="Gilt für alle Benachrichtigungen — Uhrzeiten werden in dieser Zeitzone interpretiert">
+        <div className="space-y-3">
+          <TimezoneSelect value={notifTimezone} onChange={setNotifTimezone} />
         </div>
       </Section>
 

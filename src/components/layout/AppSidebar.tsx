@@ -28,6 +28,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { ProfileSidebar } from './ProfileSidebar'
+import { useVersionCheck } from '@/hooks/useVersionCheck'
+import { RefreshCw, Sparkles } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -207,6 +209,7 @@ export function AppSidebar() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const update = useVersionCheck()
 
   // Sync watchlist indicator via localStorage + cross-component events (no extra API call)
   useEffect(() => {
@@ -317,23 +320,31 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: avatar — click opens ProfileSidebar from left */}
+      {/* Bottom: avatar + optional update dot */}
       <div className="flex flex-col items-center pb-3 pt-2 w-full px-1" style={{ borderTop: '1px solid var(--border-raw)' }}>
-        <button
-          onClick={() => setProfileOpen(true)}
-          aria-label="Profil"
-          className="active:opacity-60"
-          style={{ width: 30, height: 30, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 0, border: 'none', cursor: 'pointer' }}
-        >
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
-          ) : (
-            <span style={{ fontSize: 12, fontWeight: 700 }}>
-              {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
-            </span>
+        <div className="relative">
+          <button
+            onClick={() => setProfileOpen(true)}
+            aria-label="Profil"
+            className="active:opacity-60"
+            style={{ width: 30, height: 30, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 0, border: 'none', cursor: 'pointer' }}
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+            ) : (
+              <span style={{ fontSize: 12, fontWeight: 700 }}>
+                {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
+              </span>
+            )}
+          </button>
+          {update && (
+            <span
+              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-pulse border border-[var(--bg-1)]"
+              style={{ background: 'var(--brand-blue)' }}
+            />
           )}
-        </button>
+        </div>
       </div>
     </aside>
 
@@ -440,9 +451,39 @@ export function AppSidebar() {
             )}
           </div>
         </button>
-        <p className="px-2 pt-0 pb-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
-          v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}
-        </p>
+        {/* Version / Update card */}
+        {update ? (
+          <div
+            className="mx-2 mb-2 mt-1 rounded-lg px-3 py-2.5"
+            style={{ background: 'rgba(255,130,16,0.07)', border: '1px solid rgba(255,130,16,0.25)' }}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3 shrink-0" style={{ color: 'var(--brand-blue)' }} />
+                <span className="text-[11px] font-bold" style={{ color: 'var(--brand-blue)' }}>
+                  v{update.version} verfügbar
+                </span>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-opacity active:opacity-70 shrink-0"
+                style={{ background: 'var(--brand-blue)', color: '#fff' }}
+              >
+                <RefreshCw className="h-2.5 w-2.5" />
+                Laden
+              </button>
+            </div>
+            {update.changes.slice(0, 3).map((c, i) => (
+              <p key={i} className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                · {c}
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="px-2 pt-0 pb-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
+            v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}
+          </p>
+        )}
       </div>
     </aside>
 
@@ -452,6 +493,7 @@ export function AppSidebar() {
       displayName={displayName}
       avatarUrl={avatarUrl}
       side="left"
+      onAvatarUpdate={(url) => setAvatarUrl(url)}
     />
     </>
   )

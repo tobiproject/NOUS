@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X, Check, HelpCircle, ChevronDown } from 'lucide-react'
+import { User2, Target, Wallet, Key, BookOpen, Bell, Info, LogOut, ChevronRight, X, Check, HelpCircle, ChevronDown, Camera, Trash2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY } from '@/lib/anleitung-progress'
@@ -13,6 +13,7 @@ interface Props {
   displayName?: string | null
   avatarUrl?: string | null
   side?: 'left' | 'right'
+  onAvatarUpdate?: (url: string | null) => void
 }
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
@@ -48,15 +49,49 @@ const NAV_ITEMS = [
   { href: '/anleitung',                                  icon: HelpCircle,  label: 'Anleitung', isAnleitung: true },
 ]
 
-export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = 'right' }: Props) {
+export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = 'right', onAvatarUpdate }: Props) {
   const { user, logout } = useAuth()
   const { accounts, activeAccount, setActiveAccount } = useAccountContext()
   const activeAccounts = accounts.filter(a => !a.is_archived)
   const [mounted, setMounted] = useState(false)
   const [accountPickerOpen, setAccountPickerOpen] = useState(false)
   const [anleitungProgress, setAnleitungProgress] = useState({ read: [] as string[], total: 10, percent: 0 })
+  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(avatarUrl ?? null)
+  const [avatarHovered, setAvatarHovered] = useState(false)
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
+
+  // Keep localAvatarUrl in sync when prop changes from parent
+  useEffect(() => { setLocalAvatarUrl(avatarUrl ?? null) }, [avatarUrl])
+
+  const handleAvatarUpload = async (file: File) => {
+    setAvatarUploading(true)
+    setAvatarMenuOpen(false)
+    try {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      const res = await fetch('/api/profile/avatar', { method: 'POST', body: formData })
+      if (res.ok) {
+        const data = await res.json()
+        setLocalAvatarUrl(data.avatar_url)
+        onAvatarUpdate?.(data.avatar_url)
+      }
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
+  const handleAvatarDelete = async () => {
+    setAvatarMenuOpen(false)
+    const res = await fetch('/api/profile/avatar', { method: 'DELETE' })
+    if (res.ok) {
+      setLocalAvatarUrl(null)
+      onAvatarUpdate?.(null)
+    }
+  }
 
   const initial = displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
   const accountTypeLabel = activeAccount?.account_type
@@ -162,14 +197,80 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
 
         {/* Profile header */}
         <div className="px-5 pt-14 pb-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold mb-3 overflow-hidden"
-            style={{ background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)' }}
-          >
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
-            ) : initial}
+          {/* Avatar with hover camera overlay */}
+          <div className="relative mb-3 w-14">
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold overflow-hidden"
+              style={{ background: localAvatarUrl ? 'transparent' : 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)' }}
+            >
+              {localAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={localAvatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+              ) : avatarUploading ? (
+                <span className="animate-pulse text-[10px]">...</span>
+              ) : initial}
+            </div>
+
+            {/* Camera hover trigger */}
+            <button
+              onClick={() => setAvatarMenuOpen(v => !v)}
+              onMouseEnter={() => setAvatarHovered(true)}
+              onMouseLeave={() => setAvatarHovered(false)}
+              className="absolute inset-0 rounded-full flex items-center justify-center transition-opacity"
+              style={{
+                background: avatarHovered || avatarMenuOpen ? 'rgba(0,0,0,0.5)' : 'transparent',
+                opacity: avatarHovered || avatarMenuOpen ? 1 : 0,
+                cursor: 'pointer',
+                border: 'none',
+              }}
+              aria-label="Profilbild ändern"
+            >
+              <Camera className="h-5 w-5" style={{ color: '#fff' }} />
+            </button>
+
+            {/* Avatar action menu */}
+            {avatarMenuOpen && (
+              <div
+                className="absolute top-16 left-0 z-20 rounded-lg overflow-hidden shadow-xl"
+                style={{ background: '#1E2028', border: '1px solid rgba(255,255,255,0.12)', minWidth: 160 }}
+              >
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-[13px] text-left active:bg-white/10 transition-colors"
+                  style={{ color: '#fff' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                >
+                  <Camera className="h-3.5 w-3.5 shrink-0" style={{ color: 'rgba(255,255,255,0.6)' }} />
+                  Foto ändern
+                </button>
+                {localAvatarUrl && (
+                  <button
+                    onClick={handleAvatarDelete}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 text-[13px] text-left transition-colors"
+                    style={{ color: 'rgba(255,80,80,0.85)' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                    Foto entfernen
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) handleAvatarUpload(file)
+                e.target.value = ''
+              }}
+            />
           </div>
 
           <p className="text-[17px] font-bold leading-tight mb-1" style={{ color: '#fff' }}>

@@ -4,7 +4,7 @@
 > **Domain:** getnous.de  
 > **Slogan:** "Turn Data into Decisions"  
 > **Status:** Live in Produktion  
-> **Nächste freie Feature-ID:** PROJ-31
+> **Nächste freie Feature-ID:** PROJ-38
 
 ---
 

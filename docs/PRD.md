@@ -38,6 +38,8 @@ Das Ziel ist nicht nur Dokumentation — sondern aktive Verbesserung des Traders
 | P2 | Lernmodus (Replay, Quiz, KI-Coach) | Planned |
 | P2 | Automatisierung & Smart Features | Planned |
 | P3 | Social Trading & Gamification | Planned |
+| P1 | Onboarding Checklist (Dashboard) | Planned |
+| P1 | Anleitung (Permanente App-Erklärungsseite) | Planned |
 
 ## Success Metrics
 

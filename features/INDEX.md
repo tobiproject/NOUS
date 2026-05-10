@@ -49,10 +49,12 @@
 | PROJ-33 | Watchlist per Konto | Deployed | [PROJ-33-watchlist-per-account.md](PROJ-33-watchlist-per-account.md) | 2026-05-04 |
 | PROJ-34 | Dashboard Loading State (kein Flash) | Deployed | [PROJ-34-dashboard-loading-state.md](PROJ-34-dashboard-loading-state.md) | 2026-05-04 |
 | PROJ-35 | Mobile Header Logo mit Slogan | Deployed | [PROJ-35-mobile-logo-slogan.md](PROJ-35-mobile-logo-slogan.md) | 2026-05-04 |
+| PROJ-36 | Onboarding Checklist (Dashboard) | Planned | [PROJ-36-onboarding-checklist.md](PROJ-36-onboarding-checklist.md) | 2026-05-09 |
+| PROJ-37 | Anleitung (Permanente App-Erklärungsseite) | Planned | [PROJ-37-anleitung-page.md](PROJ-37-anleitung-page.md) | 2026-05-09 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-36
+## Next Available ID: PROJ-38
 
 ## Build Order (Empfohlen)
 

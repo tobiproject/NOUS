@@ -7,8 +7,8 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   LayoutDashboard, BookOpen, TrendingUp, Brain, ShieldCheck,
   CalendarDays, ClipboardList, GraduationCap, Settings,
-  LogOut, Plus, GripVertical, Star, Map as MapIcon, Telescope, BookMarked,
-  Users, BookMarked as KbIcon, Info,
+  LogOut, Plus, GripVertical, Star, Map as MapIcon, Telescope,
+  Info, Users, BookMarked as KbIcon,
 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -27,10 +27,10 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { AccountSwitcher } from '@/components/accounts/AccountSwitcher'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { useWatchlist } from '@/hooks/useWatchlist'
+import { ProfileSidebar } from '@/components/layout/ProfileSidebar'
 import { cn } from '@/lib/utils'
 
 type NavItem =
@@ -200,13 +200,26 @@ function SortableNavItem({ item, isActive, hasTodayPlan, hasWatchlistItems, hasW
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const { activeAccount } = useAccountContext()
   const [navItems, setNavItems] = useState(DEFAULT_NAV_ITEMS)
   const [hasTodayPlan, setHasTodayPlan] = useState(false)
   const [hasWeeklyPrepReminder, setHasWeeklyPrepReminder] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [displayName, setDisplayName] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const { items: watchlistItems } = useWatchlist(activeAccount?.id)
   const hasWatchlistItems = watchlistItems.length > 0
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.json())
+      .then(d => {
+        setDisplayName(d.display_name ?? null)
+        setAvatarUrl(d.avatar_url ?? null)
+      })
+      .catch(() => {})
+  }, [])
 
   // Restore saved order from localStorage (client-side only)
   useEffect(() => {
@@ -256,9 +269,6 @@ export function AppSidebar() {
     })
   }, [])
 
-  // suppress unused-var warning — activeAccount used for future features
-  void activeAccount
-
   return (
     <>
     {/* ── Collapsed sidebar (tablet 768–1023px) ── */}
@@ -300,9 +310,30 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: settings + logout */}
+      {/* Bottom: avatar + settings + logout */}
       <div className="flex flex-col items-center gap-1 pb-3 pt-2 w-full px-1" style={{ borderTop: '1px solid var(--border-raw)' }}>
         <TooltipProvider>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setProfileOpen(true)}
+                className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100"
+                style={{ background: 'transparent' }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt="Avatar" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+                  ) : (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-blue)' }}>
+                      {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="text-xs">Profil</TooltipContent>
+          </Tooltip>
           <Tooltip delayDuration={300}>
             <TooltipTrigger asChild>
               <Link href="/einstellungen" className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100" style={{ color: 'var(--fg-3)' }}>
@@ -332,21 +363,12 @@ export function AppSidebar() {
       }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-4 pb-3">
+      <div className="px-4 py-4 pb-3">
         <Image
-          src="/logo/nous-mark-white.svg"
-          alt="NOUS"
-          width={20}
-          height={20}
-          className="shrink-0"
-          priority
-        />
-        <Image
-          src="/logo/nous-wordmark-white.svg"
-          alt="NOUS"
-          width={58}
-          height={14}
-          className="shrink-0"
+          src="/logo/nous-logo-slogan.svg"
+          alt="NOUS — Turn data into decisions"
+          width={130}
+          height={41}
           priority
         />
       </div>
@@ -395,14 +417,49 @@ export function AppSidebar() {
         </TooltipProvider>
       </nav>
 
-      {/* Bottom: account + logout */}
+      {/* Bottom: profile + settings + logout */}
       <div
-        className="mt-auto px-2 pb-3 pt-3 flex flex-col gap-1"
+        className="mt-auto px-2 pb-3 pt-2 flex flex-col gap-1"
         style={{ borderTop: '1px solid var(--border-raw)' }}
       >
-        <div className="px-2 py-1">
-          <AccountSwitcher />
-        </div>
+        {/* Profile row — opens ProfileSidebar */}
+        <button
+          onClick={() => setProfileOpen(true)}
+          className="flex items-center gap-2.5 px-2 py-2 rounded w-full text-left transition-colors duration-100"
+          style={{ background: 'transparent' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+        >
+          <div
+            style={{
+              width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+              background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)',
+              color: 'var(--brand-blue)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="Avatar" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+            ) : (
+              <span style={{ fontSize: 11, fontWeight: 700 }}>
+                {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] font-semibold truncate" style={{ color: 'var(--fg-1)' }}>
+              {displayName ?? user?.email ?? 'Profil'}
+            </div>
+            {activeAccount && (
+              <div className="text-[11px] truncate" style={{ color: 'var(--fg-3)' }}>
+                {activeAccount.name}
+              </div>
+            )}
+          </div>
+        </button>
+
         <div className="flex items-center gap-1">
           <Popover>
             <PopoverTrigger asChild>
@@ -477,6 +534,13 @@ export function AppSidebar() {
         </div>
       </div>
     </aside>
+
+    <ProfileSidebar
+      open={profileOpen}
+      onClose={() => setProfileOpen(false)}
+      displayName={displayName}
+      avatarUrl={avatarUrl}
+    />
     </>
   )
 }

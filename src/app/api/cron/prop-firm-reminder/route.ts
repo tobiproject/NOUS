@@ -25,16 +25,24 @@ export async function GET(req: NextRequest) {
   // Fetch users with prop-firm reminder enabled + push subscription
   const { data: settings } = await supabase
     .from('notification_settings')
-    .select('user_id, push_subscription')
+    .select('user_id, push_subscription, prop_firm_reminder_time')
     .eq('prop_firm_reminder_enabled', true)
     .eq('push_enabled', true)
     .not('push_subscription', 'is', null)
 
   if (!settings?.length) return NextResponse.json({ sent: 0 })
 
+  // Only send to users whose preferred UTC hour matches current hour
+  const currentUtcHour = new Date().getUTCHours()
+  const dueSettings = settings.filter(s => {
+    const preferredHour = parseInt((s.prop_firm_reminder_time ?? '07:00').split(':')[0], 10)
+    return preferredHour === currentUtcHour
+  })
+  if (!dueSettings.length) return NextResponse.json({ sent: 0, skipped: settings.length })
+
   let sent = 0
 
-  for (const s of settings) {
+  for (const s of dueSettings) {
     // Get the most recently updated prop-firm rule for this user
     const { data: rules } = await supabase
       .from('prop_firm_rules')

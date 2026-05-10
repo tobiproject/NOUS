@@ -34,10 +34,18 @@ export async function GET(req: NextRequest) {
   // Get all users with notifications enabled
   const { data: settings } = await supabase
     .from('notification_settings')
-    .select('user_id, push_enabled, push_subscription, email_enabled, email_address')
+    .select('user_id, push_enabled, push_subscription, email_enabled, email_address, weekly_prep_time')
     .or('push_enabled.eq.true,email_enabled.eq.true')
 
   if (!settings?.length) return NextResponse.json({ sent: 0 })
+
+  // Only send to users whose preferred UTC hour matches the current hour
+  const currentUtcHour = new Date().getUTCHours()
+  const dueSettings = settings.filter(s => {
+    const preferredHour = parseInt((s.weekly_prep_time ?? '09:00').split(':')[0], 10)
+    return preferredHour === currentUtcHour
+  })
+  if (!dueSettings.length) return NextResponse.json({ sent: 0, skipped: settings.length })
 
   const kw = getISOWeek(new Date())
   const nextKw = kw + 1
@@ -53,7 +61,7 @@ export async function GET(req: NextRequest) {
   let pushSent = 0
   let emailSent = 0
 
-  for (const s of settings) {
+  for (const s of dueSettings) {
     // Push notification
     if (s.push_enabled && s.push_subscription) {
       try {

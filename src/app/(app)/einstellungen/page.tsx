@@ -71,6 +71,49 @@ async function getCroppedBlob(imageSrc: string, pixelCrop: Area): Promise<Blob> 
   return new Promise(resolve => canvas.toBlob(b => resolve(b!), 'image/jpeg', 0.92))
 }
 
+function TimePickerRow({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [h, m] = value.split(':').map(Number)
+  const hours = Array.from({ length: 24 }, (_, i) => i)
+  const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+  const selectStyle = {
+    background: 'var(--bg-3)',
+    border: '1px solid var(--border-raw)',
+    color: 'var(--fg-1)',
+    borderRadius: 8,
+    padding: '4px 8px',
+    fontSize: 13,
+    cursor: 'pointer',
+    outline: 'none',
+  }
+  return (
+    <div className="flex items-center justify-between pt-1">
+      <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>{label}</span>
+      <div className="flex items-center gap-1.5">
+        <select
+          value={h}
+          onChange={e => onChange(`${String(Number(e.target.value)).padStart(2,'0')}:${String(m).padStart(2,'0')}`)}
+          style={selectStyle}
+        >
+          {hours.map(hh => (
+            <option key={hh} value={hh}>{String(hh).padStart(2, '0')}</option>
+          ))}
+        </select>
+        <span style={{ color: 'var(--fg-3)', fontWeight: 600 }}>:</span>
+        <select
+          value={m}
+          onChange={e => onChange(`${String(h).padStart(2,'0')}:${String(Number(e.target.value)).padStart(2,'0')}`)}
+          style={selectStyle}
+        >
+          {minutes.map(mm => (
+            <option key={mm} value={mm}>{String(mm).padStart(2, '0')}</option>
+          ))}
+        </select>
+        <span className="text-xs" style={{ color: 'var(--fg-4)' }}>Uhr</span>
+      </div>
+    </div>
+  )
+}
+
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <div
@@ -808,6 +851,8 @@ function BenachrichtigungenTab() {
   const [notifEmail, setNotifEmail] = useState('')
   const [notifEmailEnabled, setNotifEmailEnabled] = useState(false)
   const [propFirmReminderEnabled, setPropFirmReminderEnabled] = useState(false)
+  const [weeklyPrepTime, setWeeklyPrepTime] = useState('09:00')
+  const [propFirmTime, setPropFirmTime] = useState('07:00')
   const [notifSaving, setNotifSaving] = useState(false)
   const { permission, subscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications()
 
@@ -816,6 +861,8 @@ function BenachrichtigungenTab() {
       setNotifEmailEnabled(d.email_enabled ?? false)
       setNotifEmail(d.email_address ?? '')
       setPropFirmReminderEnabled(d.prop_firm_reminder_enabled ?? false)
+      setWeeklyPrepTime(d.weekly_prep_time ?? '09:00')
+      setPropFirmTime(d.prop_firm_reminder_time ?? '07:00')
     })
   }, [])
 
@@ -828,6 +875,8 @@ function BenachrichtigungenTab() {
         email_enabled: notifEmailEnabled,
         email_address: notifEmail,
         prop_firm_reminder_enabled: propFirmReminderEnabled,
+        weekly_prep_time: weeklyPrepTime,
+        prop_firm_reminder_time: propFirmTime,
       }),
     })
     setNotifSaving(false)
@@ -860,7 +909,7 @@ function BenachrichtigungenTab() {
 
   return (
     <div className="space-y-6">
-      <Section title="Browser Push" subtitle="Erinnerungen für Wochenvorbereitung — samstags & sonntags 9:00 Uhr">
+      <Section title="Browser Push" subtitle="Erinnerungen für Wochenvorbereitung — samstags & sonntags">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -919,10 +968,19 @@ function BenachrichtigungenTab() {
               </Button>
             </div>
           </div>
+
+          {/* Weekly prep time picker */}
+          {(subscribed || permission === 'granted') && (
+            <TimePickerRow
+              label="Uhrzeit Sa & So"
+              value={weeklyPrepTime}
+              onChange={setWeeklyPrepTime}
+            />
+          )}
         </div>
       </Section>
 
-      <Section title="Prop-Firm Regelwerk" subtitle="Mo–Fr um 09:00 Uhr — deine Regeln als Push-Erinnerung vor dem Trading">
+      <Section title="Prop-Firm Regelwerk" subtitle="Mo–Fr — deine Regeln als Push-Erinnerung vor dem Trading">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -943,6 +1001,13 @@ function BenachrichtigungenTab() {
           </div>
           {propFirmReminderEnabled && !(subscribed || permission === 'granted') && (
             <p className="text-xs" style={{ color: 'var(--fg-4)' }}>Browser Push muss erst aktiviert sein.</p>
+          )}
+          {propFirmReminderEnabled && (subscribed || permission === 'granted') && (
+            <TimePickerRow
+              label="Uhrzeit Mo–Fr"
+              value={propFirmTime}
+              onChange={setPropFirmTime}
+            />
           )}
         </div>
       </Section>

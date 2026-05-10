@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from('notification_settings')
-    .select('push_enabled, email_enabled, email_address, prop_firm_reminder_enabled')
+    .select('push_enabled, email_enabled, email_address, prop_firm_reminder_enabled, weekly_prep_time, prop_firm_reminder_time')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -17,6 +17,8 @@ export async function GET() {
     email_enabled: data?.email_enabled ?? false,
     email_address: data?.email_address ?? '',
     prop_firm_reminder_enabled: data?.prop_firm_reminder_enabled ?? false,
+    weekly_prep_time: data?.weekly_prep_time ?? '09:00',
+    prop_firm_reminder_time: data?.prop_firm_reminder_time ?? '07:00',
   })
 }
 
@@ -32,6 +34,8 @@ export async function POST(req: NextRequest) {
       email_enabled: body.email_enabled ?? false,
       email_address: body.email_address ?? null,
       prop_firm_reminder_enabled: body.prop_firm_reminder_enabled ?? false,
+      weekly_prep_time: body.weekly_prep_time ?? '09:00',
+      prop_firm_reminder_time: body.prop_firm_reminder_time ?? '07:00',
     },
     { onConflict: 'user_id' }
   )

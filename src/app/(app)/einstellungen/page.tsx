@@ -145,28 +145,52 @@ const TIMEZONE_OPTIONS: { value: string; label: string }[] = (() => {
 })()
 
 function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000)
+    return () => clearInterval(t)
+  }, [])
+
+  const localTime = (() => {
+    try {
+      return new Intl.DateTimeFormat('de-DE', {
+        timeZone: value,
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'shortOffset',
+      }).format(now)
+    } catch { return '' }
+  })()
+
   return (
-    <div className="flex items-center justify-between pt-1">
-      <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>Zeitzone</span>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{
-          background: 'var(--bg-3)',
-          border: '1px solid var(--border-raw)',
-          color: 'var(--fg-1)',
-          borderRadius: 8,
-          padding: '4px 8px',
-          fontSize: 13,
-          cursor: 'pointer',
-          outline: 'none',
-          maxWidth: 220,
-        }}
-      >
-        {TIMEZONE_OPTIONS.map(tz => (
-          <option key={tz.value} value={tz.value}>{tz.label}</option>
-        ))}
-      </select>
+    <div className="space-y-2 pt-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>Zeitzone</span>
+        <select
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          style={{
+            background: 'var(--bg-3)',
+            border: '1px solid var(--border-raw)',
+            color: 'var(--fg-1)',
+            borderRadius: 8,
+            padding: '4px 8px',
+            fontSize: 13,
+            cursor: 'pointer',
+            outline: 'none',
+            maxWidth: 220,
+          }}
+        >
+          {TIMEZONE_OPTIONS.map(tz => (
+            <option key={tz.value} value={tz.value}>{tz.label}</option>
+          ))}
+        </select>
+      </div>
+      {localTime && (
+        <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
+          Aktuelle Uhrzeit in dieser Zeitzone: <span style={{ color: 'var(--fg-2)', fontWeight: 600 }}>{localTime}</span>
+        </p>
+      )}
     </div>
   )
 }

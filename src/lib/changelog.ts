@@ -7,6 +7,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.3.0',
+    date: '2026-05-10',
+    features: [
+      'Anleitung-Fortschritt synchronisiert sich zwischen Geräten',
+      'Versionsanzeige jetzt auch im Mobil-Profil sichtbar',
+      'Zeitzonenauswahl für Benachrichtigungen (weltweit)',
+      'Uhrzeiten-Picker als Scroll-Drum mit Haptik-Feedback',
+    ],
+    fixes: [
+      'Anleitung-Badge auf Desktop zeigte falsche Werte',
+      'Speichern-Button für Benachrichtigungen jetzt immer sichtbar',
+      'Profil-Sidebar: Version + Logout waren auf kleinen Bildschirmen versteckt',
+    ],
+  },
+  {
     version: '1.2.1',
     date: '2026-05-10',
     fixes: [

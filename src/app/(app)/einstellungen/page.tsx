@@ -71,44 +71,105 @@ async function getCroppedBlob(imageSrc: string, pixelCrop: Area): Promise<Blob> 
   return new Promise(resolve => canvas.toBlob(b => resolve(b!), 'image/jpeg', 0.92))
 }
 
+const DRUM_H = 44
+const HOURS_ARR = Array.from({ length: 24 }, (_, i) => i)
+const MINUTES_ARR = Array.from({ length: 60 }, (_, i) => i)
+
+function DrumColumn({ values, selected, onChange }: {
+  values: number[]
+  selected: number
+  onChange: (v: number) => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const fmt = (v: number) => String(v).padStart(2, '0')
+
+  // Initial scroll — instant, no animation
+  useEffect(() => {
+    const idx = values.indexOf(selected)
+    if (idx >= 0 && ref.current) ref.current.scrollTop = idx * DRUM_H
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Programmatic scroll when parent changes value externally
+  const prevSelected = useRef(selected)
+  useEffect(() => {
+    if (prevSelected.current === selected) return
+    prevSelected.current = selected
+    const idx = values.indexOf(selected)
+    if (idx >= 0 && ref.current) ref.current.scrollTo({ top: idx * DRUM_H, behavior: 'smooth' })
+  }, [selected, values])
+
+  const handleScroll = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    const idx = Math.round(el.scrollTop / DRUM_H)
+    const v = values[Math.max(0, Math.min(idx, values.length - 1))]
+    if (v !== undefined && v !== prevSelected.current) {
+      prevSelected.current = v
+      onChange(v)
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(8)
+    }
+  }, [values, onChange])
+
+  return (
+    <div style={{ position: 'relative', height: DRUM_H * 3, width: 52, overflow: 'hidden', borderRadius: 8, background: 'var(--bg-3)' }}>
+      {/* Selection highlight */}
+      <div style={{
+        position: 'absolute', top: DRUM_H, left: 0, right: 0, height: DRUM_H,
+        background: 'rgba(255,255,255,0.07)',
+        borderTop: '1px solid rgba(255,255,255,0.1)',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        pointerEvents: 'none', zIndex: 1,
+      }} />
+      {/* Top fade */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: DRUM_H,
+        background: 'linear-gradient(to bottom, var(--bg-3) 10%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 2,
+      }} />
+      {/* Bottom fade */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: DRUM_H,
+        background: 'linear-gradient(to top, var(--bg-3) 10%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 2,
+      }} />
+      <div
+        ref={ref}
+        onScroll={handleScroll}
+        style={{
+          height: '100%', overflowY: 'scroll',
+          scrollSnapType: 'y mandatory', scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch',
+        } as React.CSSProperties}
+      >
+        <div style={{ height: DRUM_H }} />
+        {values.map(v => (
+          <div key={v} style={{
+            height: DRUM_H, scrollSnapAlign: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 17, fontWeight: v === selected ? 700 : 400,
+            color: v === selected ? 'var(--fg-1)' : 'rgba(255,255,255,0.28)',
+            fontVariantNumeric: 'tabular-nums', userSelect: 'none',
+            transition: 'color 0.1s',
+          }}>
+            {fmt(v)}
+          </div>
+        ))}
+        <div style={{ height: DRUM_H }} />
+      </div>
+    </div>
+  )
+}
+
 function TimePickerRow({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [h, m] = value.split(':').map(Number)
-  const hours = Array.from({ length: 24 }, (_, i) => i)
-  const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
-  const selectStyle = {
-    background: 'var(--bg-3)',
-    border: '1px solid var(--border-raw)',
-    color: 'var(--fg-1)',
-    borderRadius: 8,
-    padding: '4px 8px',
-    fontSize: 13,
-    cursor: 'pointer',
-    outline: 'none',
-  }
   return (
-    <div className="flex items-center justify-between pt-1">
-      <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>{label}</span>
-      <div className="flex items-center gap-1.5">
-        <select
-          value={h}
-          onChange={e => onChange(`${String(Number(e.target.value)).padStart(2,'0')}:${String(m).padStart(2,'0')}`)}
-          style={selectStyle}
-        >
-          {hours.map(hh => (
-            <option key={hh} value={hh}>{String(hh).padStart(2, '0')}</option>
-          ))}
-        </select>
-        <span style={{ color: 'var(--fg-3)', fontWeight: 600 }}>:</span>
-        <select
-          value={m}
-          onChange={e => onChange(`${String(h).padStart(2,'0')}:${String(Number(e.target.value)).padStart(2,'0')}`)}
-          style={selectStyle}
-        >
-          {minutes.map(mm => (
-            <option key={mm} value={mm}>{String(mm).padStart(2, '0')}</option>
-          ))}
-        </select>
-        <span className="text-xs" style={{ color: 'var(--fg-4)' }}>Uhr</span>
+    <div className="pt-2">
+      <span className="text-xs font-medium block mb-2" style={{ color: 'var(--fg-3)' }}>{label}</span>
+      <div className="flex items-center gap-2">
+        <DrumColumn values={HOURS_ARR} selected={h} onChange={v => onChange(`${String(v).padStart(2,'0')}:${String(m).padStart(2,'0')}`)} />
+        <span style={{ color: 'var(--fg-3)', fontWeight: 700, fontSize: 18 }}>:</span>
+        <DrumColumn values={MINUTES_ARR} selected={m} onChange={v => onChange(`${String(h).padStart(2,'0')}:${String(v).padStart(2,'0')}`)} />
+        <span className="text-sm" style={{ color: 'var(--fg-4)' }}>Uhr</span>
       </div>
     </div>
   )
@@ -1133,17 +1194,19 @@ function BenachrichtigungenTab() {
               placeholder="deine@email.de"
             />
           )}
-          <Button
-            onClick={saveNotifSettings}
-            disabled={notifSaving}
-            className="h-8 px-3 text-xs font-semibold rounded"
-            style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
-          >
-            {notifSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Check className="h-3.5 w-3.5 mr-1" />}
-            Speichern
-          </Button>
         </div>
       </Section>
+
+      {/* Speichern — prominent, covers all notification settings */}
+      <Button
+        onClick={saveNotifSettings}
+        disabled={notifSaving}
+        className="w-full h-10 text-sm font-semibold rounded-lg"
+        style={{ background: 'var(--brand-blue)', color: '#fff' }}
+      >
+        {notifSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+        Benachrichtigungseinstellungen speichern
+      </Button>
     </div>
   )
 }

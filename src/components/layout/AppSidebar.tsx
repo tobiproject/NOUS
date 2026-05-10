@@ -29,7 +29,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { ProfileSidebar } from './ProfileSidebar'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
-import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY } from '@/lib/anleitung-progress'
+import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY, fetchProgressFromServer, setProgressFromServer } from '@/lib/anleitung-progress'
 import { CHANGELOG } from '@/lib/changelog'
 import { RefreshCw, Sparkles, X } from 'lucide-react'
 
@@ -215,10 +215,16 @@ export function AppSidebar() {
   const [anleitungPercent, setAnleitungPercent] = useState(0)
   const update = useVersionCheck()
 
-  // Track anleitung progress for profile dot
+  // Track anleitung progress — sync from server on mount so desktop sees mobile progress
   useEffect(() => {
     const refresh = () => setAnleitungPercent(getAnleitungProgress().percent)
     refresh()
+    fetchProgressFromServer().then(serverSections => {
+      if (serverSections.length === 0) return
+      const local = getAnleitungProgress().read
+      const merged = Array.from(new Set([...local, ...serverSections]))
+      if (merged.length !== local.length) setProgressFromServer(merged)
+    }).catch(() => {})
     window.addEventListener('anleitung-progress-changed', refresh)
     window.addEventListener('storage', (e) => { if (e.key === ANLEITUNG_STORAGE_KEY) refresh() })
     return () => window.removeEventListener('anleitung-progress-changed', refresh)

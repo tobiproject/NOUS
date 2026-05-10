@@ -14,7 +14,7 @@ import {
   ExternalLink, CheckCircle2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { markSectionRead, getAnleitungProgress, ANLEITUNG_SECTION_IDS, fetchProgressFromServer, setProgressFromServer } from '@/lib/anleitung-progress'
+import { markSectionRead, getAnleitungProgress, ANLEITUNG_SECTION_IDS, fetchProgressFromServer, setProgressFromServer, syncProgressToServer } from '@/lib/anleitung-progress'
 
 interface Step {
   title: string
@@ -356,13 +356,15 @@ export function AnleitungContent() {
     return getAnleitungProgress().read
   })
 
-  // Sync from server on mount — merges server state with localStorage so all devices stay in sync
+  // Bidirectional sync on mount: merge local + server, push merged back if server is missing anything
   useEffect(() => {
     fetchProgressFromServer().then(serverSections => {
-      if (serverSections.length === 0) return
       const local = getAnleitungProgress().read
       const merged = Array.from(new Set([...local, ...serverSections]))
-      if (merged.length !== local.length) {
+      if (merged.length > serverSections.length) {
+        syncProgressToServer(merged).catch(() => {})
+      }
+      if (merged.length > local.length) {
         setProgressFromServer(merged)
         setReadSections(merged)
       }

@@ -1,6 +1,6 @@
 # PROJ-37: Anleitung (Permanente App-Erklärungsseite)
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-05-09
 **Last Updated:** 2026-05-09
 
@@ -56,7 +56,54 @@
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Reine statische Content-Seite — kein Backend, keine Datenbankanbindung. Inhalt ist direkt im Code. Blitzschnelles Laden, kein Loading-State.
+
+### Komponentenstruktur
+```
+/anleitung (page.tsx — Server Component)
+└── AnleitungContent (Client Component — für Accordion-Interaktivität)
+    ├── Page Header (Eyebrow + H1)
+    └── Layout: Desktop 2-spaltig / Mobile 1-spaltig
+        ├── [Desktop] TableOfContents — sticky, Links zu allen 10 Sektionen
+        └── 10 Accordion-Sektionen mit Anchor-IDs
+            ├── #erste-schritte
+            ├── #journal
+            ├── #dashboard
+            ├── #ki-analyse
+            ├── #risk
+            ├── #performance
+            ├── #knowledge-base
+            ├── #wochenvorbereitung
+            ├── #benachrichtigungen
+            └── #einstellungen
+```
+
+### Datenmodell
+Kein Datenmodell — vollständig statischer Inhalt im Code.
+
+### Tech-Entscheidungen
+- **Server Component** für `page.tsx` → schnellstes Rendering
+- **Client Component** für `AnleitungContent.tsx` → Accordion braucht JS
+- **shadcn Accordion** (bereits installiert) → keine neue Abhängigkeit
+- **CSS sticky** für Desktop-TOC → kein JS-State nötig
+- **HTML Anchor-Links** (`id` auf Sektionen) → Standard, kein Router-Magic
+
+### Navigation
+- **Desktop AppSidebar**: Neuer Nav-Eintrag `HelpCircle` / "Anleitung" / `/anleitung`
+- **Mobile ProfileSidebar**: Link in NAV_ITEMS (ProfileSidebar fungiert als Mehr-Menü)
+
+### Neue Dateien
+- `src/app/(app)/anleitung/page.tsx`
+- `src/components/anleitung/AnleitungContent.tsx`
+
+### Angepasste Dateien
+- `src/components/layout/AppSidebar.tsx` — Nav-Eintrag
+- `src/components/layout/ProfileSidebar.tsx` — Mobile-Link
+
+### Abhängigkeiten
+Keine neuen Pakete — Accordion, Icons und Tailwind bereits vorhanden.
 
 ## QA Test Results
 _To be added by /qa_

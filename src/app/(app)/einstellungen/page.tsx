@@ -175,83 +175,142 @@ function TimePickerRow({ label, value, onChange }: { label: string; value: strin
   )
 }
 
-// All IANA timezone identifiers with UTC offset labels, grouped for readability
-const TIMEZONE_OPTIONS: { value: string; label: string }[] = (() => {
-  const ids: string[] = typeof Intl !== 'undefined' && 'supportedValuesOf' in Intl
-    ? (Intl as unknown as { supportedValuesOf: (key: string) => string[] }).supportedValuesOf('timeZone')
-    : ['UTC', 'Europe/Berlin', 'Europe/London', 'America/New_York', 'America/Los_Angeles', 'Asia/Tokyo', 'Asia/Singapore', 'Australia/Sydney']
+// One entry per UTC offset — curated, no duplicates
+const CURATED_TIMEZONES: { tz: string; city: string }[] = [
+  { tz: 'Etc/GMT+12',              city: 'UTC-12'    },
+  { tz: 'Pacific/Pago_Pago',       city: 'Samoa'     },
+  { tz: 'Pacific/Honolulu',        city: 'Hawaii'    },
+  { tz: 'America/Anchorage',       city: 'Anchorage' },
+  { tz: 'America/Los_Angeles',     city: 'L.A.'      },
+  { tz: 'America/Denver',          city: 'Denver'    },
+  { tz: 'America/Chicago',         city: 'Chicago'   },
+  { tz: 'America/New_York',        city: 'New York'  },
+  { tz: 'America/Caracas',         city: 'Caracas'   },
+  { tz: 'America/Sao_Paulo',       city: 'São Paulo' },
+  { tz: 'Atlantic/South_Georgia',  city: 'S. Georgia'},
+  { tz: 'Atlantic/Azores',         city: 'Azoren'    },
+  { tz: 'Europe/London',           city: 'London'    },
+  { tz: 'Europe/Berlin',           city: 'Berlin'    },
+  { tz: 'Europe/Helsinki',         city: 'Helsinki'  },
+  { tz: 'Europe/Moscow',           city: 'Moskau'    },
+  { tz: 'Asia/Tehran',             city: 'Teheran'   },
+  { tz: 'Asia/Dubai',              city: 'Dubai'     },
+  { tz: 'Asia/Kabul',              city: 'Kabul'     },
+  { tz: 'Asia/Karachi',            city: 'Karachi'   },
+  { tz: 'Asia/Kolkata',            city: 'Mumbai'    },
+  { tz: 'Asia/Kathmandu',          city: 'Kathmandu' },
+  { tz: 'Asia/Dhaka',              city: 'Dhaka'     },
+  { tz: 'Asia/Yangon',             city: 'Yangon'    },
+  { tz: 'Asia/Bangkok',            city: 'Bangkok'   },
+  { tz: 'Asia/Singapore',          city: 'Singapur'  },
+  { tz: 'Asia/Tokyo',              city: 'Tokio'     },
+  { tz: 'Australia/Adelaide',      city: 'Adelaide'  },
+  { tz: 'Australia/Sydney',        city: 'Sydney'    },
+  { tz: 'Pacific/Noumea',          city: 'Noumea'    },
+  { tz: 'Pacific/Auckland',        city: 'Auckland'  },
+  { tz: 'Pacific/Chatham',         city: 'Chatham'   },
+  { tz: 'Pacific/Apia',            city: 'Apia'      },
+  { tz: 'Pacific/Kiritimati',      city: 'Kiritimati'},
+]
 
-  const now = new Date()
-  return ids
-    .map(id => {
-      try {
-        const parts = new Intl.DateTimeFormat('en-US', { timeZone: id, timeZoneName: 'shortOffset' }).formatToParts(now)
-        const offset = parts.find(p => p.type === 'timeZoneName')?.value ?? 'UTC'
-        return { value: id, label: `(${offset}) ${id.replace(/_/g, ' ')}`, sortKey: offset }
-      } catch {
-        return null
-      }
-    })
-    .filter((x): x is { value: string; label: string; sortKey: string } => x !== null)
-    .sort((a, b) => {
-      const toMinutes = (s: string) => {
-        const m = s.match(/GMT([+-])(\d+)(?::(\d+))?/)
-        if (!m) return 0
-        return (parseInt(m[2]) * 60 + parseInt(m[3] ?? '0')) * (m[1] === '+' ? 1 : -1)
-      }
-      const diff = toMinutes(a.sortKey) - toMinutes(b.sortKey)
-      return diff !== 0 ? diff : a.value.localeCompare(b.value)
-    })
-    .map(({ value, label }) => ({ value, label }))
-})()
+function getTzOffset(tz: string, now: Date): string {
+  try {
+    const v = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' })
+      .formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? 'UTC'
+    return v.replace('GMT', 'UTC')
+  } catch { return 'UTC' }
+}
 
-function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+// Map any IANA tz → nearest curated entry (by current offset)
+function normalizeToCurated(tz: string): string {
+  if (CURATED_TIMEZONES.some(t => t.tz === tz)) return tz
+  try {
+    const now = new Date()
+    const target = getTzOffset(tz, now)
+    const match = CURATED_TIMEZONES.find(t => getTzOffset(t.tz, now) === target)
+    return match?.tz ?? 'Europe/Berlin'
+  } catch { return 'Europe/Berlin' }
+}
+
+function TimezoneDrum({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const normalized = normalizeToCurated(value)
+  const idx = CURATED_TIMEZONES.findIndex(t => t.tz === normalized)
+  const safeidx = idx >= 0 ? idx : 13 // fallback to Berlin
+  const ref = useRef<HTMLDivElement>(null)
+  const prevIdx = useRef(safeidx)
   const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = safeidx * DRUM_H
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (prevIdx.current === safeidx) return
+    prevIdx.current = safeidx
+    if (ref.current) ref.current.scrollTo({ top: safeidx * DRUM_H, behavior: 'smooth' })
+  }, [safeidx])
+
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000)
     return () => clearInterval(t)
   }, [])
 
+  const handleScroll = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    const i = Math.round(el.scrollTop / DRUM_H)
+    const entry = CURATED_TIMEZONES[Math.max(0, Math.min(i, CURATED_TIMEZONES.length - 1))]
+    if (entry && entry.tz !== CURATED_TIMEZONES[prevIdx.current]?.tz) {
+      const newIdx = CURATED_TIMEZONES.indexOf(entry)
+      prevIdx.current = newIdx
+      onChange(entry.tz)
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(8)
+    }
+  }, [onChange])
+
+  const current = CURATED_TIMEZONES[safeidx]
+  const offset = getTzOffset(current.tz, now)
   const localTime = (() => {
     try {
-      return new Intl.DateTimeFormat('de-DE', {
-        timeZone: value,
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZoneName: 'shortOffset',
-      }).format(now)
+      return new Intl.DateTimeFormat('de-DE', { timeZone: current.tz, hour: '2-digit', minute: '2-digit' }).format(now)
     } catch { return '' }
   })()
 
   return (
-    <div className="space-y-2 pt-1">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>Zeitzone</span>
-        <select
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          style={{
-            background: 'var(--bg-3)',
-            border: '1px solid var(--border-raw)',
-            color: 'var(--fg-1)',
-            borderRadius: 8,
-            padding: '4px 8px',
-            fontSize: 13,
-            cursor: 'pointer',
-            outline: 'none',
-            maxWidth: 220,
-          }}
-        >
-          {TIMEZONE_OPTIONS.map(tz => (
-            <option key={tz.value} value={tz.value}>{tz.label}</option>
-          ))}
-        </select>
+    <div className="pt-1 space-y-2">
+      <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>Zeitzone</span>
+      <div className="flex items-center gap-3">
+        {/* Drum */}
+        <div style={{ position: 'relative', height: DRUM_H * 3, width: 120, overflow: 'hidden', borderRadius: 8, background: 'var(--bg-3)', flexShrink: 0 }}>
+          <div style={{ position: 'absolute', top: DRUM_H, left: 0, right: 0, height: DRUM_H, background: 'rgba(255,255,255,0.07)', borderTop: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', pointerEvents: 'none', zIndex: 1 }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: DRUM_H, background: 'linear-gradient(to bottom, var(--bg-3) 10%, transparent 100%)', pointerEvents: 'none', zIndex: 2 }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: DRUM_H, background: 'linear-gradient(to top, var(--bg-3) 10%, transparent 100%)', pointerEvents: 'none', zIndex: 2 }} />
+          <div ref={ref} onScroll={handleScroll} style={{ height: '100%', overflowY: 'scroll', scrollSnapType: 'y mandatory', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+            <div style={{ height: DRUM_H }} />
+            {CURATED_TIMEZONES.map((t, i) => (
+              <div key={t.tz} style={{
+                height: DRUM_H, scrollSnapAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                userSelect: 'none', gap: 1,
+              }}>
+                <span style={{ fontSize: 13, fontWeight: i === safeidx ? 700 : 400, color: i === safeidx ? 'var(--fg-1)' : 'rgba(255,255,255,0.28)', transition: 'color 0.1s', lineHeight: 1.2 }}>
+                  {getTzOffset(t.tz, now)}
+                </span>
+                <span style={{ fontSize: 11, color: i === safeidx ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.18)', transition: 'color 0.1s', lineHeight: 1.2 }}>
+                  {t.city}
+                </span>
+              </div>
+            ))}
+            <div style={{ height: DRUM_H }} />
+          </div>
+        </div>
+        {/* Live info */}
+        <div>
+          <p className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>{current.city}</p>
+          <p className="text-xs" style={{ color: 'var(--fg-4)' }}>{offset}</p>
+          {localTime && <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--brand-blue)' }}>{localTime} Uhr</p>}
+        </div>
       </div>
-      {localTime && (
-        <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
-          Aktuelle Uhrzeit in dieser Zeitzone: <span style={{ color: 'var(--fg-2)', fontWeight: 600 }}>{localTime}</span>
-        </p>
-      )}
     </div>
   )
 }
@@ -997,9 +1056,9 @@ function BenachrichtigungenTab() {
   const [propFirmTime, setPropFirmTime] = useState('07:00')
   const [notifTimezone, setNotifTimezone] = useState(() => {
     if (typeof window !== 'undefined') {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone
+      return normalizeToCurated(Intl.DateTimeFormat().resolvedOptions().timeZone)
     }
-    return 'UTC'
+    return 'Europe/Berlin'
   })
   const [notifSaving, setNotifSaving] = useState(false)
   const { permission, subscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications()
@@ -1011,7 +1070,7 @@ function BenachrichtigungenTab() {
       setPropFirmReminderEnabled(d.prop_firm_reminder_enabled ?? false)
       setWeeklyPrepTime(d.weekly_prep_time ?? '09:00')
       setPropFirmTime(d.prop_firm_reminder_time ?? '07:00')
-      if (d.notification_timezone) setNotifTimezone(d.notification_timezone)
+      if (d.notification_timezone) setNotifTimezone(normalizeToCurated(d.notification_timezone))
     })
   }, [])
 
@@ -1164,7 +1223,7 @@ function BenachrichtigungenTab() {
 
       <Section title="Zeitzone" subtitle="Gilt für alle Benachrichtigungen — Uhrzeiten werden in dieser Zeitzone interpretiert">
         <div className="space-y-3">
-          <TimezoneSelect value={notifTimezone} onChange={setNotifTimezone} />
+          <TimezoneDrum value={notifTimezone} onChange={setNotifTimezone} />
         </div>
       </Section>
 

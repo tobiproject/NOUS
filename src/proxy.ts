@@ -30,7 +30,9 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route))
+  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+    route === '/' ? pathname === '/' : pathname.startsWith(route)
+  )
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()

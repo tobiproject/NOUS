@@ -10,6 +10,7 @@ import { MobileHeader } from '@/components/layout/MobileHeader'
 import { MorningBriefing } from '@/components/layout/MorningBriefing'
 import { AnalysisReminderBanner } from '@/components/layout/AnalysisReminderBanner'
 import { MobileUpdateModal } from '@/components/layout/MobileUpdateModal'
+import { UpdateBanner } from '@/components/layout/UpdateBanner'
 import { FontSizeApplier } from '@/components/layout/FontSizeApplier'
 import { QuickAddTradeButton } from '@/components/layout/QuickAddTradeButton'
 
@@ -38,6 +39,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <MobileUpdateModal />
+      <UpdateBanner />
       <QuickAddTradeButton />
       <BottomNav />
     </AccountProvider>

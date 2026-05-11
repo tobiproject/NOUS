@@ -49,9 +49,11 @@ export function useVersionCheck(): UpdateInfo | null {
       } catch {}
     }
 
-    const t = setTimeout(check, 2_000)
+    check()
     const i = setInterval(check, 60_000)
-    return () => { clearTimeout(t); clearInterval(i) }
+    const onVisible = () => { if (document.visibilityState === 'visible') check() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { clearInterval(i); document.removeEventListener('visibilitychange', onVisible) }
   }, [])
 
   return update

@@ -1,6 +1,6 @@
 {
   "name": "ai-coding-starter-kit",
-  "version": "1.0.0",
+  "version": "1.3.1",
   "description": "AI Coding Starter Kit with AI Agent Team System for Claude Code",
   "private": true,
   "scripts": {
@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:all": "vitest run && playwright test"
+    "test:all": "vitest run && playwright test",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.0",

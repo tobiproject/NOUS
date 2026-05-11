@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
-import { getChangelogForVersion } from '@/lib/changelog'
+import { getCurrentChangelog } from '@/lib/changelog'
 
 export const dynamic = 'force-dynamic'
 
 export function GET() {
-  const version = process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'
-  const entry = getChangelogForVersion(version)
+  const buildId = process.env.NEXT_PUBLIC_APP_VERSION ?? 'dev'
+  const releaseVersion = process.env.NEXT_PUBLIC_RELEASE_VERSION ?? '0.0.0'
+  const entry = getCurrentChangelog()
   return NextResponse.json({
-    version,
-    features: entry?.features ?? [],
-    fixes: entry?.fixes ?? [],
+    buildId,
+    releaseVersion,
+    features: entry.features ?? [],
+    fixes: entry.fixes ?? [],
   })
 }

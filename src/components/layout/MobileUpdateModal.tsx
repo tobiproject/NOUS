@@ -3,15 +3,15 @@
 import { useState } from 'react'
 import { RefreshCw, X, Sparkles } from 'lucide-react'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
-import { CHANGELOG } from '@/lib/changelog'
+import { getCurrentChangelog } from '@/lib/changelog'
+
+const CURRENT = getCurrentChangelog()
 
 export function MobileUpdateModal() {
   const update = useVersionCheck()
   const [dismissed, setDismissed] = useState(false)
 
   if (!update || dismissed) return null
-
-  const entry = CHANGELOG[0]
 
   return (
     <div
@@ -38,16 +38,16 @@ export function MobileUpdateModal() {
         </div>
 
         <p className="px-5 pb-3 text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-          v{entry.version} · {entry.date}
+          v{update.releaseVersion} · {CURRENT.date}
         </p>
 
         {/* Changes */}
         <div className="px-5 pb-4 space-y-2.5">
-          {(entry.features?.length ?? 0) > 0 && (
+          {(update.features?.length ?? 0) > 0 && (
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: 'var(--brand-blue)' }}>Neu</p>
               <div className="space-y-1">
-                {(entry.features ?? []).map((c, i) => (
+                {(update.features ?? []).map((c, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <span className="text-[12px] shrink-0 leading-relaxed font-semibold" style={{ color: 'var(--brand-blue)' }}>+</span>
                     <span className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>{c}</span>
@@ -56,11 +56,11 @@ export function MobileUpdateModal() {
               </div>
             </div>
           )}
-          {(entry.fixes?.length ?? 0) > 0 && (
+          {(update.fixes?.length ?? 0) > 0 && (
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: 'rgba(255,180,60,0.85)' }}>Gefixt</p>
               <div className="space-y-1">
-                {(entry.fixes ?? []).map((c, i) => (
+                {(update.fixes ?? []).map((c, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <span className="text-[12px] shrink-0 leading-relaxed" style={{ color: 'rgba(255,180,60,0.7)' }}>~</span>
                     <span className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{c}</span>

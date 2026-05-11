@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 
-const CLIENT_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? 'dev'
+const CLIENT_BUILD_ID = process.env.NEXT_PUBLIC_APP_VERSION ?? 'dev'
 const CACHE_KEY = 'nous-update-available'
 
 export interface UpdateInfo {
-  version: string
+  buildId: string
+  releaseVersion: string
   features: string[]
   fixes: string[]
 }
@@ -19,8 +20,7 @@ export function useVersionCheck(): UpdateInfo | null {
       const cached = localStorage.getItem(CACHE_KEY)
       if (cached) {
         const parsed = JSON.parse(cached)
-        // Clear cache if wrong format (old 'changes' shape), wrong version, or stale
-        if (!parsed?.features || !parsed?.fixes || parsed.version === CLIENT_VERSION) {
+        if (!parsed?.releaseVersion || parsed.buildId === CLIENT_BUILD_ID) {
           localStorage.removeItem(CACHE_KEY)
         } else {
           setUpdate(parsed as UpdateInfo)
@@ -33,12 +33,16 @@ export function useVersionCheck(): UpdateInfo | null {
         const res = await fetch('/api/version', { cache: 'no-store' })
         if (!res.ok) return
         const data = await res.json()
-        if (data.version && data.version !== CLIENT_VERSION) {
-          const info: UpdateInfo = { version: data.version, features: data.features ?? [], fixes: data.fixes ?? [] }
+        if (data.buildId && data.buildId !== CLIENT_BUILD_ID) {
+          const info: UpdateInfo = {
+            buildId: data.buildId,
+            releaseVersion: data.releaseVersion,
+            features: data.features ?? [],
+            fixes: data.fixes ?? [],
+          }
           setUpdate(info)
           localStorage.setItem(CACHE_KEY, JSON.stringify(info))
         } else {
-          // User is on latest version — clear any stale update notification
           localStorage.removeItem(CACHE_KEY)
           setUpdate(null)
         }

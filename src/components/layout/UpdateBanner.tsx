@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import { RefreshCw, X, Sparkles } from 'lucide-react'
 
-const CLIENT_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'
+const CLIENT_BUILD_ID = process.env.NEXT_PUBLIC_APP_VERSION ?? 'dev'
+const CLIENT_RELEASE = process.env.NEXT_PUBLIC_RELEASE_VERSION ?? ''
 
 export function UpdateBanner() {
   const [show, setShow] = useState(false)
-  const [serverVersion, setServerVersion] = useState('')
+  const [releaseVersion, setReleaseVersion] = useState('')
   const [changes, setChanges] = useState<string[]>([])
 
   useEffect(() => {
@@ -16,9 +17,9 @@ export function UpdateBanner() {
         const res = await fetch('/api/version', { cache: 'no-store' })
         if (!res.ok) return
         const data = await res.json()
-        if (data.version && data.version !== CLIENT_VERSION) {
-          setServerVersion(data.version)
-          setChanges(data.changes ?? [])
+        if (data.buildId && data.buildId !== CLIENT_BUILD_ID) {
+          setReleaseVersion(data.releaseVersion ?? '')
+          setChanges([...(data.features ?? []), ...(data.fixes ?? [])])
           setShow(true)
         }
       } catch {}
@@ -51,11 +52,13 @@ export function UpdateBanner() {
           </div>
           <div>
             <span className="text-[13px] font-bold" style={{ color: '#fff' }}>
-              NOUS {serverVersion} ist verfügbar
+              NOUS {releaseVersion} ist verfügbar
             </span>
-            <span className="text-[12px] ml-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              Du nutzt noch {CLIENT_VERSION}
-            </span>
+            {CLIENT_RELEASE && (
+              <span className="text-[12px] ml-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                Du nutzt noch {CLIENT_RELEASE}
+              </span>
+            )}
           </div>
         </div>
         <button

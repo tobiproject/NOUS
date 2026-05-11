@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Toaster } from '@/components/ui/sonner'
 import { SplashScreen } from '@/components/layout/SplashScreen'
 import { AutoLogout } from '@/components/layout/AutoLogout'
+import { InactivityLogout } from '@/components/layout/InactivityLogout'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="antialiased bg-background text-foreground">
         <SplashScreen />
         <AutoLogout />
+        <InactivityLogout />
         {children}
         <Toaster />
       </body>

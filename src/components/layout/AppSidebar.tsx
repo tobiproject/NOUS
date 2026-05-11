@@ -30,7 +30,10 @@ import { useAccountContext } from '@/contexts/AccountContext'
 import { ProfileSidebar } from './ProfileSidebar'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
 import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY, fetchProgressFromServer, setProgressFromServer } from '@/lib/anleitung-progress'
-import { CHANGELOG } from '@/lib/changelog'
+import { getCurrentChangelog } from '@/lib/changelog'
+
+const CURRENT = getCurrentChangelog()
+const RELEASE_VERSION = process.env.NEXT_PUBLIC_RELEASE_VERSION ?? CURRENT.version
 import { RefreshCw, Sparkles, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -488,7 +491,7 @@ export function AppSidebar() {
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3 shrink-0" style={{ color: 'var(--brand-blue)' }} />
                 <span className="text-[11px] font-bold" style={{ color: 'var(--brand-blue)' }}>
-                  v{CHANGELOG[0].version} verfügbar
+                  v{update.releaseVersion} verfügbar
                 </span>
               </div>
               <button
@@ -513,7 +516,7 @@ export function AppSidebar() {
             className="px-2 pt-0 pb-1 text-[10px] text-left w-full transition-opacity active:opacity-60"
             style={{ color: 'var(--fg-4)' }}
           >
-            v{CHANGELOG[0].version} · {process.env.NEXT_PUBLIC_BUILD_DATE ?? ''}
+            v{RELEASE_VERSION} · {process.env.NEXT_PUBLIC_BUILD_DATE ?? ''}
           </button>
         )}
 
@@ -525,17 +528,17 @@ export function AppSidebar() {
           >
             <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] font-bold" style={{ color: 'var(--fg-1)' }}>
-                v{CHANGELOG[0].version}
+                v{RELEASE_VERSION}
               </span>
               <button onClick={() => setChangelogOpen(false)}>
                 <X className="h-3 w-3" style={{ color: 'var(--fg-4)' }} />
               </button>
             </div>
-            <p className="text-[10px] mb-2.5" style={{ color: 'var(--fg-4)' }}>{CHANGELOG[0].date}</p>
-            {CHANGELOG[0].features && CHANGELOG[0].features.length > 0 && (
+            <p className="text-[10px] mb-2.5" style={{ color: 'var(--fg-4)' }}>{CURRENT.date}</p>
+            {CURRENT.features && CURRENT.features.length > 0 && (
               <div className="mb-2">
                 <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--brand-blue)' }}>Neu</p>
-                {CHANGELOG[0].features.map((c, i) => (
+                {CURRENT.features.map((c, i) => (
                   <div key={i} className="flex items-start gap-1.5">
                     <span className="text-[11px] shrink-0 leading-relaxed" style={{ color: 'var(--brand-blue)' }}>+</span>
                     <span className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{c}</span>
@@ -543,10 +546,10 @@ export function AppSidebar() {
                 ))}
               </div>
             )}
-            {CHANGELOG[0].fixes && CHANGELOG[0].fixes.length > 0 && (
+            {CURRENT.fixes && CURRENT.fixes.length > 0 && (
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,180,60,0.8)' }}>Gefixt</p>
-                {CHANGELOG[0].fixes.map((c, i) => (
+                {CURRENT.fixes.map((c, i) => (
                   <div key={i} className="flex items-start gap-1.5">
                     <span className="text-[11px] shrink-0 leading-relaxed" style={{ color: 'rgba(255,180,60,0.7)' }}>~</span>
                     <span className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>{c}</span>

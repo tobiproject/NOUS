@@ -5,43 +5,19 @@ export interface ChangelogEntry {
   fixes?: string[]
 }
 
+// Nur das aktuelle Release. Bei jedem Deploy via `npm run release` wird version automatisch hochgezählt.
+// features/fixes hier manuell eintragen was neu ist — nur für dieses Release, keine Historie.
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '1.3.0',
-    date: '2026-05-10',
-    features: [
-      'Anleitung-Fortschritt synchronisiert sich zwischen Geräten',
-      'Versionsanzeige jetzt auch im Mobil-Profil sichtbar',
-      'Zeitzonenauswahl für Benachrichtigungen (weltweit)',
-      'Uhrzeiten-Picker als Scroll-Drum mit Haptik-Feedback',
-    ],
+    version: '1.3.1',
+    date: '2026-05-11',
     fixes: [
-      'Anleitung-Badge auf Desktop zeigte falsche Werte',
-      'Speichern-Button für Benachrichtigungen jetzt immer sichtbar',
-      'Profil-Sidebar: Version + Logout waren auf kleinen Bildschirmen versteckt',
-    ],
-  },
-  {
-    version: '1.2.1',
-    date: '2026-05-10',
-    fixes: [
-      'Wochenvorbereitung lädt jetzt korrekt (Infinite-Loop gefixt)',
-      'Update-Erkennung erkennt neue Versionen zuverlässig',
-      'Versionsanzeige zeigt jetzt korrektes Datum',
-    ],
-  },
-  {
-    version: '1.2.0',
-    date: '2026-05-10',
-    features: [
-      'Profil-Sidebar öffnet von links mit Konto-Schnellwechsel',
-      'Anleitung-Seite mit Schritt-für-Schritt-Erklärungen',
-      'Account-Typen nach Markt aufgeteilt (FX, Futures, Aktien…)',
-      'Update-Banner zeigt was neu ist',
+      'Auto-Logout beim Beenden der App (synchrone Session-Löschung)',
+      'Inaktivitäts-Logout nach 5 Minuten ohne Aktion',
     ],
   },
 ]
 
-export function getChangelogForVersion(version: string): ChangelogEntry | undefined {
-  return CHANGELOG.find(e => e.version === version) ?? CHANGELOG[0]
+export function getCurrentChangelog(): ChangelogEntry {
+  return CHANGELOG[0]
 }

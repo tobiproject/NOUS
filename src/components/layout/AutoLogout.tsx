@@ -7,11 +7,14 @@ export function AutoLogout() {
   useEffect(() => {
     const supabase = createClient()
 
-    const handleHide = () => {
-      supabase.auth.signOut()
+    const handleHide = (e: PageTransitionEvent) => {
+      // persisted: true = nur in Hintergrund (Home-Button) → KEIN Logout
+      // persisted: false = App wirklich beendet (aus App-Switcher gewischt) → Logout
+      if (!e.persisted) {
+        supabase.auth.signOut()
+      }
     }
 
-    // pagehide: feuert bei Tab-/Browser-Schließen und PWA-Close
     window.addEventListener('pagehide', handleHide)
     return () => window.removeEventListener('pagehide', handleHide)
   }, [])

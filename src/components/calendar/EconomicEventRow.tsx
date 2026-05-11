@@ -9,6 +9,7 @@ import { ImpactDot } from './ImpactDot'
 import { CountryFlag } from './CountryFlag'
 import { ActualValue } from './ActualValue'
 import { EconomicEventDetail } from './EconomicEventDetail'
+import { getWatchlistMatches } from '@/lib/calendar-asset-mapping'
 import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -16,6 +17,7 @@ interface Props {
   event: EconomicEvent
   isPast: boolean
   userTimezone?: string
+  watchlistSymbols?: string[]
 }
 
 function formatEventTime(timeUtc: string | null, userTimezone?: string): string {
@@ -32,32 +34,33 @@ function formatEventTime(timeUtc: string | null, userTimezone?: string): string 
   }
 }
 
-export function EconomicEventRow({ event, isPast, userTimezone }: Props) {
+export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols = [] }: Props) {
   const [expanded, setExpanded] = useState(false)
-
   const toggle = useCallback(() => setExpanded(v => !v), [])
 
   const timeLabel = formatEventTime(event.time_utc, userTimezone)
+  const matchedSymbols = watchlistSymbols.length > 0
+    ? getWatchlistMatches(event.title, event.currency, watchlistSymbols)
+    : []
+  const isRelevant = matchedSymbols.length > 0
 
   return (
     <div
       id={`event-${event.id}`}
-      className={cn(
-        'rounded-md overflow-hidden transition-opacity',
-        isPast && 'opacity-50'
-      )}
-      style={{ border: '1px solid var(--border-raw)', background: 'var(--bg-2)' }}
+      className={cn('rounded-md overflow-hidden transition-opacity', isPast && 'opacity-50')}
+      style={{
+        border: '1px solid var(--border-raw)',
+        background: 'var(--bg-2)',
+        borderLeft: isRelevant ? '3px solid var(--brand-blue)' : '1px solid var(--border-raw)',
+      }}
     >
-      {/* Main row */}
       <button
         className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--bg-3)] transition-colors"
         onClick={toggle}
         aria-expanded={expanded}
       >
-        {/* Impact dot */}
         <ImpactDot impact={event.impact} className="mt-px" />
 
-        {/* Time */}
         <span
           className="text-xs tabular-nums w-10 shrink-0"
           style={{ color: 'var(--fg-3)', fontFamily: 'JetBrains Mono, monospace' }}
@@ -65,17 +68,13 @@ export function EconomicEventRow({ event, isPast, userTimezone }: Props) {
           {timeLabel}
         </span>
 
-        {/* Flag + currency */}
         <CountryFlag countryCode={event.country_code} currency={event.currency} />
 
-        {/* Event name + trade indicator */}
         <span className="flex-1 flex items-center gap-1.5 min-w-0">
-          <span
-            className="text-xs font-medium truncate"
-            style={{ color: 'var(--fg-1)' }}
-          >
+          <span className="text-xs font-medium truncate" style={{ color: 'var(--fg-1)' }}>
             {event.title}
           </span>
+
           {event.trade_indicator && (
             <TooltipProvider>
               <Tooltip>
@@ -95,9 +94,27 @@ export function EconomicEventRow({ event, isPast, userTimezone }: Props) {
               </Tooltip>
             </TooltipProvider>
           )}
+
+          {matchedSymbols.slice(0, 3).map(sym => (
+            <span
+              key={sym}
+              className="hidden sm:inline-flex px-1 py-px rounded text-[10px] font-semibold shrink-0"
+              style={{
+                background: 'rgba(255,130,16,0.12)',
+                color: 'var(--brand-blue)',
+                border: '1px solid rgba(255,130,16,0.3)',
+              }}
+            >
+              {sym}
+            </span>
+          ))}
+          {matchedSymbols.length > 3 && (
+            <span className="hidden sm:inline text-[10px]" style={{ color: 'var(--fg-4)' }}>
+              +{matchedSymbols.length - 3}
+            </span>
+          )}
         </span>
 
-        {/* Previous / Forecast / Actual */}
         <span className="hidden sm:flex items-center gap-4 shrink-0">
           <span className="text-xs tabular-nums w-14 text-right" style={{ color: 'var(--fg-4)' }}>
             {event.previous ?? '—'}
@@ -110,7 +127,6 @@ export function EconomicEventRow({ event, isPast, userTimezone }: Props) {
           </span>
         </span>
 
-        {/* Expand chevron */}
         <ChevronDown
           size={13}
           className={cn('shrink-0 transition-transform', expanded && 'rotate-180')}
@@ -118,8 +134,13 @@ export function EconomicEventRow({ event, isPast, userTimezone }: Props) {
         />
       </button>
 
-      {/* Detail section */}
-      {expanded && <EconomicEventDetail event={event} />}
+      {expanded && (
+        <EconomicEventDetail
+          event={event}
+          watchlistSymbols={watchlistSymbols}
+          matchedSymbols={matchedSymbols}
+        />
+      )}
     </div>
   )
 }

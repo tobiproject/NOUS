@@ -15,6 +15,7 @@ interface Props {
   isLoading: boolean
   userTimezone?: string
   allImpactFiltersOff?: boolean
+  watchlistSymbols?: string[]
 }
 
 function groupByDate(events: EconomicEvent[]): Record<string, EconomicEvent[]> {
@@ -52,7 +53,7 @@ function CurrentTimeRule() {
   )
 }
 
-export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userTimezone, allImpactFiltersOff }: Props) {
+export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userTimezone, allImpactFiltersOff, watchlistSymbols = [] }: Props) {
   const todayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -181,6 +182,7 @@ export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userT
                         event={event}
                         isPast={isPast}
                         userTimezone={userTimezone}
+                        watchlistSymbols={watchlistSymbols}
                       />
                     </div>
                   )

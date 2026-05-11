@@ -37,8 +37,8 @@ export function LoginForm() {
     }
 
     if (data.session) {
-      // Flag setzen → SplashScreen zeigt Animation beim Dashboard-Laden
-      sessionStorage.setItem('nous-post-login', '1')
+      sessionStorage.setItem('nous-session', '1')    // Session aktiv markieren
+      sessionStorage.setItem('nous-post-login', '1') // Animation triggern
       window.location.href = '/dashboard'
     }
   }

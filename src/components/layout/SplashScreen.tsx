@@ -1,37 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { useEffect, useLayoutEffect, useState } from 'react'
 
 type Phase = 'blocking' | 'animating' | 'exiting' | 'done'
 
 export function SplashScreen() {
-  const pathname = usePathname()
-  const isRoot = pathname === '/'
+  const [phase, setPhase] = useState<Phase>('done')
 
-  // Nur auf Root-Page blockieren — Login, Dashboard etc. sehen nie einen schwarzen Flash
-  const [phase, setPhase] = useState<Phase>(isRoot ? 'blocking' : 'done')
+  // useLayoutEffect feuert VOR dem Browser-Paint → kein Flash des Dashboards
+  useLayoutEffect(() => {
+    if (sessionStorage.getItem('nous-post-login') !== '1') return
+    sessionStorage.removeItem('nous-post-login')
+    setPhase('blocking')
+  }, [])
 
+  // Sobald blocking gesetzt → Animation starten
   useEffect(() => {
-    if (!isRoot) return
-
-    const shown = sessionStorage.getItem('nous-splash-v4')
-    if (shown) {
-      setPhase('done')
-      return
-    }
-
-    sessionStorage.setItem('nous-splash-v4', '1')
+    if (phase !== 'blocking') return
     setPhase('animating')
-
     const exitTimer = setTimeout(() => setPhase('exiting'), 5000)
     const doneTimer = setTimeout(() => setPhase('done'), 5800)
-
-    return () => {
-      clearTimeout(exitTimer)
-      clearTimeout(doneTimer)
-    }
-  }, [isRoot])
+    return () => { clearTimeout(exitTimer); clearTimeout(doneTimer) }
+  }, [phase])
 
   if (phase === 'done') return null
 

@@ -37,8 +37,9 @@ export function LoginForm() {
     }
 
     if (data.session) {
-      const params = new URLSearchParams(window.location.search)
-      window.location.href = params.get('next') || '/dashboard'
+      // Flag setzen → SplashScreen zeigt Animation beim Dashboard-Laden
+      sessionStorage.setItem('nous-post-login', '1')
+      window.location.href = '/dashboard'
     }
   }
 

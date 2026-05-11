@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
+// Give Vercel Pro up to 60s for large PDF parsing
+export const maxDuration = 60
+
 async function extractPdfText(buffer: Buffer): Promise<string> {
-  // pdf-parse is in serverExternalPackages — loaded natively, not bundled
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const pdfParse = require('pdf-parse')
-  const result = await pdfParse(buffer)
+
+  // Race against a 45s timeout — fail gracefully instead of hanging until Vercel kills the function
+  const parsePromise = pdfParse(buffer, { max: 150 }) // max 150 pages
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('PDF parsing timeout after 45s')), 45_000)
+  )
+  const result = await Promise.race([parsePromise, timeout])
   return result.text?.trim() ?? ''
 }
 
@@ -39,7 +47,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Maximal 10 Dokumente erlaubt. Bitte erst ein Dokument löschen.' }, { status: 409 })
   }
 
-  const form = await req.formData()
+  let form: FormData
+  try {
+    form = await req.formData()
+  } catch {
+    return NextResponse.json({ error: 'Datei konnte nicht gelesen werden. Bitte erneut versuchen.' }, { status: 400 })
+  }
+
   const file = form.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'Keine Datei übermittelt' }, { status: 400 })
   if (file.type !== 'application/pdf') return NextResponse.json({ error: 'Nur PDF-Dateien erlaubt' }, { status: 400 })
@@ -47,14 +61,14 @@ export async function POST(req: NextRequest) {
 
   const fileName = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
 
-  // Upload to Supabase Storage
   const bytes = await file.arrayBuffer()
+
+  // Upload to Supabase Storage
   const { error: uploadError } = await supabase.storage
     .from('knowledge-base')
     .upload(fileName, bytes, { contentType: 'application/pdf', upsert: false })
   if (uploadError) return NextResponse.json({ error: 'Upload fehlgeschlagen: ' + uploadError.message }, { status: 500 })
 
-  // Create DB record
   const cleanName = file.name
     .replace(/\.pdf$/i, '')
     .replace(/[_-]+/g, ' ')
@@ -74,7 +88,7 @@ export async function POST(req: NextRequest) {
     if (!text) {
       await supabase.from('knowledge_documents').update({
         status: 'error',
-        error_message: 'Dieses PDF enthält keinen lesbaren Text (möglicherweise gescannt oder passwortgeschützt). Bitte Tab "Text einfügen" verwenden.',
+        error_message: 'Dieses PDF enthält keinen lesbaren Text (möglicherweise gescannt oder passwortgeschützt). Bitte den Tab "Text einfügen" verwenden.',
       }).eq('id', doc.id)
       return NextResponse.json({ document: { ...doc, status: 'error' } })
     }
@@ -87,9 +101,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ document: { id: doc.id, name: cleanName, file_size: file.size, status: 'ready' } })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
+    const isTimeout = msg.includes('timeout')
     await supabase.from('knowledge_documents').update({
       status: 'error',
-      error_message: `PDF-Parsing fehlgeschlagen: ${msg.slice(0, 200)}`,
+      error_message: isTimeout
+        ? 'Das PDF ist zu komplex zum automatischen Verarbeiten. Bitte den Tab "Text einfügen" verwenden und den Inhalt direkt einfügen.'
+        : `PDF-Parsing fehlgeschlagen: ${msg.slice(0, 200)}`,
     }).eq('id', doc.id)
     return NextResponse.json({ document: { id: doc.id, status: 'error' } })
   }

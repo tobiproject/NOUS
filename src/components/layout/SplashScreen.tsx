@@ -2,19 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 
 type Phase = 'blocking' | 'animating' | 'exiting' | 'done'
 
 export function SplashScreen() {
   const pathname = usePathname()
-  const isLogin = pathname === '/login'
+  const isRoot = pathname === '/'
 
-  // Nur auf Login-Page blockieren — Dashboard etc. sehen nie einen schwarzen Flash
-  const [phase, setPhase] = useState<Phase>(isLogin ? 'blocking' : 'done')
+  // Nur auf Root-Page blockieren — Login, Dashboard etc. sehen nie einen schwarzen Flash
+  const [phase, setPhase] = useState<Phase>(isRoot ? 'blocking' : 'done')
 
   useEffect(() => {
-    if (!isLogin) return
+    if (!isRoot) return
 
     const shown = sessionStorage.getItem('nous-splash-v4')
     if (shown) {
@@ -25,10 +24,6 @@ export function SplashScreen() {
     sessionStorage.setItem('nous-splash-v4', '1')
     setPhase('animating')
 
-    // Auth-State im Hintergrund laden während die Animation läuft
-    const supabase = createClient()
-    supabase.auth.getSession().catch(() => {})
-
     const exitTimer = setTimeout(() => setPhase('exiting'), 5000)
     const doneTimer = setTimeout(() => setPhase('done'), 5800)
 
@@ -36,7 +31,7 @@ export function SplashScreen() {
       clearTimeout(exitTimer)
       clearTimeout(doneTimer)
     }
-  }, [isLogin])
+  }, [isRoot])
 
   if (phase === 'done') return null
 

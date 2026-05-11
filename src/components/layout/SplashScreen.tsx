@@ -1,31 +1,40 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 type Phase = 'blocking' | 'animating' | 'exiting' | 'done'
 
 export function SplashScreen() {
   const [phase, setPhase] = useState<Phase>('done')
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const doneTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // useLayoutEffect feuert VOR dem Browser-Paint → kein Flash des Dashboards
+  // Feuert VOR Browser-Paint → kein Flash des Dashboards
   useLayoutEffect(() => {
     if (sessionStorage.getItem('nous-post-login') !== '1') return
     sessionStorage.removeItem('nous-post-login')
     setPhase('blocking')
   }, [])
 
-  // Sobald blocking gesetzt → Animation starten
+  // Timer in Refs — werden NICHT durch phase-Wechsel-Cleanup gelöscht
   useEffect(() => {
     if (phase !== 'blocking') return
     setPhase('animating')
-    const exitTimer = setTimeout(() => setPhase('exiting'), 5000)
-    const doneTimer = setTimeout(() => setPhase('done'), 5800)
-    return () => { clearTimeout(exitTimer); clearTimeout(doneTimer) }
+    exitTimerRef.current = setTimeout(() => setPhase('exiting'), 2400)
+    doneTimerRef.current = setTimeout(() => setPhase('done'), 3000)
   }, [phase])
+
+  // Cleanup nur bei Unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(exitTimerRef.current)
+      clearTimeout(doneTimerRef.current)
+    }
+  }, [])
 
   if (phase === 'done') return null
 
-  const DURATION = '5.8s'
+  const DURATION = '3s'
   const EASE_LETTER = 'cubic-bezier(0.215, 0.61, 0.355, 1)'
   const EASE_TAG = 'cubic-bezier(0.19, 1, 0.22, 1)'
 

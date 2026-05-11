@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'NOUS — Trading OS',
     short_name: 'NOUS',
     description: 'Dein Trading-Betriebssystem',
-    start_url: '/dashboard',
+    start_url: '/',
     display: 'standalone',
     background_color: '#0a0a0a',
     theme_color: '#0a0a0a',

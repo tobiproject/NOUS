@@ -70,12 +70,12 @@ interface Props {
   matchedSymbols?: string[]
 }
 
-const CACHE_KEY = (eventId: string) => `ki-briefing-${eventId}`
+const LS_KEY = (eventId: string) => `ki-briefing-${eventId}`
 
 export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbols = [] }: Props) {
   const [analysis, setAnalysis] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null
-    return localStorage.getItem(CACHE_KEY(event.id)) ?? null
+    return localStorage.getItem(LS_KEY(event.id)) ?? null
   })
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
@@ -91,6 +91,20 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
 
   const affectedAssets = AFFECTED_ASSETS[event.currency] ?? []
   const description = getEventDescription(event.title)
+
+  // On mount: if no local cache, fetch from DB (syncs across devices)
+  useEffect(() => {
+    if (analysis) return
+    fetch(`/api/calendar/ki-briefing?event_id=${encodeURIComponent(event.id)}`)
+      .then(r => r.ok ? r.json() : { content: null })
+      .then(d => {
+        if (d.content) {
+          setAnalysis(d.content)
+          localStorage.setItem(LS_KEY(event.id), d.content)
+        }
+      })
+      .catch(() => {})
+  }, [event.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const params = new URLSearchParams({ title: event.title, currency: event.currency })
@@ -156,7 +170,13 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
         if (firstChunk) { setAnalysisLoading(false); firstChunk = false }
       }
       if (accumulated) {
-        localStorage.setItem(CACHE_KEY(event.id), accumulated)
+        localStorage.setItem(LS_KEY(event.id), accumulated)
+        // Sync to DB so all devices see the same briefing
+        fetch('/api/calendar/ki-briefing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event_id: event.id, content: accumulated }),
+        }).catch(() => {})
       }
     } catch {
       setAnalysisError('Verbindungsfehler. Bitte erneut versuchen.')

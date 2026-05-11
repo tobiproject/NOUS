@@ -7,11 +7,13 @@ export const ANLEITUNG_SECTION_IDS = [
   'performance',
   'knowledge-base',
   'wochenvorbereitung',
+  'kalender',
   'benachrichtigungen',
   'einstellungen',
 ]
 
 export const ANLEITUNG_STORAGE_KEY = 'nous-anleitung-read'
+export const ANLEITUNG_DISMISSED_KEY = 'nous-anleitung-dismissed-count'
 
 export function getAnleitungProgress(): { read: string[]; total: number; percent: number } {
   if (typeof window === 'undefined') return { read: [], total: ANLEITUNG_SECTION_IDS.length, percent: 0 }
@@ -29,6 +31,27 @@ export function getAnleitungProgress(): { read: string[]; total: number; percent
   }
 }
 
+export function getAnleitungDismissed(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const count = parseInt(localStorage.getItem(ANLEITUNG_DISMISSED_KEY) ?? '0', 10)
+    // Only dismissed if dismissed at the CURRENT section count — new sections reset it
+    return count === ANLEITUNG_SECTION_IDS.length
+  } catch {
+    return false
+  }
+}
+
+export function setAnleitungDismissed(): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(ANLEITUNG_DISMISSED_KEY, String(ANLEITUNG_SECTION_IDS.length))
+}
+
+export function clearAnleitungDismissed(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(ANLEITUNG_DISMISSED_KEY)
+}
+
 export function markSectionRead(sectionId: string): void {
   if (typeof window === 'undefined') return
   try {
@@ -38,7 +61,6 @@ export function markSectionRead(sectionId: string): void {
       const updated = [...all, sectionId]
       localStorage.setItem(ANLEITUNG_STORAGE_KEY, JSON.stringify(updated))
       window.dispatchEvent(new CustomEvent('anleitung-progress-changed'))
-      // Async sync to server — non-blocking
       syncProgressToServer(updated).catch(() => {})
     }
   } catch {}

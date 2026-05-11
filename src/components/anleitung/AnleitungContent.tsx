@@ -11,10 +11,10 @@ import Link from 'next/link'
 import {
   Rocket, BookOpen, LayoutDashboard, Brain, ShieldCheck,
   TrendingUp, Library, Telescope, Bell, Settings, ArrowUp,
-  ExternalLink, CheckCircle2,
+  ExternalLink, CheckCircle2, CalendarDays, PartyPopper,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { markSectionRead, getAnleitungProgress, ANLEITUNG_SECTION_IDS, fetchProgressFromServer, setProgressFromServer, syncProgressToServer } from '@/lib/anleitung-progress'
+import { markSectionRead, getAnleitungProgress, ANLEITUNG_SECTION_IDS, fetchProgressFromServer, setProgressFromServer, syncProgressToServer, getAnleitungDismissed, setAnleitungDismissed, clearAnleitungDismissed } from '@/lib/anleitung-progress'
 
 interface Step {
   title: string
@@ -278,6 +278,41 @@ const sections: Section[] = [
     ],
   },
   {
+    id: 'kalender',
+    icon: CalendarDays,
+    title: 'Wirtschaftskalender',
+    description: 'Makrodaten lesen, Events vorbereiten und KI-Briefings abrufen',
+    was: 'Der Wirtschaftskalender zeigt alle wichtigen makroökonomischen Events der Woche — von NFP über CPI bis hin zu Zinsentscheidungen. Er ist direkt mit deiner Watchlist und deinem Trading-Journal verknüpft.',
+    wozu: 'Makrodaten bewegen Märkte. Mit dem Kalender weißt du wann Volatilität kommt, welche deiner Assets direkt betroffen sind und wie du in der Vergangenheit bei genau diesem Event-Typ getradet hast.',
+    steps: [
+      {
+        title: 'Kalender öffnen und filtern',
+        text: 'Gehe zum Kalender. Nutze die Impact-Filter (High / Med / Low) um die Ansicht auf die Events zu beschränken, die für dich relevant sind. High Impact (roter Punkt) = marktsbewegende Events wie NFP, CPI oder Zinsentscheidungen.',
+        link: '/kalender',
+      },
+      {
+        title: 'Watchlist-Highlights lesen',
+        text: 'Events die deine Watchlist-Assets direkt betreffen sind mit einem orangen linken Rahmen markiert. Die Asset-Tags (z.B. "ES ★", "NQ ★") zeigen dir welche deiner Instrumente von diesem Event betroffen sein könnten. So siehst du auf einen Blick was heute für dich relevant ist.',
+      },
+      {
+        title: 'Event-Details aufklappen',
+        text: 'Klicke auf einen Event um die Details zu sehen: Previous, Forecast und Actual-Wert, historische Releases der letzten Monate und deine eigene Trade-Statistik zu diesem Event-Typ (Trades ±60 Minuten um den Event).',
+      },
+      {
+        title: 'KI-Briefing anfordern',
+        text: 'Klicke im aufgeklappten Event auf "KI-Briefing anfordern". Die KI erstellt ein personalisiertes Briefing: Was dieser Event bedeutet, wie er deine Watchlist-Assets beeinflusst und was deine eigene Statistik zeigt. Das Briefing wird gespeichert und bleibt auch nach Tab-Wechsel erhalten.',
+      },
+      {
+        title: 'Datengrundlage prüfen',
+        text: 'Unter "Datengrundlage prüfen" siehst du genau welche Zahlen der KI übergeben wurden. Wenn der KI-Text Zahlen nennt die dort nicht stehen: Das ist eine Halluzination. NOUS macht KI-Ergebnisse transparent und überprüfbar.',
+      },
+      {
+        title: 'Pre- vs. Post-Event',
+        text: 'Vor der Veröffentlichung gibt NOUS ein Pre-Event-Briefing mit Erwartungen und möglichen Szenarien. Sobald der Actual-Wert bekannt ist, wechselt das Briefing automatisch zum Post-Event-Modus mit konkreter Einschätzung was die Zahlen bedeuten.',
+      },
+    ],
+  },
+  {
     id: 'benachrichtigungen',
     icon: Bell,
     title: 'Benachrichtigungen',
@@ -355,6 +390,10 @@ export function AnleitungContent() {
     if (typeof window === 'undefined') return []
     return getAnleitungProgress().read
   })
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return getAnleitungDismissed()
+  })
 
   // Bidirectional sync on mount: merge local + server, push merged back if server is missing anything
   useEffect(() => {
@@ -384,6 +423,46 @@ export function AnleitungContent() {
   const percent = readSections.length > 0
     ? Math.round((readSections.length / ANLEITUNG_SECTION_IDS.length) * 100)
     : progress.percent
+  const isComplete = percent === 100
+
+  const handleDismiss = () => {
+    setAnleitungDismissed()
+    setDismissed(true)
+  }
+
+  const handleReopen = () => {
+    clearAnleitungDismissed()
+    setDismissed(false)
+  }
+
+  // Dismissed state — compact card, shown when all sections read and user clicked "Fertig"
+  if (dismissed) {
+    return (
+      <div id="anleitung-top" className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center"
+          style={{ background: 'rgba(34,197,94,0.1)' }}
+        >
+          <PartyPopper className="h-8 w-8" style={{ color: 'rgb(134,239,172)' }} />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--fg-1)' }}>
+            Anleitung abgeschlossen
+          </h2>
+          <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
+            Du hast alle {ANLEITUNG_SECTION_IDS.length} Abschnitte gelesen. Sobald neue Features hinzukommen, erscheint die Anleitung automatisch wieder.
+          </p>
+        </div>
+        <button
+          onClick={handleReopen}
+          className="mt-2 px-4 py-2 rounded text-sm font-medium transition-opacity active:opacity-70"
+          style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+        >
+          Nochmal ansehen
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div id="anleitung-top">
@@ -428,10 +507,20 @@ export function AnleitungContent() {
               />
             </div>
           </div>
-          {percent === 100 && (
+          {isComplete && (
             <CheckCircle2 className="h-5 w-5 shrink-0" style={{ color: 'rgb(134,239,172)' }} />
           )}
         </div>
+        {isComplete && (
+          <button
+            onClick={handleDismiss}
+            className="mt-3 w-full py-2.5 rounded-lg text-sm font-semibold transition-opacity active:opacity-70 flex items-center justify-center gap-2"
+            style={{ background: 'rgba(34,197,94,0.12)', color: 'rgb(134,239,172)', border: '1px solid rgba(34,197,94,0.25)' }}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Anleitung als erledigt markieren
+          </button>
+        )}
       </div>
 
       {/* Desktop 2-column / Mobile 1-column */}

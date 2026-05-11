@@ -1,8 +1,8 @@
 # PROJ-38: Wirtschaftskalender (Custom Design)
 
-## Status: Deployed
+## Status: In Progress
 **Created:** 2026-05-10
-**Last Updated:** 2026-05-10
+**Last Updated:** 2026-05-11
 
 ## Implementation Notes (Frontend)
 - Iframe + Investing.com link completely removed from `/kalender`
@@ -424,6 +424,92 @@ Jedes Wirtschaftsereignis hat:
 - BUG-7 ✅ Trade-Indikatoren werden jetzt mit einer einzigen Wochenquery geholt (kein N+1 mehr)
 - BUG-8 ✅ Spezifischer Hinweis "Mindestens einen Filter aktivieren" wenn alle Impact-Filter aus
 - BUG-9 ✅ Unused `eventRefs` entfernt
+
+---
+
+## KI-Kalender-Intelligenz (Erweiterung Phase 2)
+
+### Kontext & Ziel
+Der Kalender kennt den User. Er weiß was auf der Watchlist steht, welche Assets gehandelt werden, und wie sich der User historisch bei bestimmten Event-Typen verhalten hat. Diese Daten werden genutzt um relevante Events hervorzuheben und personalisierten Kontext zu liefern — ohne Halluzinationen.
+
+**Kernregel Anti-Halluzination:** Alle statistischen Werte (Win-Rate, Avg R, Anzahl Trades) werden ausschließlich mathematisch aus dem Journal berechnet. Die KI interpretiert nur, erfindet keine Zahlen. Bei zu wenig Datenpunkten (< 3 Trades) wird das explizit angezeigt — keine erfundenen Werte.
+
+---
+
+### Neue User Stories
+
+- Als Trader möchte ich auf einen Blick sehen welche Events meine Watchlist-Assets direkt betreffen, damit ich mich gezielt vorbereiten kann ohne irrelevante Events zu ignorieren.
+- Als Trader möchte ich meine historische Performance rund um jeden Event-Typ sehen (z.B. "meine letzten 5 NFP-Trades: 2 Win / 3 Loss, Ø -0.6R"), damit ich ein datenbasiertes Gefühl für diesen Event entwickle.
+- Als Trader möchte ich eine KI-Einschätzung, die ausschließlich auf meinen echten Trades und echten Event-Daten basiert, damit ich ihr vertrauen kann.
+- Als Trader möchte ich, dass alle gefilterten Events weiterhin angezeigt werden — Watchlist-Relevanz ist ein Hervorhebungs-Layer, kein zusätzlicher Filter.
+- Als Trader möchte ich beim Event-Detail sehen wie sich ein Event typischerweise auf mein Asset auswirkt (z.B. NFP → ES), basierend auf statischem, verlässlichem Finanz-Wissen — nicht KI-generiert.
+
+---
+
+### Neue Acceptance Criteria
+
+#### Watchlist-Relevanz-Tagging (kein KI — statisches Mapping)
+- [ ] Jedes Event hat eine intern definierte Liste betroffener Asset-Klassen (z.B. USD NFP → ES, NQ, Gold, DXY, alle USD-Paare)
+- [ ] Events die mindestens ein Watchlist-Asset des Users betreffen: visuelles Highlight (z.B. farbiger linker Rand oder kleines Watchlist-Icon)
+- [ ] Betroffene Watchlist-Assets werden als Tags direkt in der Event-Zeile angezeigt (z.B. "ES · NQ")
+- [ ] Alle Events bleiben sichtbar — kein automatisches Ausblenden. Relevanz ist Zusatz-Layer über dem bestehenden Filter.
+- [ ] Das Asset-Mapping ist hardcoded (keine KI) — damit keine Halluzinationen möglich
+
+#### Persönliche Trade-Historie im Event-Detail (kein KI — reine Datenbankabfrage)
+- [ ] Im Event-Detail neuer Abschnitt: "Deine Geschichte mit diesem Event-Typ"
+- [ ] Zeigt alle vergangenen Trades des Users die ±60 Minuten um Ereignisse desselben Event-Typs (z.B. alle NFP-Ereignisse) stattfanden
+- [ ] Statistiken: Anzahl Trades, Win-Rate (%), Durchschnitts-R, bestes/schlechtestes Ergebnis
+- [ ] Bei < 3 Trades: "Noch zu wenig Daten — mindestens 3 Trades um diese Auswertung zu sehen"
+- [ ] Liste der einzelnen Trades: Datum des Events, Asset, Richtung, R-Ergebnis — klickbar zu Journal-Eintrag
+- [ ] Keine KI involviert — nur math. Berechnung aus Journal-Daten
+
+#### KI-Briefing (halluzinationsfest)
+- [ ] Neuer Button im Event-Detail: "KI-Briefing anfordern" (zusätzlich zur bestehenden Event-Analyse)
+- [ ] KI-Prompt enthält ausschließlich: Event-Name, Actual/Forecast/Previous-Werte, User's Watchlist-Assets, berechnete Trade-Statistiken aus DB, explizite Anweisung keine Zahlen zu erfinden
+- [ ] KI nennt in der Antwort explizit welche Datenbasis sie nutzt: "Basierend auf deinen 4 NFP-Trades und deiner Watchlist (ES, Gold)..."
+- [ ] Falls Actual noch nicht veröffentlicht: Pre-Event-Briefing (Was erwartet der Markt? Was bedeutet Besser/Schlechter für deine Assets?)
+- [ ] Falls Actual verfügbar: Post-Event-Analyse (Was ist passiert? Was bedeutet das für deine offenen/geplanten Positionen?)
+- [ ] Streaming-Output wie alle anderen KI-Features in NOUS
+- [ ] Bei fehlendem API-Key: Standard-Hinweis wie überall in der App
+
+#### Asset-Wissens-Karten (statisch, kein KI — in Event-Detail)
+- [ ] Für jedes Event existiert eine kurze "Asset-Impact"-Karte: "Wie reagiert ES typischerweise auf NFP?"
+- [ ] Inhalt ist statisch/hardcoded für die 20 wichtigsten Events (NFP, CPI, FOMC, PCE, PMI, Retail Sales, GDP, etc.)
+- [ ] Format: kurze Bullet-Liste (z.B. "Besser als erwartet → bullish USD → oft ES-Anstieg in ersten 15min, erhöhte Volatilität")
+- [ ] Nur für Events angezeigt bei denen eine Karte vorhanden ist — kein Fallback-Text erfunden
+
+---
+
+### Anti-Halluzinations-Architektur
+
+| Datenquelle | Methode | KI involviert? |
+|-------------|---------|----------------|
+| Asset-Event-Mapping | Hardcoded Lookup-Tabelle | ❌ Nein |
+| Trade-Statistiken | SQL-Berechnung aus `trades` | ❌ Nein |
+| Asset-Wissens-Karten | Statischer Text, hardcoded | ❌ Nein |
+| KI-Briefing-Text | LLM mit strikt gegrundeten Daten | ✅ Ja, aber nur Interpretation |
+
+Die KI bekommt im Prompt explizit: *"Erfinde keine Statistiken oder Daten. Wenn die bereitgestellten Daten unzureichend sind, sag das. Nutze ausschließlich die Daten in diesem Prompt."*
+
+---
+
+### Neue Komponenten & API-Routen
+
+**Frontend:**
+- `EconomicEventDetail` — Neuer Abschnitt "Deine Geschichte" + Asset-Wissens-Karte
+- `TradeHistoryForEvent` — Zeigt berechnete Stats + Trade-Liste
+- `AssetImpactCard` — Statische Wissens-Karte pro Event-Typ
+- `KalenderEventRow` — Watchlist-Asset-Tags + Relevanz-Highlight
+
+**Backend:**
+- `GET /api/calendar/event-trade-history?eventType=NFP` — Berechnet Trade-Statistiken für User rund um diesen Event-Typ
+- `POST /api/ai/calendar-briefing` — Grounded KI-Briefing (Pre- oder Post-Event)
+
+**Daten:**
+- Neues statisches Modul: `src/lib/calendar-asset-mapping.ts` — Event-Typ → betroffene Asset-Klassen
+- Neues statisches Modul: `src/lib/calendar-event-knowledge.ts` — Event-Typ → Asset-Impact-Karten-Text
+
+---
 
 ## Deployment
 

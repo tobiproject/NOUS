@@ -70,8 +70,13 @@ interface Props {
   matchedSymbols?: string[]
 }
 
+const CACHE_KEY = (eventId: string) => `ki-briefing-${eventId}`
+
 export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbols = [] }: Props) {
-  const [analysis, setAnalysis] = useState<string | null>(null)
+  const [analysis, setAnalysis] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem(CACHE_KEY(event.id)) ?? null
+  })
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [showGrounding, setShowGrounding] = useState(false)
@@ -149,6 +154,9 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
         accumulated += decoder.decode(value, { stream: true })
         setAnalysis(accumulated)
         if (firstChunk) { setAnalysisLoading(false); firstChunk = false }
+      }
+      if (accumulated) {
+        localStorage.setItem(CACHE_KEY(event.id), accumulated)
       }
     } catch {
       setAnalysisError('Verbindungsfehler. Bitte erneut versuchen.')
@@ -391,10 +399,16 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
 
         {analysis && (
           <div
-            className="text-xs leading-relaxed rounded-md p-3"
+            className="text-xs leading-relaxed rounded-md p-3 space-y-2"
             style={{ background: 'var(--bg-2)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
           >
-            {analysis}
+            {analysis.split('\n').map((line, i) => {
+              if (!line.trim()) return null
+              const formatted = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+              return (
+                <p key={i} dangerouslySetInnerHTML={{ __html: formatted }} />
+              )
+            })}
           </div>
         )}
       </div>

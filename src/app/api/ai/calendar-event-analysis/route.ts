@@ -49,11 +49,13 @@ export async function POST(req: NextRequest) {
     watchlist_matches, trade_stats, recent_trades,
   } = parsed.data
 
-  const aiSettingsRes = await supabase
-    .from('user_ai_settings')
-    .select('provider, api_key, model')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const [aiSettingsRes, roadmapRes] = await Promise.all([
+    supabase.from('user_ai_settings').select('provider, api_key, model').eq('user_id', user.id).maybeSingle(),
+    supabase.from('user_roadmap').select('data').eq('user_id', user.id).maybeSingle(),
+  ])
+
+  const traderLevel = (roadmapRes.data?.data?.level as string | undefined) ?? 'Beginner'
+  const isBeginnerLevel = ['Beginner', 'Anfänger', 'beginner'].includes(traderLevel)
 
   const provider = (aiSettingsRes.data?.provider as 'anthropic' | 'openai') ?? 'anthropic'
   const userApiKey = aiSettingsRes.data?.api_key ?? null
@@ -79,12 +81,17 @@ ${recent_trades?.length ? `- Letzte Trades: ${recent_trades.slice(0, 5).map(t =>
 
   const isPreEvent = !actual
 
-  const prompt = `Du bist Trading-Coach und Makro-Analyst. Erstelle ein ${isPreEvent ? 'Pre-Event-Briefing' : 'Post-Event-Briefing'}.
+  const levelNote = isBeginnerLevel
+    ? `Trader-Level: ${traderLevel} — erkläre alles klar und verständlich, nutze kurze Alltagsbeispiele wenn hilfreich, vermeide Fachjargon ohne Erklärung.`
+    : `Trader-Level: ${traderLevel} — du kannst Fachbegriffe verwenden, knapp und präzise bleiben.`
 
-═══ EREIGNIS-DATEN ═══
+  const prompt = `Du bist Trading-Coach und Makro-Analyst. Erstelle ein ${isPreEvent ? 'Pre-Event-Briefing' : 'Post-Event-Briefing'} mit klar strukturierten Abschnitten und Emojis.
+
+═══ KONTEXT ═══
 Event: ${event_title} (${event_currency}, Impact: ${event_impact})
 Datum: ${event_date}
 ${actualInfo}
+${levelNote}
 
 ═══ DEINE WATCHLIST ═══
 ${watchlistSection}
@@ -92,24 +99,39 @@ ${watchlistSection}
 ═══ DEINE STATISTIK ═══
 ${statsSection}
 
-═══ AUFGABE ═══
-${isPreEvent
-  ? `Pre-Event-Briefing (3–5 Sätze):
-1. Was erwartet der Markt, und was bedeuten Besser/Schlechter-Szenarien?
-2. Wie reagieren deine Watchlist-Assets typischerweise auf diesen Event-Typ?
-3. Was solltest du heute konkret beachten?`
-  : `Post-Event-Briefing (3–5 Sätze):
-1. Was ist passiert (Actual vs. Forecast)?
-2. Was bedeutet das für deine Watchlist-Assets?
-3. Was lernst du aus deiner eigenen Trade-Statistik zu diesem Event-Typ?`}
+═══ AUSGABE-FORMAT (PFLICHT) ═══
+Nutze EXAKT diese Struktur mit Emoji-Überschriften:
+
+${isPreEvent ? `📊 **Was passiert heute?**
+Erkläre kurz was dieser Event misst und was der Markt erwartet.${isBeginnerLevel ? ' Nutze ein einfaches Beispiel.' : ''}
+
+🎯 **Für deine Watchlist**
+Wie kann dieser Event deine relevanten Assets bewegen? Was sind die Szenarien?
+
+⚠️ **Beachten heute**
+1–2 konkrete Punkte, die du vor/während diesem Event im Blick haben solltest.${isBeginnerLevel ? `
+
+💡 **Beispiel**
+Ein kurzes Szenario: "Wenn der Wert besser als erwartet → dann typischerweise..."` : ''}` : `📊 **Was ist passiert?**
+Actual vs. Forecast — was bedeutet diese Abweichung?${isBeginnerLevel ? ' Kurze Erklärung warum das wichtig ist.' : ''}
+
+🎯 **Auswirkung auf deine Watchlist**
+Was bedeutet dieses Ergebnis konkret für deine relevanten Assets?
+
+📈 **Deine Statistik zu diesem Event**
+Was sagen deine eigenen Daten dazu?${isBeginnerLevel ? `
+
+💡 **Was du mitnehmen kannst**
+Ein konkreter Lernpunkt aus diesem Event.` : ''}`}
 
 ═══ PFLICHTREGELN (KEINE AUSNAHMEN) ═══
-- Nutze Zahlen NUR aus den obigen Abschnitten — erfinde KEINE eigenen Statistiken oder Preisbewegungen
-- Wenn Statistik "zu wenig Daten": weise explizit darauf hin, nenne KEINE Prozentzahlen
-- Wenn keine Watchlist-Assets betroffen: sage das klar
-- Sprich mich direkt an (du-Form), kurz und präzise`
+- Zahlen NUR aus den Daten oben — KEINE erfundenen Statistiken oder Preisbewegungen
+- Wenn Statistik "zu wenig Daten": explizit darauf hinweisen, KEINE Prozentzahlen erfinden
+- Wenn keine Watchlist-Assets betroffen: das klar sagen
+- Du-Form, maximal 5 Sätze pro Abschnitt
+- Halte dich EXAKT an das Format mit den Emoji-Überschriften`
 
-  const system = 'Du bist Trading-Coach. Antworte präzise auf Basis der gelieferten Daten. Erfinde keine Statistiken oder Zahlen die nicht in den Daten stehen.'
+  const system = `Du bist Trading-Coach. Antworte strukturiert mit Emoji-Abschnitten, auf Basis der gelieferten Daten. Erfinde keine Statistiken oder Zahlen. Formatiere Abschnitts-Überschriften fett (**text**).`
 
   const encoder = new TextEncoder()
 

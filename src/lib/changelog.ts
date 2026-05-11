@@ -9,7 +9,7 @@ export interface ChangelogEntry {
 // features/fixes hier manuell eintragen was neu ist — nur für dieses Release, keine Historie.
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '1.3.4',
+    version: '1.3.5',
     date: '2026-05-11',
     fixes: [
       'Auto-Logout beim Beenden der App (synchrone Session-Löschung)',

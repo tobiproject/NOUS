@@ -1,6 +1,6 @@
 # PROJ-40 · Guided Trading Workflow (Roter Faden)
 
-**Status:** Approved  
+**Status:** Deployed  
 **Erstellt:** 2026-05-14  
 **Typ:** Frontend + Backend + DB
 

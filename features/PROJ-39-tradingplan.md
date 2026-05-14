@@ -266,12 +266,10 @@ Alle benötigten Abhängigkeiten sind bereits installiert:
 **Behoben in:** `fix(PROJ-39): Load KB context in analyze-period alongside trading plan`  
 KB-Kontext wird jetzt parallel zu `getTradingPlanContext` geladen und via `[knowledgeContext, tradingPlanContext].filter(Boolean).join(...)` zusammengeführt — analog zu `analyze-trade` und `weekly-prep`.
 
-#### B-2 · Low: EC-1 API-Fehlermeldung bei leerer KB irreführend
+#### ~~B-2 · Low: EC-1 API-Fehlermeldung bei leerer KB irreführend~~ ✅ BEHOBEN
 
-**Datei:** `src/app/api/ai/trading-plan-suggestion/route.ts:48`  
-**Beschreibung:** Wenn gar keine KB-Dokumente existieren, gibt die Route zurück: "Keine passenden Inhalte in deiner Knowledge Base gefunden". Diese Nachricht impliziert, Dokumente seien vorhanden aber ohne relevante Inhalte — korrekt wäre ein Hinweis, dass zuerst Dokumente hochgeladen werden sollen.  
-**Einschränkung:** In der Praxis erreicht kein User diesen Pfad, weil der KI-Button bereits im Frontend deaktiviert ist (hasKbDocs-Check). Nur direkte API-Aufrufe treffen diesen Pfad.  
-**Fix:** Für leere KB andere Message verwenden, z.B. "Bitte zuerst Dokumente in der Knowledge Base hochladen".
+**Behoben in:** `fix(PROJ-39): Use correct error message when KB is empty in trading-plan-suggestion`  
+Fehlermeldung für leere KB geändert von "Keine passenden Inhalte in deiner Knowledge Base gefunden" zu "Bitte zuerst Dokumente in der Knowledge Base hochladen" — klare Unterscheidung zwischen "KB leer" und "KB hat keine relevanten Inhalte".
 
 ### Tests
 

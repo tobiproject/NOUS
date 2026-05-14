@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   if (!kbDocs || kbDocs.length === 0) {
     return NextResponse.json(
-      { error: 'Keine passenden Inhalte in deiner Knowledge Base gefunden' },
+      { error: 'Bitte zuerst Dokumente in der Knowledge Base hochladen' },
       { status: 422 }
     )
   }

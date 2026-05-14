@@ -58,6 +58,16 @@ KI-gestützt via Anthropic Claude — jeder Nutzer bringt seinen eigenen API-Key
 5. `/qa` - Tests gegen Acceptance Criteria + Security Audit
 6. `/deploy` - Vercel Deploy + Production Checks
 
+## Versioning (Automatisch)
+
+**Jeder Push auf `main` erzeugt automatisch eine neue Version.**
+
+- GitHub Action (`.github/workflows/auto-release.yml`) läuft bei jedem Push auf `main`
+- Überspringt nur `chore: release`-Commits (Anti-Loop)
+- Führt `npm run release` aus: bumpt Patch-Version in `package.json`, generiert `changelog.ts` aus `feat:`/`fix:`-Commits, pusht neuen Release-Commit
+- Vercel deployt dann den Release-Commit → neue `NEXT_PUBLIC_APP_VERSION` (git SHA) → Update-Banner zeigt sich bei offenen Tabs
+- **NIEMALS manuell `npm run release` aufrufen** — das erledigt die GitHub Action automatisch
+
 ---
 
 ## Agent-Struktur

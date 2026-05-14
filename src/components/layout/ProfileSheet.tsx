@@ -40,7 +40,7 @@ export function ProfileSheet({ open, onClose, displayName, avatarUrl }: Props) {
         <SheetContent
           side="bottom"
           className="p-0 rounded-t-2xl border-0 focus:outline-none"
-          style={{ background: '#111111', maxHeight: '70vh' }}
+          style={{ background: 'var(--bg-2)', maxHeight: '70vh' }}
         >
           {/* Handle */}
           <div className="flex justify-center pt-3 pb-1">

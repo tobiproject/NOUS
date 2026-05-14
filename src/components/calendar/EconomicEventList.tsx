@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { format, parseISO, isToday, isWeekend, getISOWeek } from 'date-fns'
+import { getWatchlistMatches } from '@/lib/calendar-asset-mapping'
 import { de } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import type { EconomicEvent } from '@/types/calendar'
@@ -16,6 +17,7 @@ interface Props {
   userTimezone?: string
   allImpactFiltersOff?: boolean
   watchlistSymbols?: string[]
+  watchlistColorMap?: Record<string, string>
 }
 
 function groupByDate(events: EconomicEvent[]): Record<string, EconomicEvent[]> {
@@ -53,7 +55,7 @@ function CurrentTimeRule() {
   )
 }
 
-export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userTimezone, allImpactFiltersOff, watchlistSymbols = [] }: Props) {
+export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userTimezone, allImpactFiltersOff, watchlistSymbols = [], watchlistColorMap = {} }: Props) {
   const todayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -127,6 +129,11 @@ export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userT
         // Find where current time falls in today's events for the red line
         let currentTimeInserted = false
 
+        // Alle einzigartigen Watchlist-Symbole, die an diesem Tag relevant sind
+        const dayMatchedSymbols = watchlistSymbols.length > 0
+          ? [...new Set(dateEvents.flatMap(e => getWatchlistMatches(e.title, e.currency, watchlistSymbols)))]
+          : []
+
         return (
           <div
             key={dateStr}
@@ -134,7 +141,7 @@ export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userT
             className={cn(isWeekendDay && 'opacity-60')}
           >
             {/* Day header */}
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <h3
                 className={cn('text-xs font-semibold uppercase tracking-wider')}
                 style={{ color: isTodayDate ? 'var(--brand-blue)' : 'var(--fg-3)' }}
@@ -153,6 +160,22 @@ export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userT
                   Heute
                 </span>
               )}
+              {dayMatchedSymbols.map(sym => {
+                const color = watchlistColorMap[sym] ?? '#ff8210'
+                return (
+                  <span
+                    key={sym}
+                    className="px-1.5 py-px rounded text-[10px] font-bold"
+                    style={{
+                      background: `${color}22`,
+                      color,
+                      border: `1px solid ${color}55`,
+                    }}
+                  >
+                    {sym}
+                  </span>
+                )
+              })}
             </div>
 
             {/* Events */}
@@ -183,6 +206,7 @@ export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userT
                         isPast={isPast}
                         userTimezone={userTimezone}
                         watchlistSymbols={watchlistSymbols}
+                        watchlistColorMap={watchlistColorMap}
                       />
                     </div>
                   )

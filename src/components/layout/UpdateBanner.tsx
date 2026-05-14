@@ -18,7 +18,7 @@ export function UpdateBanner() {
     <div
       className="fixed bottom-0 left-0 right-0 z-[100] px-4 pt-4 pb-4 hidden md:block"
       style={{
-        background: '#14161C',
+        background: 'var(--bg-2)',
         borderTop: '1px solid rgba(255,130,16,0.35)',
         boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
       }}

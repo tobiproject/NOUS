@@ -22,7 +22,25 @@ export async function GET(req: NextRequest) {
 
   const now = new Date()
   const tz = req.nextUrl.searchParams.get('tz') ?? 'UTC'
-  const { todayStr, hour: localHour, dayOfWeek: localDayOfWeek } = getLocalDateInfo(now, tz)
+  const { todayStr: rawTodayStr, hour: localHour, dayOfWeek: rawDayOfWeek } = getLocalDateInfo(now, tz)
+
+  // Fetch user's reset hour — default 0 (midnight)
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('workflow_reset_hour')
+    .eq('id', user.id)
+    .single()
+  const resetHour: number = profileData?.workflow_reset_hour ?? 0
+
+  // If current local hour is before resetHour, treat previous calendar day as "today"
+  let todayStr = rawTodayStr
+  let localDayOfWeek = rawDayOfWeek
+  if (localHour < resetHour) {
+    const d = new Date(`${rawTodayStr}T12:00:00`)
+    d.setDate(d.getDate() - 1)
+    todayStr = d.toLocaleDateString('sv')
+    localDayOfWeek = d.getDay()
+  }
   const weekIso = getISOWeekString(now)
   const mondayStr = getMondayStr(todayStr, localDayOfWeek)
 
@@ -33,11 +51,12 @@ export async function GET(req: NextRequest) {
   // Fetch all data in parallel
   const [weeklyPlanResult, dailyPlanResult, tradesTodayResult, analysisResult, workflowStateResult, watchlistResult] =
     await Promise.all([
-      // 1. Wochenvorbereitung: weekly_plan for this week
+      // 1. Wochenvorbereitung: weekly_plan for this week and account
       supabase
         .from('weekly_plans')
         .select('id')
         .eq('user_id', user.id)
+        .eq('account_id', accountId)
         .eq('week_start', mondayStr)
         .maybeSingle(),
 

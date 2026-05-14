@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 const schema = z.object({
-  provider: z.enum(['anthropic', 'openai']).optional(),
+  provider: z.literal('anthropic').optional(),
   api_key:  z.string().max(200).nullable().optional(),
   model:    z.string().max(100).nullable().optional(),
 })

@@ -18,6 +18,7 @@ interface Props {
   isPast: boolean
   userTimezone?: string
   watchlistSymbols?: string[]
+  watchlistColorMap?: Record<string, string>
 }
 
 function formatEventTime(timeUtc: string | null, userTimezone?: string): string {
@@ -34,7 +35,7 @@ function formatEventTime(timeUtc: string | null, userTimezone?: string): string 
   }
 }
 
-export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols = [] }: Props) {
+export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols = [], watchlistColorMap = {} }: Props) {
   const [expanded, setExpanded] = useState(false)
   const toggle = useCallback(() => setExpanded(v => !v), [])
 
@@ -43,19 +44,23 @@ export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols
     ? getWatchlistMatches(event.title, event.currency, watchlistSymbols)
     : []
   const isRelevant = matchedSymbols.length > 0
+  // Hauptfarbe des ersten gematchten Symbols (für Event-Highlight)
+  const accentColor = isRelevant ? (watchlistColorMap[matchedSymbols[0]] ?? '#ff8210') : null
 
   return (
     <div
       id={`event-${event.id}`}
       className={cn('rounded-md overflow-hidden transition-opacity', isPast && 'opacity-50')}
       style={{
-        border: '1px solid var(--border-raw)',
-        background: 'var(--bg-2)',
-        borderLeft: isRelevant ? '3px solid var(--brand-blue)' : '1px solid var(--border-raw)',
+        border: isRelevant ? `1px solid ${accentColor}55` : '1px solid var(--border-raw)',
+        background: isRelevant ? `${accentColor}0d` : 'var(--bg-2)',
+        borderLeft: isRelevant ? `3px solid ${accentColor}` : '1px solid var(--border-raw)',
       }}
     >
       <button
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--bg-3)] transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors"
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isRelevant ? `${accentColor}1a` : 'var(--bg-3)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
         onClick={toggle}
         aria-expanded={expanded}
       >
@@ -70,8 +75,8 @@ export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols
 
         <CountryFlag countryCode={event.country_code} currency={event.currency} />
 
-        <span className="flex-1 flex items-center gap-1.5 min-w-0">
-          <span className="text-xs font-medium truncate" style={{ color: 'var(--fg-1)' }}>
+        <span className="flex-1 flex flex-wrap items-center gap-1.5 min-w-0">
+          <span className="text-xs font-medium truncate" style={{ color: isRelevant ? 'var(--fg-1)' : 'var(--fg-2)' }}>
             {event.title}
           </span>
 
@@ -95,21 +100,25 @@ export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols
             </TooltipProvider>
           )}
 
-          {matchedSymbols.slice(0, 3).map(sym => (
-            <span
-              key={sym}
-              className="hidden sm:inline-flex px-1 py-px rounded text-[10px] font-semibold shrink-0"
-              style={{
-                background: 'rgba(255,130,16,0.12)',
-                color: 'var(--brand-blue)',
-                border: '1px solid rgba(255,130,16,0.3)',
-              }}
-            >
-              {sym}
-            </span>
-          ))}
+          {matchedSymbols.slice(0, 3).map(sym => {
+            const c = watchlistColorMap[sym] ?? '#ff8210'
+            return (
+              <span
+                key={sym}
+                className="inline-flex px-1.5 py-px rounded text-[10px] font-bold shrink-0"
+                style={{
+                  background: `${c}22`,
+                  color: c,
+                  border: `1px solid ${c}55`,
+                  letterSpacing: '0.03em',
+                }}
+              >
+                {sym}
+              </span>
+            )
+          })}
           {matchedSymbols.length > 3 && (
-            <span className="hidden sm:inline text-[10px]" style={{ color: 'var(--fg-4)' }}>
+            <span className="text-[10px] font-semibold" style={{ color: accentColor ?? '#ff8210' }}>
               +{matchedSymbols.length - 3}
             </span>
           )}
@@ -139,6 +148,7 @@ export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols
           event={event}
           watchlistSymbols={watchlistSymbols}
           matchedSymbols={matchedSymbols}
+          watchlistColorMap={watchlistColorMap}
         />
       )}
     </div>

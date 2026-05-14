@@ -5,7 +5,8 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 const addSchema = z.object({
   symbol: z.string().min(1).max(20).toUpperCase(),
   name: z.string().max(100).optional(),
-  category: z.enum(['futures', 'forex', 'crypto', 'stocks', 'indices', 'cfd', 'other']).optional(),
+  category: z.string().max(50).optional(),
+  color: z.string().max(30).nullable().optional(),
 })
 
 const CME_PRESETS: Record<string, { tick_size: number; tick_value: number; point_value: number }> = {

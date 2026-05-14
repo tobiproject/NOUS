@@ -32,8 +32,8 @@ export function MobileHeader() {
         style={{
           height: 'calc(68px + env(safe-area-inset-top))',
           paddingTop: 'env(safe-area-inset-top)',
-          background: '#0C0D0F',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          background: '#000000',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}
       >
         <Image

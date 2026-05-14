@@ -68,11 +68,12 @@ interface Props {
   event: EconomicEvent
   watchlistSymbols?: string[]
   matchedSymbols?: string[]
+  watchlistColorMap?: Record<string, string>
 }
 
 const LS_KEY = (eventId: string) => `ki-briefing-${eventId}`
 
-export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbols = [] }: Props) {
+export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbols = [], watchlistColorMap = {} }: Props) {
   const [analysis, setAnalysis] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null
     return localStorage.getItem(LS_KEY(event.id)) ?? null
@@ -198,15 +199,18 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
 
       {/* Assets: watchlist matches highlighted, generic assets dimmer */}
       <div className="flex flex-wrap gap-1.5">
-        {matchedSymbols.map(asset => (
-          <span
-            key={`wl-${asset}`}
-            className="px-2 py-0.5 rounded text-xs font-semibold"
-            style={{ background: 'rgba(255,130,16,0.15)', color: 'var(--brand-blue)', border: '1px solid rgba(255,130,16,0.35)' }}
-          >
-            {asset} ★
-          </span>
-        ))}
+        {matchedSymbols.map(asset => {
+          const c = watchlistColorMap[asset] ?? '#ff8210'
+          return (
+            <span
+              key={`wl-${asset}`}
+              className="px-2 py-0.5 rounded text-xs font-semibold"
+              style={{ background: `${c}22`, color: c, border: `1px solid ${c}55` }}
+            >
+              {asset} ★
+            </span>
+          )
+        })}
         {affectedAssets
           .filter(a => !matchedSymbols.some(m => m.toUpperCase() === a.toUpperCase()))
           .map(asset => (

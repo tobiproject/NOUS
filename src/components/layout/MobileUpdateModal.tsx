@@ -20,7 +20,7 @@ export function MobileUpdateModal() {
     >
       <div
         className="w-full rounded-2xl overflow-hidden shadow-2xl"
-        style={{ background: '#1E2028', border: '1px solid rgba(255,255,255,0.12)', maxWidth: 420 }}
+        style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', maxWidth: 420 }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3">

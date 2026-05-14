@@ -6,11 +6,12 @@ import type { Area } from 'react-easy-crop'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil, ChevronLeft, Sparkles, GripVertical } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { applyFontSize, getStoredFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX } from '@/components/layout/FontSizeApplier'
 import { useAccounts } from '@/hooks/useAccounts'
-import { type Account } from '@/contexts/AccountContext'
+import { useAccountContext, type Account } from '@/contexts/AccountContext'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -538,7 +539,151 @@ function ProfilTab() {
 
       {/* Font Size */}
       <FontSizeSection />
+
+      {/* Workflow Reset */}
+      <WorkflowResetSection />
+
+      {/* Password */}
+      <PasswordSection />
     </div>
+  )
+}
+
+function WorkflowResetSection() {
+  const [resetHour, setResetHour] = useState(0)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.json())
+      .then(d => setResetHour(d.workflow_reset_hour ?? 0))
+      .catch(() => {})
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workflow_reset_hour: resetHour }),
+    })
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  const hours = Array.from({ length: 24 }, (_, i) => i)
+
+  return (
+    <Section title="Workflow-Reset" subtitle="Zu welcher Uhrzeit soll sich der Tages-Workflow zurücksetzen?">
+      <div className="flex items-center gap-3">
+        <select
+          value={resetHour}
+          onChange={e => setResetHour(Number(e.target.value))}
+          className="h-9 rounded px-3 text-sm flex-1"
+          style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+        >
+          {hours.map(h => (
+            <option key={h} value={h}>
+              {String(h).padStart(2, '0')}:00 Uhr
+            </option>
+          ))}
+        </select>
+        <Button
+          onClick={save}
+          disabled={saving}
+          className="h-9 px-4 text-[13px] font-semibold rounded shrink-0"
+          style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : 'Speichern'}
+        </Button>
+      </div>
+      <p className="text-[11px] mt-1.5" style={{ color: 'var(--fg-4)' }}>
+        Vor dieser Uhrzeit zählt der aktuelle Workflow-Tag noch als "gestern". Ideal für Night-Trader.
+      </p>
+    </Section>
+  )
+}
+
+function PasswordSection() {
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  const save = async () => {
+    setError(null)
+    if (next.length < 8) { setError('Neues Passwort muss mindestens 8 Zeichen haben.'); return }
+    if (next !== confirm) { setError('Passwörter stimmen nicht überein.'); return }
+    setSaving(true)
+    try {
+      const supabase = createClient()
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: (await supabase.auth.getUser()).data.user?.email ?? '',
+        password: current,
+      })
+      if (signInErr) { setError('Aktuelles Passwort ist falsch.'); setSaving(false); return }
+      const { error: updateErr } = await supabase.auth.updateUser({ password: next })
+      if (updateErr) { setError(updateErr.message); setSaving(false); return }
+      setSuccess(true)
+      setCurrent(''); setNext(''); setConfirm('')
+      setTimeout(() => setSuccess(false), 3000)
+    } catch {
+      setError('Verbindungsfehler. Bitte erneut versuchen.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Section title="Passwort ändern" subtitle="Gib dein aktuelles Passwort ein und wähle ein neues.">
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>Aktuelles Passwort</label>
+          <Input
+            type="password"
+            value={current}
+            onChange={e => setCurrent(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="current-password"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>Neues Passwort</label>
+          <Input
+            type="password"
+            value={next}
+            onChange={e => setNext(e.target.value)}
+            placeholder="Min. 8 Zeichen"
+            autoComplete="new-password"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>Neues Passwort bestätigen</label>
+          <Input
+            type="password"
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="new-password"
+          />
+        </div>
+        {error && (
+          <p className="text-[12px] font-medium" style={{ color: 'var(--short)' }}>{error}</p>
+        )}
+        <Button
+          onClick={save}
+          disabled={saving || !current || !next || !confirm}
+          className="h-8 px-4 text-[13px] font-semibold rounded"
+          style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : success ? <Check className="h-4 w-4" /> : 'Passwort ändern'}
+        </Button>
+      </div>
+    </Section>
   )
 }
 
@@ -595,6 +740,7 @@ function FontSizeSection() {
 // ─── Tab: Strategie ─────────────────────────────────────────────────────────
 
 function StrategieTab() {
+  const { activeAccount } = useAccountContext()
   const [strategy, setStrategy] = useState<Strategy>(EMPTY)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -602,7 +748,9 @@ function StrategieTab() {
   const [newRule, setNewRule] = useState('')
 
   useEffect(() => {
-    fetch('/api/strategy').then(r => r.json()).then(stratData => {
+    if (!activeAccount?.id) return
+    setLoading(true)
+    fetch(`/api/strategy?account_id=${activeAccount.id}`).then(r => r.json()).then(stratData => {
       if (stratData.strategy) {
         setStrategy({
           name: stratData.strategy.name || '',
@@ -611,16 +759,19 @@ function StrategieTab() {
           preferred_timeframes: stratData.strategy.preferred_timeframes || [],
           instruments: stratData.strategy.instruments || [],
         })
+      } else {
+        setStrategy(EMPTY)
       }
     }).finally(() => setLoading(false))
-  }, [])
+  }, [activeAccount?.id])
 
   const save = useCallback(async () => {
+    if (!activeAccount?.id) return
     setSaving(true)
     const res = await fetch('/api/strategy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(strategy),
+      body: JSON.stringify({ account_id: activeAccount.id, ...strategy }),
     })
     setSaving(false)
     if (res.ok) {
@@ -866,14 +1017,12 @@ function KontenTab() {
 // ─── Tab: API Key ─────────────────────────────────────────────────────────────
 
 function ApiKeyTab() {
-  const [aiProvider, setAiProvider] = useState<'anthropic' | 'openai'>('anthropic')
   const [aiApiKey, setAiApiKey] = useState('')
   const [aiSaving, setAiSaving] = useState(false)
   const [aiSaved, setAiSaved] = useState(false)
 
   useEffect(() => {
     fetch('/api/ai-settings').then(r => r.json()).then(d => {
-      setAiProvider(d.provider ?? 'anthropic')
       setAiApiKey(d.api_key ?? '')
     })
   }, [])
@@ -883,39 +1032,20 @@ function ApiKeyTab() {
     await fetch('/api/ai-settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider: aiProvider, api_key: aiApiKey || null }),
+      body: JSON.stringify({ provider: 'anthropic', api_key: aiApiKey || null }),
     })
     setAiSaving(false)
     setAiSaved(true)
     setTimeout(() => setAiSaved(false), 2500)
-  }, [aiProvider, aiApiKey])
+  }, [aiApiKey])
 
   return (
     <div className="space-y-6">
-      <Section title="KI-Provider" subtitle="Eigenen API-Key hinterlegen — NOUS nutzt dann dein Konto statt des Server-Schlüssels.">
+      <Section title="Claude API-Key" subtitle="Eigenen Anthropic API-Key hinterlegen — NOUS nutzt dann dein Konto statt des Server-Schlüssels.">
         <div className="space-y-4">
-          <div className="flex gap-2">
-            {(['anthropic', 'openai'] as const).map(p => (
-              <button
-                key={p}
-                onClick={() => setAiProvider(p)}
-                className="flex items-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors"
-                style={{
-                  background: aiProvider === p ? 'var(--brand-blue)' : 'var(--bg-3)',
-                  color: aiProvider === p ? '#fff' : 'var(--fg-3)',
-                  border: `1px solid ${aiProvider === p ? 'var(--brand-blue)' : 'var(--border-raw)'}`,
-                }}
-              >
-                <Bot className="h-3.5 w-3.5" />
-                {p === 'anthropic' ? 'Claude (Anthropic)' : 'GPT-4o (OpenAI)'}
-              </button>
-            ))}
-          </div>
-
           <div className="space-y-1.5">
             <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
-              {aiProvider === 'anthropic' ? 'Anthropic API-Key' : 'OpenAI API-Key'}
-              {' '}— wird verschlüsselt in deiner DB-Row gespeichert, nur du kannst ihn lesen.
+              Anthropic API-Key — wird verschlüsselt in deiner DB-Row gespeichert, nur du kannst ihn lesen.
             </p>
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -924,7 +1054,7 @@ function ApiKeyTab() {
                   type="password"
                   value={aiApiKey}
                   onChange={e => setAiApiKey(e.target.value)}
-                  placeholder={aiProvider === 'anthropic' ? 'sk-ant-…' : 'sk-…'}
+                  placeholder="sk-ant-…"
                   className="pl-9"
                 />
               </div>
@@ -942,62 +1072,51 @@ function ApiKeyTab() {
                 Kein eigener Key — NOUS nutzt den Server-Schlüssel (Shared Budget).
               </p>
             )}
-            {aiProvider === 'anthropic' && (
-              <div
-                className="flex items-start gap-2 px-3 py-2 rounded text-xs"
-                style={{ background: 'rgba(41,98,255,0.08)', borderLeft: '2px solid var(--brand-blue)' }}
-              >
-                <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: 'var(--brand-blue)' }} />
-                <p style={{ color: 'var(--fg-3)' }}>
-                  Damit alle Funktionen verfügbar sind, lade dein Anthropic-Konto mit mindestens 5 € auf.{' '}
-                  <a
-                    href="https://console.anthropic.com/settings/billing"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold hover:opacity-80"
-                    style={{ color: 'var(--brand-blue)' }}
-                  >
-                    Guthaben aufladen →
-                  </a>
-                </p>
-              </div>
-            )}
+            <div
+              className="flex items-start gap-2 px-3 py-2 rounded text-xs"
+              style={{ background: 'rgba(41,98,255,0.08)', borderLeft: '2px solid var(--brand-blue)' }}
+            >
+              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: 'var(--brand-blue)' }} />
+              <p style={{ color: 'var(--fg-3)' }}>
+                Damit alle Funktionen verfügbar sind, lade dein Anthropic-Konto mit mindestens 5 € auf.{' '}
+                <a
+                  href="https://console.anthropic.com/settings/billing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold hover:opacity-80"
+                  style={{ color: 'var(--brand-blue)' }}
+                >
+                  Guthaben aufladen →
+                </a>
+              </p>
+            </div>
           </div>
 
-          {aiProvider === 'anthropic' && (
-            <div className="space-y-2">
-              <div className="rounded px-4 py-3 flex items-start gap-3" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)' }}>
-                <Brain className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--brand-blue)' }} />
-                <div className="space-y-1">
-                  <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
-                    Jede KI-Analyse kostet ca. <span style={{ color: 'var(--fg-1)' }}>$0.002–$0.01</span> — bei normalem Nutzungsverhalten unter <span style={{ color: 'var(--fg-1)' }}>$5/Monat</span>.
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--warn)' }}>
-                    Mindest-Aufladung: <span className="font-semibold">$5</span> — Anthropic aktiviert den Key erst ab diesem Betrag.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Link href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold hover:opacity-80"
-                  style={{ background: 'var(--brand-blue)', color: '#fff' }}>
-                  <ExternalLink className="h-3 w-3" /> Billing öffnen
-                </Link>
-                <Link href="https://console.anthropic.com/settings/usage" target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold hover:opacity-80"
-                  style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}>
-                  <ExternalLink className="h-3 w-3" /> API Usage
-                </Link>
+          <div className="space-y-2">
+            <div className="rounded px-4 py-3 flex items-start gap-3" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)' }}>
+              <Brain className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--brand-blue)' }} />
+              <div className="space-y-1">
+                <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
+                  Jede KI-Analyse kostet ca. <span style={{ color: 'var(--fg-1)' }}>$0.002–$0.01</span> — bei normalem Nutzungsverhalten unter <span style={{ color: 'var(--fg-1)' }}>$5/Monat</span>.
+                </p>
+                <p className="text-xs" style={{ color: 'var(--warn)' }}>
+                  Mindest-Aufladung: <span className="font-semibold">$5</span> — Anthropic aktiviert den Key erst ab diesem Betrag.
+                </p>
               </div>
             </div>
-          )}
-          {aiProvider === 'openai' && (
-            <Link href="https://platform.openai.com/usage" target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold hover:opacity-80"
-              style={{ background: 'var(--brand-blue)', color: '#fff' }}>
-              <ExternalLink className="h-3 w-3" /> OpenAI Usage öffnen
-            </Link>
-          )}
+            <div className="flex gap-2">
+              <Link href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold hover:opacity-80"
+                style={{ background: 'var(--brand-blue)', color: '#fff' }}>
+                <ExternalLink className="h-3 w-3" /> Billing öffnen
+              </Link>
+              <Link href="https://console.anthropic.com/settings/usage" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold hover:opacity-80"
+                style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}>
+                <ExternalLink className="h-3 w-3" /> API Usage
+              </Link>
+            </div>
+          </div>
         </div>
       </Section>
     </div>

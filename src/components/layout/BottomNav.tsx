@@ -184,7 +184,7 @@ function GestureDrawer({ open, onClose, children }: DrawerProps) {
         ref={sheetRef}
         className="absolute bottom-0 left-0 right-0 rounded-t-2xl overflow-hidden"
         style={{
-          background: '#111111',
+          background: 'var(--bg-2)',
           maxHeight: '82vh',
           transform: 'translateY(100%)',
           willChange: 'transform',
@@ -269,8 +269,8 @@ export function BottomNav() {
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch"
         style={{
-          background: '#111111',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--bg-2)',
+          borderTop: '1px solid var(--border-raw)',
           height: 'calc(56px + env(safe-area-inset-bottom))',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
-import OpenAI from 'openai'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { buildSystemPrompt } from '@/lib/coach-system-prompt'
+import { getCoachContext } from '@/lib/coach-context'
 
 export interface AIMessage {
   role: 'user' | 'assistant'
@@ -18,55 +19,33 @@ export interface AICompleteResult {
   toolResult: Record<string, unknown> | null
 }
 
-// Fetches the user's stored AI settings (provider + api_key) from DB.
-// Called server-side from API routes.
-async function getUserAISettings(userId: string): Promise<{
-  provider: 'anthropic' | 'openai'
-  apiKey: string | null
-  model: string | null
-}> {
+// Fetches the user's stored API key from DB.
+async function getUserApiKey(userId: string): Promise<string | null> {
   try {
     const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('user_ai_settings')
-      .select('provider, api_key, model')
+      .select('api_key')
       .eq('user_id', userId)
       .maybeSingle()
-
-    return {
-      provider: (data?.provider as 'anthropic' | 'openai') ?? 'anthropic',
-      apiKey: data?.api_key ?? null,
-      model: data?.model ?? null,
-    }
+    return data?.api_key ?? null
   } catch {
-    return { provider: 'anthropic', apiKey: null, model: null }
+    return null
   }
 }
 
-// Resolve the actual API key to use: user's own key → server env key → error
 function resolveAnthropicKey(userKey: string | null): string {
   const key = userKey || process.env.ANTHROPIC_API_KEY
-  if (!key) throw new Error('Kein Anthropic API-Key konfiguriert. Bitte in Einstellungen → KI-Provider hinterlegen.')
+  if (!key) throw new Error('Kein Anthropic API-Key konfiguriert. Bitte in Einstellungen → API Key hinterlegen.')
   return key
 }
 
-function resolveOpenAIKey(userKey: string | null): string {
-  const key = userKey || process.env.OPENAI_API_KEY
-  if (!key) throw new Error('Kein OpenAI API-Key konfiguriert. Bitte in Einstellungen → KI-Provider hinterlegen.')
-  return key
-}
+const DEFAULT_MODEL = 'claude-sonnet-4-6'
 
-// Default models per provider
-const DEFAULT_MODELS = {
-  anthropic: 'claude-sonnet-4-6',
-  openai: 'gpt-4o',
-}
-
-// ─── Anthropic call ──────────────────────────────────────────────────────────
+// ─── Core Anthropic call ─────────────────────────────────────────────────────
 
 async function callAnthropic(params: {
   apiKey: string
-  model: string
   system: string
   messages: AIMessage[]
   tool?: AIToolSchema
@@ -76,23 +55,19 @@ async function callAnthropic(params: {
 
   if (params.tool) {
     const response = await client.messages.create({
-      model: params.model,
+      model: DEFAULT_MODEL,
       max_tokens: params.maxTokens ?? 2048,
       system: params.system,
       messages: params.messages,
       tools: [params.tool as Anthropic.Tool],
       tool_choice: { type: 'tool', name: params.tool.name },
     })
-
     const toolBlock = response.content.find(b => b.type === 'tool_use') as Anthropic.ToolUseBlock | undefined
-    return {
-      text: null,
-      toolResult: (toolBlock?.input as Record<string, unknown>) ?? null,
-    }
+    return { text: null, toolResult: (toolBlock?.input as Record<string, unknown>) ?? null }
   }
 
   const response = await client.messages.create({
-    model: params.model,
+    model: DEFAULT_MODEL,
     max_tokens: params.maxTokens ?? 2048,
     system: params.system,
     messages: params.messages,
@@ -102,80 +77,55 @@ async function callAnthropic(params: {
   return { text: textBlock?.text ?? null, toolResult: null }
 }
 
-// ─── OpenAI call ─────────────────────────────────────────────────────────────
-
-async function callOpenAI(params: {
-  apiKey: string
-  model: string
-  system: string
-  messages: AIMessage[]
-  tool?: AIToolSchema
-  maxTokens?: number
-}): Promise<AICompleteResult> {
-  const client = new OpenAI({ apiKey: params.apiKey })
-
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    { role: 'system', content: params.system },
-    ...params.messages.map(m => ({ role: m.role, content: m.content } as OpenAI.Chat.ChatCompletionMessageParam)),
-  ]
-
-  if (params.tool) {
-    // Use function calling for structured output
-    const response = await client.chat.completions.create({
-      model: params.model,
-      max_tokens: params.maxTokens ?? 2048,
-      messages,
-      functions: [{
-        name: params.tool.name,
-        description: params.tool.description,
-        parameters: params.tool.input_schema,
-      }],
-      function_call: { name: params.tool.name },
-    })
-
-    const fnCall = response.choices[0]?.message?.function_call
-    if (!fnCall?.arguments) return { text: null, toolResult: null }
-    try {
-      return { text: null, toolResult: JSON.parse(fnCall.arguments) as Record<string, unknown> }
-    } catch {
-      return { text: null, toolResult: null }
-    }
-  }
-
-  const response = await client.chat.completions.create({
-    model: params.model,
-    max_tokens: params.maxTokens ?? 2048,
-    messages,
-  })
-
-  return { text: response.choices[0]?.message?.content ?? null, toolResult: null }
-}
-
 // ─── Public interface ────────────────────────────────────────────────────────
 
+/**
+ * Hauptfunktion für alle KI-Aufrufe in NOUS.
+ *
+ * - Lädt automatisch den User-API-Key
+ * - Stellt den Coach-Basis-Prompt voran
+ * - Injiziert das Coach-Profil des Nutzers (sofern vorhanden)
+ *
+ * `system` sollte NUR den route-spezifischen Kontext enthalten.
+ */
 export async function callAI(params: {
   userId: string
+  accountId?: string | null
   system: string
   messages: AIMessage[]
   tool?: AIToolSchema
   maxTokens?: number
+  /** true = system-param wird unverändert genutzt (Legacy/interne Routen) */
+  rawSystem?: boolean
 }): Promise<AICompleteResult> {
-  const settings = await getUserAISettings(params.userId)
-  const provider = settings.provider
-  const model = settings.model || DEFAULT_MODELS[provider]
+  const [userKey, coachContext] = await Promise.all([
+    getUserApiKey(params.userId),
+    params.rawSystem ? Promise.resolve('') : getCoachContext(params.userId, params.accountId),
+  ])
 
-  if (provider === 'openai') {
-    const apiKey = resolveOpenAIKey(settings.apiKey)
-    return callOpenAI({ apiKey, model, ...params })
+  const apiKey = resolveAnthropicKey(userKey)
+
+  let system: string
+  if (params.rawSystem) {
+    system = params.system
+  } else {
+    const routeContext = coachContext
+      ? `${coachContext}\n\n${params.system}`
+      : params.system
+    system = buildSystemPrompt(routeContext)
   }
 
-  // Default: Anthropic
-  const apiKey = resolveAnthropicKey(settings.apiKey)
-  return callAnthropic({ apiKey, model, ...params })
+  return callAnthropic({ apiKey, system, messages: params.messages, tool: params.tool, maxTokens: params.maxTokens })
 }
 
-// Backwards-compatible helper — for routes that haven't migrated yet.
-// Uses env key only, no user settings lookup.
+// Für Streaming-Routen (calendar-event-analysis) die direkt einen Anthropic-Client brauchen.
+export async function getAnthropicClient(userId: string): Promise<{ client: Anthropic; model: string }> {
+  const userKey = await getUserApiKey(userId)
+  const apiKey = resolveAnthropicKey(userKey)
+  return { client: new Anthropic({ apiKey }), model: DEFAULT_MODEL }
+}
+
+// Backwards-compatible helper — für Routen die noch keinen userId haben.
 export function getAnthropicClientDirect(): Anthropic {
   const key = process.env.ANTHROPIC_API_KEY
   if (!key) throw new Error('ANTHROPIC_API_KEY is not set')

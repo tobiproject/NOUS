@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useAccountContext } from '@/contexts/AccountContext'
 
 interface Props {
-  step: 'kalender' | 'performance' | 'briefing'
+  step: 'kalender' | 'performance' | 'briefing' | 'tagesplan'
 }
 
 export function WorkflowVisitTracker({ step }: Props) {

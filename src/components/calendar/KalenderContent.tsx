@@ -1,10 +1,12 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { useEconomicCalendar } from '@/hooks/useEconomicCalendar'
 import { useWatchlist } from '@/hooks/useWatchlist'
+import { useAccountContext } from '@/contexts/AccountContext'
+import { getCategoryColor } from '@/lib/category-colors'
 import { CountdownBanner } from './CountdownBanner'
 import { KalenderWeekNav } from './KalenderWeekNav'
 import { KalenderFilterBar } from './KalenderFilterBar'
@@ -12,15 +14,24 @@ import { EconomicEventList } from './EconomicEventList'
 import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
 
 export function KalenderContent() {
+  const { activeAccount } = useAccountContext()
   const {
     events, filters, weekOffset, weekStart, weekEnd,
     fetchedAt, isLoading, filtersLoading,
     updateFilters, goToPrevWeek, goToNextWeek, goToThisWeek,
   } = useEconomicCalendar()
 
-  // Load all watchlist items (no account filter — user wants all assets they trade)
-  const { items: watchlistItems } = useWatchlist()
+  const { items: watchlistItems } = useWatchlist(activeAccount?.id)
   const watchlistSymbols = watchlistItems.map(i => i.symbol)
+
+  // Symbol → Farbe aus der Watchlist (eigene Farbe des Users oder Kategorie-Farbe)
+  const watchlistColorMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    watchlistItems.forEach(item => {
+      map[item.symbol] = item.color ?? getCategoryColor(item.category)
+    })
+    return map
+  }, [watchlistItems])
 
   const handleScrollToEvent = useCallback((eventId: string) => {
     const el = document.getElementById(`event-${eventId}`)
@@ -60,6 +71,7 @@ export function KalenderContent() {
         userTimezone={Intl.DateTimeFormat().resolvedOptions().timeZone}
         allImpactFiltersOff={filters.impact.length === 0}
         watchlistSymbols={watchlistSymbols}
+        watchlistColorMap={watchlistColorMap}
       />
 
       {fetchedAtLabel && (

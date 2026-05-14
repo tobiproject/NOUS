@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import Anthropic from '@anthropic-ai/sdk'
-import OpenAI from 'openai'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getAnthropicClient } from '@/lib/ai-client'
 
 const TradeStatsSchema = z.object({
   total: z.number(),
@@ -49,17 +48,12 @@ export async function POST(req: NextRequest) {
     watchlist_matches, trade_stats, recent_trades,
   } = parsed.data
 
-  const [aiSettingsRes, roadmapRes] = await Promise.all([
-    supabase.from('user_ai_settings').select('provider, api_key, model').eq('user_id', user.id).maybeSingle(),
-    supabase.from('user_roadmap').select('data').eq('user_id', user.id).maybeSingle(),
-  ])
+  const roadmapRes = await supabase.from('user_roadmap').select('data').eq('user_id', user.id).maybeSingle()
 
   const traderLevel = (roadmapRes.data?.data?.level as string | undefined) ?? 'Beginner'
   const isBeginnerLevel = ['Beginner', 'Anfänger', 'beginner'].includes(traderLevel)
 
-  const provider = (aiSettingsRes.data?.provider as 'anthropic' | 'openai') ?? 'anthropic'
-  const userApiKey = aiSettingsRes.data?.api_key ?? null
-  const model = aiSettingsRes.data?.model ?? (provider === 'openai' ? 'gpt-4o' : 'claude-sonnet-4-6')
+  const { client, model } = await getAnthropicClient(user.id)
 
   // Build grounded data sections
   const watchlistSection = watchlist_matches?.length
@@ -135,57 +129,17 @@ Ein konkreter Lernpunkt aus diesem Event.` : ''}`}
 
   const encoder = new TextEncoder()
 
-  // ── Anthropic ────────────────────────────────────────────────────────────────
-  if (provider === 'anthropic') {
-    const apiKey = userApiKey || process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Kein Anthropic API-Key hinterlegt. Bitte in Einstellungen → KI-Provider eintragen.' },
-        { status: 422 }
-      )
-    }
-    const client = new Anthropic({ apiKey })
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          const response = await client.messages.stream({
-            model, max_tokens: 600, system,
-            messages: [{ role: 'user', content: prompt }],
-          })
-          for await (const event of response) {
-            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-              controller.enqueue(encoder.encode(event.delta.text))
-            }
-          }
-        } catch (err) {
-          controller.enqueue(encoder.encode(`\n[Fehler: ${err instanceof Error ? err.message : 'KI-Fehler'}]`))
-        } finally {
-          controller.close()
-        }
-      },
-    })
-    return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' } })
-  }
-
-  // ── OpenAI ───────────────────────────────────────────────────────────────────
-  const apiKey = userApiKey || process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'Kein OpenAI API-Key hinterlegt. Bitte in Einstellungen → KI-Provider eintragen.' },
-      { status: 422 }
-    )
-  }
-  const client = new OpenAI({ apiKey })
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const response = await client.chat.completions.create({
-          model, max_tokens: 600, stream: true,
-          messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
+        const response = await client.messages.stream({
+          model, max_tokens: 600, system,
+          messages: [{ role: 'user', content: prompt }],
         })
-        for await (const chunk of response) {
-          const text = chunk.choices[0]?.delta?.content ?? ''
-          if (text) controller.enqueue(encoder.encode(text))
+        for await (const event of response) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            controller.enqueue(encoder.encode(event.delta.text))
+          }
         }
       } catch (err) {
         controller.enqueue(encoder.encode(`\n[Fehler: ${err instanceof Error ? err.message : 'KI-Fehler'}]`))

@@ -7,6 +7,7 @@ export interface WatchlistItem {
   symbol: string
   name: string | null
   category: string
+  color: string | null
   tick_size: number | null
   tick_value: number | null
   point_value: number | null
@@ -38,11 +39,11 @@ export function useWatchlist(accountId?: string | null) {
 
   useEffect(() => { load() }, [load])
 
-  const addItem = useCallback(async (symbol: string, name?: string, category?: string) => {
+  const addItem = useCallback(async (symbol: string, name?: string, category?: string, color?: string | null) => {
     const res = await fetch('/api/watchlist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ symbol, name, category, account_id: accountId ?? null }),
+      body: JSON.stringify({ symbol, name, category, color: color ?? null, account_id: accountId ?? null }),
     })
     if (res.ok) {
       const data = await res.json()
@@ -60,7 +61,7 @@ export function useWatchlist(accountId?: string | null) {
 
   const updateItem = useCallback(async (
     id: string,
-    patch: { tick_size?: number | null; tick_value?: number | null; point_value?: number | null }
+    patch: { tick_size?: number | null; tick_value?: number | null; point_value?: number | null; color?: string | null; category?: string }
   ) => {
     const res = await fetch(`/api/watchlist/${id}`, {
       method: 'PATCH',

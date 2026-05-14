@@ -191,7 +191,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
         ref={panelRef}
         className={`absolute inset-y-0 ${side === 'left' ? 'left-0' : 'right-0'} flex flex-col`}
         style={{
-          background: '#141417',
+          background: 'var(--bg-2)',
           width: 'min(270px, 75vw)',
           transform: side === 'left' ? 'translateX(-100%)' : 'translateX(100%)',
           willChange: 'transform',
@@ -247,7 +247,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
             {avatarMenuOpen && (
               <div
                 className="absolute top-16 left-0 z-20 rounded-lg overflow-hidden shadow-xl"
-                style={{ background: '#1E2028', border: '1px solid rgba(255,255,255,0.12)', minWidth: 160 }}
+                style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', minWidth: 160 }}
               >
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -457,7 +457,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
           {changelogOpen && !update && (
             <div
               className="absolute bottom-8 left-2 right-2 rounded-lg p-3 shadow-xl z-20"
-              style={{ background: '#1E2028', border: '1px solid rgba(255,255,255,0.12)' }}
+              style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)' }}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] font-bold" style={{ color: 'rgba(255,255,255,0.9)' }}>

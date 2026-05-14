@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Plus, X, Loader2, Save, CheckCircle } from 'lucide-react'
+import { Plus, X, Loader2, Save, CheckCircle, Sparkles, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { AssetMultiPicker } from '@/components/watchlist/AssetMultiPicker'
-import { WeeklyPrepCard } from '@/components/dashboard/WeeklyPrepCard'
 import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
+import { useAccountContext } from '@/contexts/AccountContext'
 import { format, startOfWeek, addWeeks, addDays, getISOWeek } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -42,11 +42,17 @@ function buildWeekLabel(monday: Date): string {
 }
 
 export default function WochenvorbereitungPage() {
+  const { activeAccount } = useAccountContext()
   const [plan, setPlan] = useState<WeeklyPlan>(EMPTY)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [newGoal, setNewGoal] = useState('')
+
+  // KI-Vorschläge
+  const [kiLoading, setKiLoading] = useState(false)
+  const [kiGoals, setKiGoals] = useState<string[]>([])
+  const [kiNotes, setKiNotes] = useState<string | null>(null)
 
   // useMemo keeps these stable across re-renders — without it, new Date()
   // objects on every render would cause an infinite useEffect/fetch loop.
@@ -56,9 +62,10 @@ export default function WochenvorbereitungPage() {
   const isNextWeek = useMemo(() => { const d = new Date().getDay(); return d === 6 || d === 0 }, [])
 
   const load = useCallback(async () => {
+    if (!activeAccount?.id) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/weekly-plan?week=${format(targetMonday, 'yyyy-MM-dd')}`)
+      const res = await fetch(`/api/weekly-plan?week=${format(targetMonday, 'yyyy-MM-dd')}&account_id=${activeAccount.id}`)
       const data = await res.json()
       if (data.plan) {
         setPlan({
@@ -74,16 +81,17 @@ export default function WochenvorbereitungPage() {
     } finally {
       setLoading(false)
     }
-  }, [targetMonday])
+  }, [targetMonday, activeAccount?.id])
 
   useEffect(() => { load() }, [load])
 
   const save = async () => {
+    if (!activeAccount?.id) return
     setSaving(true)
     const res = await fetch('/api/weekly-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ week_start: weekStart, ...plan }),
+      body: JSON.stringify({ account_id: activeAccount.id, week_start: weekStart, ...plan }),
     })
     setSaving(false)
     if (res.ok) {
@@ -104,8 +112,41 @@ export default function WochenvorbereitungPage() {
   const removeGoal = (i: number) =>
     setPlan(p => ({ ...p, weekly_goals: p.weekly_goals.filter((_, j) => j !== i) }))
 
+  const loadKiSuggestions = async () => {
+    if (!activeAccount?.id) return
+    setKiLoading(true)
+    setKiGoals([])
+    setKiNotes(null)
+    try {
+      const res = await fetch('/api/ai/weekly-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_id: activeAccount.id, week_start: weekStart }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setKiGoals(data.goals ?? [])
+        setKiNotes(data.notes ?? null)
+      }
+    } finally {
+      setKiLoading(false)
+    }
+  }
+
+  const acceptKiGoal = (goal: string) => {
+    if (plan.weekly_goals.includes(goal)) return
+    setPlan(p => ({ ...p, weekly_goals: [...p.weekly_goals, goal] }))
+    setKiGoals(prev => prev.filter(g => g !== goal))
+  }
+
+  const acceptKiNotes = () => {
+    if (!kiNotes) return
+    setPlan(p => ({ ...p, notes: p.notes ? p.notes + '\n\n' + kiNotes : kiNotes }))
+    setKiNotes(null)
+  }
+
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <WorkflowVisitTracker step="briefing" />
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
@@ -154,7 +195,21 @@ export default function WochenvorbereitungPage() {
           </Section>
 
           {/* Weekly Goals */}
-          <Section title="Wochenziele" subtitle="Was willst du diese Woche erreichen oder üben?">
+          <Section
+            title="Wochenziele"
+            subtitle="Was willst du diese Woche erreichen oder üben?"
+            action={
+              <button
+                onClick={loadKiSuggestions}
+                disabled={kiLoading}
+                className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded transition-opacity hover:opacity-75"
+                style={{ background: 'var(--bg-3)', color: 'var(--brand-blue)', border: '1px solid var(--border-raw)' }}
+              >
+                {kiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                KI-Vorschlag
+              </button>
+            }
+          >
             <div className="space-y-2">
               {plan.weekly_goals.map((g, i) => (
                 <div
@@ -171,6 +226,27 @@ export default function WochenvorbereitungPage() {
                   </button>
                 </div>
               ))}
+
+              {/* KI-Zielvorschläge */}
+              {kiGoals.length > 0 && (
+                <div className="rounded-lg p-3 space-y-1.5" style={{ background: 'var(--bg-1)', border: '1px dashed var(--brand-blue)' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--brand-blue)' }}>
+                    KI-Vorschläge — klicken zum Übernehmen
+                  </p>
+                  {kiGoals.map((g, i) => (
+                    <button
+                      key={i}
+                      onClick={() => acceptKiGoal(g)}
+                      className="w-full flex items-start gap-2 rounded px-3 py-2 text-left transition-colors hover:opacity-80"
+                      style={{ background: 'rgba(41,98,255,0.08)', border: '1px solid rgba(41,98,255,0.2)' }}
+                    >
+                      <Plus className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: 'var(--brand-blue)' }} />
+                      <span className="text-sm" style={{ color: 'var(--fg-1)' }}>{g}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <Input
                   value={newGoal}
@@ -220,18 +296,55 @@ export default function WochenvorbereitungPage() {
           </Section>
 
           {/* Notes */}
-          <Section title="Notizen" subtitle="Marktkontext, Events, besondere Beobachtungen">
-            <Textarea
-              rows={4}
-              value={plan.notes}
-              onChange={e => setPlan(p => ({ ...p, notes: e.target.value }))}
-              placeholder="z.B. Fed-Entscheidung am Mittwoch, Earnings-Season läuft, Dollar schwächelt…"
-              className="resize-none text-sm"
-            />
+          <Section
+            title="Notizen"
+            subtitle="Marktkontext, Events, besondere Beobachtungen"
+            action={
+              <button
+                onClick={loadKiSuggestions}
+                disabled={kiLoading}
+                className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded transition-opacity hover:opacity-75"
+                style={{ background: 'var(--bg-3)', color: 'var(--brand-blue)', border: '1px solid var(--border-raw)' }}
+              >
+                {kiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                KI-Vorschlag
+              </button>
+            }
+          >
+            <div className="space-y-2">
+              <Textarea
+                rows={4}
+                value={plan.notes}
+                onChange={e => setPlan(p => ({ ...p, notes: e.target.value }))}
+                placeholder="z.B. Fed-Entscheidung am Mittwoch, Earnings-Season läuft, Dollar schwächelt…"
+                className="resize-none text-sm"
+              />
+              {kiNotes && (
+                <div className="rounded-lg p-3" style={{ background: 'var(--bg-1)', border: '1px dashed var(--brand-blue)' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--brand-blue)' }}>
+                    KI-Vorschlag
+                  </p>
+                  <p className="text-sm leading-relaxed mb-3" style={{ color: 'var(--fg-2)' }}>{kiNotes}</p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={acceptKiNotes}
+                      className="h-7 px-3 text-xs rounded font-semibold gap-1.5"
+                      style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
+                    >
+                      <Check className="h-3 w-3" /> Übernehmen
+                    </Button>
+                    <button
+                      onClick={() => setKiNotes(null)}
+                      className="text-xs px-2"
+                      style={{ color: 'var(--fg-4)' }}
+                    >
+                      Verwerfen
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </Section>
-
-          {/* KI Weekly Prep */}
-          <WeeklyPrepCard />
 
         </div>
       )}
@@ -239,12 +352,15 @@ export default function WochenvorbereitungPage() {
   )
 }
 
-function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function Section({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="rounded-lg p-5 space-y-3" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
-      <div>
-        <p className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>{title}</p>
-        {subtitle && <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>{subtitle}</p>}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>{title}</p>
+          {subtitle && <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>{subtitle}</p>}
+        </div>
+        {action}
       </div>
       {children}
     </div>

@@ -3,9 +3,11 @@ import { z } from 'zod'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 const patchSchema = z.object({
-  tick_size: z.number().positive().nullable().optional(),
-  tick_value: z.number().positive().nullable().optional(),
+  tick_size:   z.number().positive().nullable().optional(),
+  tick_value:  z.number().positive().nullable().optional(),
   point_value: z.number().positive().nullable().optional(),
+  color:       z.string().max(30).nullable().optional(),
+  category:    z.string().max(50).optional(),
 })
 
 export async function PATCH(

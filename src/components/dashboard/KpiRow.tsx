@@ -13,10 +13,7 @@ interface KpiCardProps {
 
 function KpiCard({ label, value, sub, valueClass }: KpiCardProps) {
   return (
-    <div
-      className="rounded-lg p-4"
-      style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
-    >
+    <div className="glass rounded-xl p-4">
       <div className="eyebrow mb-2">{label}</div>
       <div className={cn('metric truncate', valueClass ?? '')} style={{ color: 'var(--fg-1)' }}>
         {value}

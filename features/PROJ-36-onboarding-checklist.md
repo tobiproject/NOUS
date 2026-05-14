@@ -61,7 +61,64 @@
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+DashboardContent (existing)
++-- OnboardingChecklist (NEW — shown only when steps < 7 complete)
+    +-- Card Header
+    |   +-- Title: "Einrichtung abschließen"
+    |   +-- Subtitle: "Du bist fast fertig — noch X Schritte"
+    +-- Progress Bar (X/7 visual, uses existing shadcn Progress)
+    +-- Steps List
+        +-- ChecklistStep × 7
+            +-- Status Icon (✓ green / circle grey)
+            +-- Step Name (clickable link → settings page)
+```
+
+### Data Flow
+
+Dashboard loads → OnboardingChecklist fetches `GET /api/onboarding/progress` → API queries 7 tables in parallel → returns `{ steps: boolean[], completedCount: number }` → component renders with live status → when all 7 true, component renders null immediately.
+
+### Step Check Logic (plain language)
+
+| # | Step | Check |
+|---|------|-------|
+| 1 | Profil einrichten | `profiles.display_name` is not empty |
+| 2 | Konto anlegen | At least 1 account with `is_active = true` |
+| 3 | Strategie definieren | At least 1 strategy with a name set |
+| 4 | API Key hinterlegen | `profiles.anthropic_api_key` is not empty |
+| 5 | Watchlist aufbauen | At least 1 watchlist item for the active account |
+| 6 | Risk Management einrichten | Active account's `max_risk_per_trade` > 0 |
+| 7 | Ersten Trade erfassen | At least 1 trade exists in the DB |
+
+All 7 checks run simultaneously (parallel Supabase queries).
+
+### Data Model
+
+No new database table. Reads from 5 existing tables: `profiles`, `accounts`, `strategies`, `watchlist_items`, `trades`.
+
+API response: `{ steps: boolean[7], completedCount: number }` — computed fresh on every load, no persistence.
+
+### Tech Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Persistence | None — compute on load | Always derived from real DB state; no stale data risk |
+| API calls | 1 dedicated endpoint | Clean separation; easy to optimize later |
+| Internal queries | All 7 parallel | Keeps response < 300ms |
+| Visibility | Computed in React render | Card disappears in same render cycle when step 7 completes |
+| UI primitives | shadcn Card + Progress | Already installed, consistent with app |
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `src/components/dashboard/OnboardingChecklist.tsx` | Checklist card component |
+| `src/app/api/onboarding/progress/route.ts` | API: reads 5 tables, returns step booleans |
+
+No new packages needed — all shadcn components (Card, Progress, Checkbox) are already installed.
 
 ## QA Test Results
 _To be added by /qa_

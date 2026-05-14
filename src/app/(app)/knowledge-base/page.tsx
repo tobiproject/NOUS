@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase'
 
 interface KnowledgeDoc {
   id: string
@@ -53,41 +52,24 @@ export default function KnowledgeBasePage() {
       toast.error('Nur PDF-Dateien erlaubt')
       return
     }
-    if (file.size > 30 * 1024 * 1024) {
-      toast.error('Datei zu groß (max. 30 MB)')
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Datei zu groß (max. 20 MB)')
       return
     }
     setUploading(true)
     try {
-      // Step 1: Upload directly from browser to Supabase Storage — bypasses Vercel's 4.5MB body limit
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { toast.error('Nicht eingeloggt'); setUploading(false); return }
-
-      const storagePath = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-      const { error: uploadError } = await supabase.storage
-        .from('knowledge-base')
-        .upload(storagePath, file, { contentType: 'application/pdf' })
-
-      if (uploadError) {
-        toast.error('Upload fehlgeschlagen: ' + uploadError.message)
-        setUploading(false)
-        return
-      }
-
-      // Step 2: Tell the API to extract text from the already-uploaded file
-      const res = await fetch('/api/knowledge-base/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storagePath, name: file.name, fileSize: file.size }),
-      })
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/knowledge-base', { method: 'POST', body: form })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.error ?? 'Verarbeitung fehlgeschlagen')
-      } else if (data.document?.status === 'error') {
-        toast.error('PDF konnte nicht gelesen werden — versuche "Text einfügen" als Alternative')
+        toast.error(data.error ?? 'Upload fehlgeschlagen')
+        return
+      }
+      if (data.document?.status === 'error') {
+        toast.error(data.document.error_message ?? 'PDF konnte nicht gelesen werden — versuche "Text einfügen"')
       } else {
-        toast.success(`"${file.name.replace(/\.pdf$/i, '')}" hochgeladen`)
+        toast.success(`"${file.name.replace(/\.pdf$/i, '')}" erfolgreich hochgeladen`)
       }
       load()
     } catch {

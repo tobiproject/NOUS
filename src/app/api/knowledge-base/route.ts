@@ -6,7 +6,7 @@ export const maxDuration = 60
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require('pdf-parse')
+  const pdfParse = require('pdf-parse/lib/pdf-parse.js')
 
   // Race against a 45s timeout — fail gracefully instead of hanging until Vercel kills the function
   const parsePromise = pdfParse(buffer, { max: 150 }) // max 150 pages

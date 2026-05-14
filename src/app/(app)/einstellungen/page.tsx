@@ -5,7 +5,7 @@ import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil, ChevronLeft } from 'lucide-react'
+import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil, ChevronLeft, Sparkles, GripVertical } from 'lucide-react'
 import Link from 'next/link'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { applyFontSize, getStoredFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX } from '@/components/layout/FontSizeApplier'
@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AssetMultiPicker } from '@/components/watchlist/AssetMultiPicker'
 import { AccountCard } from '@/components/accounts/AccountCard'
@@ -1625,9 +1626,443 @@ function KnowledgeBaseTab() {
   )
 }
 
+// ─── Tab: Tradingplan ─────────────────────────────────────────────────────────
+
+interface TradingPlanSection {
+  section_key: string
+  rules: string[]
+  notes: string
+  updated_at: string | null
+}
+
+interface AISuggestion {
+  rules: string[]
+  notes: string
+  source: string
+}
+
+const TRADING_PLAN_SECTIONS = [
+  { key: 'strategie_uebersicht', title: 'Strategie-Übersicht', description: 'Was ist deine Strategie, Markttyp, Timeframes, Assets' },
+  { key: 'setup_kriterien', title: 'Setup-Kriterien', description: 'Genaue Bedingungen, die erfüllt sein müssen, bevor du einen Trade nimmst' },
+  { key: 'entry_exit_regeln', title: 'Entry & Exit Regeln', description: 'Entry-Bedingungen, SL-Platzierung, TP-Ziele, Trailing-Stop-Regeln' },
+  { key: 'risiko_regeln', title: 'Risiko-Regeln', description: 'Max Risk per Trade, Max Daily Loss, Drawdown-Grenze, Positionsgrößen' },
+  { key: 'psychologie_mindset', title: 'Psychologie & Mindset', description: 'Regeln für emotionales Trading, Selbst-Check vor dem Trade' },
+  { key: 'verbotene_verhaltensweisen', title: 'Verbotene Verhaltensweisen', description: 'Explizite No-Gos — was du unter keinen Umständen tust' },
+  { key: 'review_prozess', title: 'Review-Prozess', description: 'Wie und wie oft du Trades reviewst, worauf du achtest' },
+  { key: 'prop_firm_regeln', title: 'Prop-Firm Regeln', description: 'Spezifische Regeln für Prop-Firm Konten' },
+] as const
+
+type SectionKey = typeof TRADING_PLAN_SECTIONS[number]['key']
+
+function formatUpdatedAt(iso: string | null): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+    ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+}
+
+function TradingPlanSectionPanel({
+  sectionDef,
+  data,
+  hasKbDocs,
+  onSaved,
+}: {
+  sectionDef: typeof TRADING_PLAN_SECTIONS[number]
+  data: TradingPlanSection | undefined
+  hasKbDocs: boolean
+  onSaved: (section: TradingPlanSection) => void
+}) {
+  const [rules, setRules] = useState<string[]>(data?.rules ?? [])
+  const [notes, setNotes] = useState(data?.notes ?? '')
+  const [newRule, setNewRule] = useState('')
+  const [editingIdx, setEditingIdx] = useState<number | null>(null)
+  const [editingVal, setEditingVal] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [savedAt, setSavedAt] = useState<string | null>(data?.updated_at ?? null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [aiRules, setAiRules] = useState<string[]>([])
+  const [aiNotes, setAiNotes] = useState('')
+
+  // Sync external data on first load
+  useEffect(() => {
+    setRules(data?.rules ?? [])
+    setNotes(data?.notes ?? '')
+    setSavedAt(data?.updated_at ?? null)
+  }, [data?.section_key]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addRule = () => {
+    const r = newRule.trim()
+    if (!r) return
+    setRules(prev => [...prev, r])
+    setNewRule('')
+  }
+
+  const deleteRule = (idx: number) => setRules(prev => prev.filter((_, i) => i !== idx))
+
+  const startEdit = (idx: number) => {
+    setEditingIdx(idx)
+    setEditingVal(rules[idx] ?? '')
+  }
+
+  const commitEdit = (idx: number) => {
+    const v = editingVal.trim()
+    if (v) setRules(prev => prev.map((r, i) => i === idx ? v : r))
+    setEditingIdx(null)
+  }
+
+  const save = async () => {
+    setSaving(true)
+    const res = await fetch('/api/trading-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ section_key: sectionDef.key, rules, notes }),
+    })
+    setSaving(false)
+    if (res.ok) {
+      const now = new Date().toISOString()
+      setSavedAt(now)
+      onSaved({ section_key: sectionDef.key, rules, notes, updated_at: now })
+      toast.success('Gespeichert')
+    } else {
+      toast.error('Fehler beim Speichern')
+    }
+  }
+
+  const requestAiSuggestion = async () => {
+    setAiLoading(true)
+    setAiError(null)
+    setAiSuggestion(null)
+    const res = await fetch('/api/ai/trading-plan-suggestion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ section_key: sectionDef.key }),
+    })
+    setAiLoading(false)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({})) as { error?: string }
+      setAiError(d.error ?? 'KI-Fehler')
+      return
+    }
+    const d = await res.json() as AISuggestion
+    setAiSuggestion(d)
+    setAiRules(d.rules)
+    setAiNotes(d.notes)
+  }
+
+  const acceptSuggestion = () => {
+    setRules(prev => [...prev, ...aiRules.filter(r => r.trim())])
+    if (aiNotes.trim()) {
+      setNotes(prev => prev ? `${prev}\n\n${aiNotes}` : aiNotes)
+    }
+    setAiSuggestion(null)
+    setAiError(null)
+  }
+
+  const dismissSuggestion = () => {
+    setAiSuggestion(null)
+    setAiError(null)
+  }
+
+  const hasContent = rules.length > 0 || notes.trim().length > 0
+
+  return (
+    <div className="space-y-4">
+      {/* Rule list */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>Regeln</p>
+        {rules.map((rule, idx) => (
+          <div
+            key={idx}
+            className="flex items-start gap-2 rounded px-3 py-2"
+            style={{ background: 'var(--bg-3)' }}
+          >
+            <GripVertical className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-30" style={{ color: 'var(--fg-4)' }} />
+            {editingIdx === idx ? (
+              <input
+                autoFocus
+                value={editingVal}
+                onChange={e => setEditingVal(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); commitEdit(idx) }
+                  if (e.key === 'Escape') setEditingIdx(null)
+                }}
+                onBlur={() => commitEdit(idx)}
+                className="flex-1 bg-transparent text-sm outline-none border-b"
+                style={{ color: 'var(--fg-1)', borderColor: 'var(--brand-blue)' }}
+              />
+            ) : (
+              <span
+                className="flex-1 text-sm cursor-text"
+                style={{ color: 'var(--fg-1)' }}
+                onClick={() => startEdit(idx)}
+              >
+                {rule}
+              </span>
+            )}
+            <button onClick={() => deleteRule(idx)} className="shrink-0">
+              <X className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
+            </button>
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <Input
+            value={newRule}
+            onChange={e => setNewRule(e.target.value)}
+            placeholder="Neue Regel hinzufügen…"
+            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addRule())}
+          />
+          <Button
+            type="button"
+            onClick={addRule}
+            className="h-9 px-3 shrink-0 rounded"
+            style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Notes textarea */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>Notizen & Kontext</p>
+        <Textarea
+          rows={3}
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Weitere Erläuterungen, Kontext, Beispiele…"
+          className="resize-none"
+          maxLength={5000}
+        />
+        <p className="text-xs text-right" style={{ color: 'var(--fg-4)' }}>{notes.length}/5000</p>
+      </div>
+
+      {/* AI suggestion area */}
+      {(aiLoading || aiSuggestion || aiError) && (
+        <div
+          className="rounded-lg p-4 space-y-3"
+          style={{ background: 'rgba(41,98,255,0.06)', border: '1px solid rgba(41,98,255,0.2)' }}
+        >
+          {aiLoading && (
+            <div className="flex items-center gap-2" style={{ color: 'var(--brand-blue)' }}>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">KI generiert Vorschlag aus deiner Knowledge Base…</span>
+            </div>
+          )}
+          {aiError && (
+            <p className="text-sm" style={{ color: 'var(--short)' }}>{aiError}</p>
+          )}
+          {aiSuggestion && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" style={{ color: 'var(--brand-blue)' }} />
+                <p className="text-xs font-semibold" style={{ color: 'var(--brand-blue)' }}>KI-Vorschlag — bearbeite vor der Übernahme</p>
+              </div>
+
+              {/* Editable rules preview */}
+              {aiRules.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs" style={{ color: 'var(--fg-4)' }}>Regeln</p>
+                  {aiRules.map((r, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <input
+                        value={r}
+                        onChange={e => setAiRules(prev => prev.map((x, j) => j === i ? e.target.value : x))}
+                        className="flex-1 text-sm px-2 py-1 rounded"
+                        style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)', outline: 'none' }}
+                      />
+                      <button onClick={() => setAiRules(prev => prev.filter((_, j) => j !== i))}>
+                        <X className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Editable notes preview */}
+              {aiNotes && (
+                <div className="space-y-1">
+                  <p className="text-xs" style={{ color: 'var(--fg-4)' }}>Notizen</p>
+                  <Textarea
+                    rows={3}
+                    value={aiNotes}
+                    onChange={e => setAiNotes(e.target.value)}
+                    className="resize-none text-sm"
+                    style={{ background: 'var(--bg-3)' }}
+                  />
+                </div>
+              )}
+
+              {/* Source */}
+              {aiSuggestion.source && (
+                <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
+                  📄 Quelle: {aiSuggestion.source}
+                </p>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={acceptSuggestion}
+                  className="h-8 px-4 text-xs font-semibold rounded"
+                  style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
+                >
+                  Übernehmen
+                </Button>
+                <Button
+                  onClick={dismissSuggestion}
+                  className="h-8 px-4 text-xs font-semibold rounded"
+                  style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+                >
+                  Verwerfen
+                </Button>
+              </div>
+            </div>
+          )}
+          {aiError && (
+            <Button
+              onClick={dismissSuggestion}
+              className="h-8 px-3 text-xs font-semibold rounded"
+              style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+            >
+              Schließen
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Footer actions */}
+      <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={requestAiSuggestion}
+            disabled={!hasKbDocs || aiLoading || !!aiSuggestion}
+            className="h-8 px-3 text-xs font-semibold rounded gap-1.5"
+            style={{
+              background: 'var(--bg-3)',
+              color: hasKbDocs ? 'var(--brand-blue)' : 'var(--fg-4)',
+              border: `1px solid ${hasKbDocs ? 'rgba(41,98,255,0.3)' : 'var(--border-raw)'}`,
+            }}
+            title={!hasKbDocs ? 'Bitte zuerst Dokumente in der Knowledge Base hochladen' : undefined}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            KI-Vorschlag aus Knowledge Base
+          </Button>
+          {!hasKbDocs && (
+            <p className="text-xs" style={{ color: 'var(--fg-4)' }}>KB leer</p>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {savedAt && !saving && (
+            <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
+              Gespeichert: {formatUpdatedAt(savedAt)}
+            </p>
+          )}
+          {hasContent && !savedAt && (
+            <p className="text-xs" style={{ color: 'var(--fg-4)' }}>Nicht gespeichert</p>
+          )}
+          <Button
+            onClick={save}
+            disabled={saving}
+            className="h-8 px-4 text-xs font-semibold rounded"
+            style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+            <span className="ml-1.5">Speichern</span>
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TradingplanTab() {
+  const [sections, setSections] = useState<TradingPlanSection[]>([])
+  const [loading, setLoading] = useState(true)
+  const [hasKbDocs, setHasKbDocs] = useState(false)
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/trading-plan').then(r => r.json()) as Promise<{ sections: TradingPlanSection[] }>,
+      fetch('/api/knowledge-base').then(r => r.json()) as Promise<{ documents: { id: string; status: string }[] }>,
+    ]).then(([planData, kbData]) => {
+      setSections(planData.sections ?? [])
+      setHasKbDocs((kbData.documents ?? []).some(d => d.status === 'ready'))
+    }).finally(() => setLoading(false))
+  }, [])
+
+  const handleSaved = useCallback((updated: TradingPlanSection) => {
+    setSections(prev => {
+      const idx = prev.findIndex(s => s.section_key === updated.section_key)
+      if (idx >= 0) return prev.map((s, i) => i === idx ? updated : s)
+      return [...prev, updated]
+    })
+  }, [])
+
+  if (loading) return (
+    <div className="space-y-3">
+      {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 rounded-lg" />)}
+    </div>
+  )
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
+        Dein persönlicher Tradingplan — 8 Sektionen. Die KI nutzt diesen Plan als Kontext für Analysen und Wochenvorbereitung.
+      </p>
+
+      <Accordion type="single" collapsible className="space-y-2">
+        {TRADING_PLAN_SECTIONS.map(sectionDef => {
+          const data = sections.find(s => s.section_key === sectionDef.key)
+          const hasContent = (data?.rules.length ?? 0) > 0 || (data?.notes?.trim().length ?? 0) > 0
+
+          return (
+            <AccordionItem
+              key={sectionDef.key}
+              value={sectionDef.key}
+              className="rounded-lg border-0 overflow-hidden"
+              style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
+            >
+              <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-white/[0.02]">
+                <div className="flex items-start gap-3 text-left flex-1 min-w-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>
+                        {sectionDef.title}
+                      </span>
+                      {hasContent && (
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--long)' }} />
+                      )}
+                    </div>
+                    {data?.updated_at ? (
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--fg-4)' }}>
+                        Gespeichert: {formatUpdatedAt(data.updated_at)}
+                      </p>
+                    ) : (
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--fg-4)' }}>{sectionDef.description}</p>
+                    )}
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 pt-0">
+                <TradingPlanSectionPanel
+                  sectionDef={sectionDef}
+                  data={data}
+                  hasKbDocs={hasKbDocs}
+                  onSaved={handleSaved}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          )
+        })}
+      </Accordion>
+    </div>
+  )
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 
-type TabId = 'profil' | 'strategie' | 'konten' | 'api-key' | 'knowledge-base' | 'benachrichtigungen'
+type TabId = 'profil' | 'strategie' | 'konten' | 'api-key' | 'knowledge-base' | 'benachrichtigungen' | 'tradingplan'
 
 const TAB_LABELS: Record<TabId, string> = {
   'profil':              'Profil',
@@ -1636,6 +2071,7 @@ const TAB_LABELS: Record<TabId, string> = {
   'api-key':             'API Key',
   'knowledge-base':      'Knowledge Base',
   'benachrichtigungen':  'Benachrichtigungen',
+  'tradingplan':         'Tradingplan',
 }
 
 function EinstellungenInner() {
@@ -1657,6 +2093,7 @@ function EinstellungenInner() {
     'api-key':            <ApiKeyTab />,
     'knowledge-base':     <KnowledgeBaseTab />,
     'benachrichtigungen': <BenachrichtigungenTab />,
+    'tradingplan':        <TradingplanTab />,
   }
 
   if (solo) {
@@ -1704,6 +2141,7 @@ function EinstellungenInner() {
             <TabsTrigger value="api-key">API Key</TabsTrigger>
             <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
             <TabsTrigger value="benachrichtigungen">Benachrichtigungen</TabsTrigger>
+            <TabsTrigger value="tradingplan">Tradingplan</TabsTrigger>
           </TabsList>
         </div>
 
@@ -1713,6 +2151,7 @@ function EinstellungenInner() {
         <TabsContent value="api-key"><ApiKeyTab /></TabsContent>
         <TabsContent value="knowledge-base"><KnowledgeBaseTab /></TabsContent>
         <TabsContent value="benachrichtigungen"><BenachrichtigungenTab /></TabsContent>
+        <TabsContent value="tradingplan"><TradingplanTab /></TabsContent>
       </Tabs>
     </div>
   )

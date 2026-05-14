@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { callAI } from '@/lib/ai-client'
 import { TRADE_ANALYSIS_TOOL, buildTradePrompt } from '@/lib/ai-prompts'
 import { getKnowledgeContext } from '@/lib/knowledge-context'
+import { getTradingPlanContext } from '@/lib/trading-plan-context'
 
 const BodySchema = z.object({
   trade_id: z.string().uuid(),
@@ -64,8 +65,14 @@ async function runAnalysis(
 
     const tradingRules = (rules ?? []).map(r => r.rule_text)
 
-    // Load knowledge base context
-    const knowledgeContext = await getKnowledgeContext(userId)
+    // Load knowledge base context and trading plan in parallel
+    const [knowledgeContext, tradingPlanContext] = await Promise.all([
+      getKnowledgeContext(userId),
+      getTradingPlanContext(userId),
+    ])
+
+    const systemParts = [knowledgeContext, tradingPlanContext].filter(Boolean)
+    const systemPrompt = systemParts.join('\n\n---\n\n')
 
     // Call Claude with retry + exponential backoff
     type AnalysisResult = { score: number; errors: unknown; strengths: unknown; suggestions: unknown; summary: string }
@@ -79,7 +86,7 @@ async function runAnalysis(
       try {
         const aiResponse = await callAI({
           userId,
-          system: knowledgeContext ?? '',
+          system: systemPrompt,
           messages: [{ role: 'user', content: buildTradePrompt(trade, accountStats, tradingRules) }],
           tool: TRADE_ANALYSIS_TOOL,
           maxTokens: 1024,

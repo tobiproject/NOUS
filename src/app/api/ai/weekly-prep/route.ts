@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { callAI } from '@/lib/ai-client'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getKnowledgeContext } from '@/lib/knowledge-context'
+import { getTradingPlanContext } from '@/lib/trading-plan-context'
 
 export async function POST() {
   const supabase = await createServerSupabaseClient()
@@ -35,11 +36,17 @@ export async function POST() {
     ? `\nMeine Strategie: ${strategy.name}\n${strategy.description ?? ''}\nRegeln: ${strategy.rules?.join(', ') ?? '-'}\nTimeframes: ${strategy.preferred_timeframes?.join(', ') ?? '-'}\nInstrumente: ${strategy.instruments?.join(', ') ?? '-'}`
     : ''
 
-  const knowledgeContext = await getKnowledgeContext(user.id)
+  const [knowledgeContext, tradingPlanContext] = await Promise.all([
+    getKnowledgeContext(user.id),
+    getTradingPlanContext(user.id),
+  ])
 
-    const aiResponse = await callAI({
+  const systemParts = [knowledgeContext, tradingPlanContext].filter(Boolean)
+  const systemPrompt = systemParts.join('\n\n---\n\n')
+
+  const aiResponse = await callAI({
     userId: user.id,
-    system: knowledgeContext ?? '',
+    system: systemPrompt,
     messages: [{
       role: 'user',
       content: `Du bist ein erfahrener Trading-Coach. Erstelle eine strukturierte Wochenvorbereitung für den Trader basierend auf seinen letzten Trades und seiner Strategie.

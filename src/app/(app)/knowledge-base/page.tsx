@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
+import { extractTextFromPdf } from '@/lib/pdf-extract-browser'
 
 interface KnowledgeDoc {
   id: string
@@ -52,28 +53,37 @@ export default function KnowledgeBasePage() {
       toast.error('Nur PDF-Dateien erlaubt')
       return
     }
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error('Datei zu groß (max. 20 MB)')
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Datei zu groß (max. 50 MB)')
       return
     }
     setUploading(true)
     try {
-      const form = new FormData()
-      form.append('file', file)
-      const res = await fetch('/api/knowledge-base', { method: 'POST', body: form })
-      const data = await res.json()
-      if (!res.ok) {
-        toast.error(data.error ?? 'Upload fehlgeschlagen')
+      // Extract text in the browser — no server timeout, no native module issues
+      const text = await extractTextFromPdf(file)
+
+      if (!text.trim()) {
+        toast.error('Kein lesbarer Text gefunden. Das PDF ist vermutlich gescannt — bitte Tab "Text einfügen" nutzen.')
         return
       }
-      if (data.document?.status === 'error') {
-        toast.error(data.document.error_message ?? 'PDF konnte nicht gelesen werden — versuche "Text einfügen"')
-      } else {
-        toast.success(`"${file.name.replace(/\.pdf$/i, '')}" erfolgreich hochgeladen`)
+
+      const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
+
+      const res = await fetch('/api/knowledge-base/text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, text }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? 'Speichern fehlgeschlagen')
+        return
       }
+      toast.success(`"${name}" hochgeladen (${text.length.toLocaleString('de')} Zeichen extrahiert)`)
       load()
-    } catch {
-      toast.error('Verbindungsfehler. Bitte erneut versuchen.')
+    } catch (err) {
+      toast.error('PDF konnte nicht gelesen werden. Bitte "Text einfügen" nutzen.')
+      console.error(err)
     } finally {
       setUploading(false)
     }

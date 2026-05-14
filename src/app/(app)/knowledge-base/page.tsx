@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Upload, Trash2, FileText, Loader2, CheckCircle, AlertTriangle, Brain, Type, Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -58,8 +59,11 @@ export default function KnowledgeBasePage() {
       toast.error('Datei zu groß (max. 100 MB)')
       return
     }
-    setUploading(true)
-    setUploadStatus('1/3 · Startet…')
+    // flushSync forces React to render immediately — status is visible before any async work
+    flushSync(() => {
+      setUploading(true)
+      setUploadStatus('1/3 · Startet…')
+    })
     const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
     const fileMB = (file.size / (1024 * 1024)).toFixed(1)
     let storagePath = ''

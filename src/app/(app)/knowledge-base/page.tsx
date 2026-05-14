@@ -61,9 +61,18 @@ export default function KnowledgeBasePage() {
     setUploading(true)
     const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
     try {
-      // Step 1: Render PDF pages as images in the browser
-      setUploadStatus('Seiten werden vorbereitet…')
-      const pageImages = await renderPdfPagesToImages(file, 8)
+      // Step 1: Render PDF pages as images in the browser (with per-page progress)
+      setUploadStatus('PDF wird geöffnet…')
+      const renderPromise = renderPdfPagesToImages(
+        file,
+        5,
+        900,
+        (current, total) => setUploadStatus(`Seite ${current} von ${total} wird vorbereitet…`),
+      )
+      const renderTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('render_timeout')), 90_000)
+      )
+      const pageImages = await Promise.race([renderPromise, renderTimeout])
 
       if (pageImages.length === 0) {
         toast.error('PDF konnte nicht gerendert werden.')
@@ -71,7 +80,7 @@ export default function KnowledgeBasePage() {
       }
 
       // Step 2: Send images to Claude Vision for extraction
-      setUploadStatus(`KI analysiert ${pageImages.length} Seite${pageImages.length !== 1 ? 'n' : ''} (Text + Zeichnungen)…`)
+      setUploadStatus(`KI liest ${pageImages.length} Seite${pageImages.length !== 1 ? 'n' : ''} (Text + Zeichnungen)…`)
       const res = await fetch('/api/knowledge-base/vision-extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,7 +94,12 @@ export default function KnowledgeBasePage() {
       toast.success(`"${name}" hochgeladen — ${data.document?.pages ?? pageImages.length} Seiten mit KI analysiert`)
       load()
     } catch (err) {
-      toast.error('Fehler beim Verarbeiten der Datei.')
+      const msg = err instanceof Error ? err.message : ''
+      if (msg === 'render_timeout') {
+        toast.error('PDF zu komplex zum Verarbeiten. Bitte "Text einfügen" verwenden.')
+      } else {
+        toast.error('Fehler beim Verarbeiten der Datei.')
+      }
       console.error(err)
     } finally {
       setUploading(false)

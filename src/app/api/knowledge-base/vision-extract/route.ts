@@ -9,7 +9,7 @@ export const maxDuration = 180
 const BodySchema = z.object({
   name: z.string().min(1),
   fileSize: z.number(),
-  pageImages: z.array(z.string()).min(1).max(10),
+  pageImages: z.array(z.string()).min(1).max(5),
 })
 
 export async function POST(req: NextRequest) {

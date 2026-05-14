@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase'
 
 interface KnowledgeDoc {
   id: string
@@ -61,26 +60,43 @@ export default function KnowledgeBasePage() {
     setUploading(true)
     const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
     const fileMB = (file.size / (1024 * 1024)).toFixed(1)
+    let storagePath = ''
     let claudeTimer: ReturnType<typeof setInterval> | null = null
     try {
-      // Step 1: Upload PDF directly to Supabase Storage
-      setUploadStatus(`1/2 · Hochladen (${fileMB} MB)…`)
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { toast.error('Nicht eingeloggt'); return }
+      // Step 1: Get a signed upload URL from the server
+      setUploadStatus(`1/3 · Verbindung wird vorbereitet…`)
+      const urlRes = await fetch('/api/knowledge-base/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name }),
+      })
+      const urlData = await urlRes.json()
+      if (!urlRes.ok) { toast.error(urlData.error ?? 'Upload-URL fehlgeschlagen'); return }
+      storagePath = urlData.storagePath
 
-      const storagePath = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-      const { error: uploadError } = await supabase.storage
-        .from('knowledge-base')
-        .upload(storagePath, file, { contentType: 'application/pdf', upsert: false })
-      if (uploadError) { toast.error('Upload fehlgeschlagen: ' + uploadError.message); return }
+      // Step 2: Upload via XHR to get real % progress
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('PUT', urlData.signedUrl)
+        xhr.setRequestHeader('Content-Type', 'application/pdf')
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100)
+            setUploadStatus(`2/3 · Hochladen ${pct}% (${fileMB} MB)…`)
+          }
+        }
+        xhr.onload = () => xhr.status < 400 ? resolve() : reject(new Error(`Upload HTTP ${xhr.status}`))
+        xhr.onerror = () => reject(new Error('Netzwerkfehler beim Upload'))
+        xhr.send(file)
+      })
+      setUploadStatus('2/3 · Hochgeladen ✓')
 
-      // Step 2: Claude reads the PDF — show live elapsed seconds so user sees it's running
+      // Step 3: Claude liest das PDF — Sekundenzähler zeigt ob es läuft
       let elapsed = 0
-      setUploadStatus('2/2 · Claude liest Dokument… 0s')
+      setUploadStatus('3/3 · Claude liest Dokument… 0s')
       claudeTimer = setInterval(() => {
         elapsed++
-        setUploadStatus(`2/2 · Claude liest Dokument… ${elapsed}s`)
+        setUploadStatus(`3/3 · Claude liest Dokument… ${elapsed}s`)
       }, 1000)
 
       const res = await fetch('/api/knowledge-base/vision-extract', {
@@ -93,14 +109,14 @@ export default function KnowledgeBasePage() {
 
       const data = await res.json()
       if (!res.ok) {
-        await supabase.storage.from('knowledge-base').remove([storagePath])
         toast.error(data.error ?? 'Verarbeitung fehlgeschlagen')
         return
       }
       toast.success(`"${name}" hochgeladen und mit KI analysiert`)
       load()
     } catch (err) {
-      toast.error('Fehler beim Verarbeiten der Datei.')
+      const msg = err instanceof Error ? err.message : 'Unbekannter Fehler'
+      toast.error(`Fehler: ${msg}`)
       console.error(err)
     } finally {
       if (claudeTimer) clearInterval(claudeTimer)

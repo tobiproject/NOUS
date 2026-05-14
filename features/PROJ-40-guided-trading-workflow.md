@@ -1,6 +1,6 @@
 # PROJ-40 · Guided Trading Workflow (Roter Faden)
 
-**Status:** Planned  
+**Status:** Architected  
 **Erstellt:** 2026-05-14  
 **Typ:** Frontend + Backend + DB
 
@@ -88,3 +88,148 @@ Dashboard-Widget das den Trader Schritt für Schritt durch seine Trading-Woche f
 - Requires: PROJ-26 (Push Notifications) — für Reset-Zeitpunkt
 - Requires: PROJ-38 (Wirtschaftskalender) — für Kalender-Daten
 - Integrates: PROJ-39 (Tradingplan) — Trade-vorbereiten Schritt kann auf Tradingplan verweisen
+
+---
+
+## Tech Design (Solution Architect)
+
+**Erstellt:** 2026-05-14  
+**Status:** Architected
+
+### Überblick
+
+Das Widget lebt als neue Karte im bestehenden `DashboardContent`. Der Fortschritt wird in einer neuen Supabase-Tabelle gespeichert — damit er gerät-übergreifend synchron ist (AC-20). Die meisten Schritte werden automatisch erkannt, indem ein neuer API-Endpunkt die bereits vorhandenen Tabellen (Trades, Daily Plans, Morning Briefings, Weekly Prep) auswertet. Nur für Seitenbesuche (Kalender, Performance) und den manuellen "Trade vorbereiten"-Schritt wird ein leichtes Tracking hinzugefügt.
+
+---
+
+### Komponenten-Struktur
+
+```
+DashboardContent (bestehend)
++-- GuidedWorkflowWidget (NEU)
+    +-- WorkflowHeader
+    |   +-- Titel "Deine Trading-Woche"
+    |   +-- Fortschrittsanzeige "3 / 8 Schritte"
+    |   +-- WorkflowProgressBar
+    +-- WorkflowStepList
+    |   +-- WorkflowStep (×8, wiederholt)
+    |       +-- StepIcon  (grün-Haken / blau-Pfeil / grau-Uhr / rot-X)
+    |       +-- StepLabel + Kategorie-Badge (Wöchentlich / Täglich / Pro Trade)
+    |       +-- StepStatusBadge ("Erledigt" / "Aktiv" / "Verpasst" / "Offen")
+    |       +-- CalendarWarningInline  (nur bei Kalender-Schritt)
+    |       +-- StepActionButton  (nur beim jeweils nächsten offenen Schritt)
+    +-- ResetButton "Neue Woche starten"
+```
+
+**Mobile-Kollaps (EC-7):** Auf kleinen Bildschirmen kollabieren erledigte Schritte zu einem einzeiligen Zusammenfassungs-Chip ("5 erledigt ✓") — nur der aktive Schritt und offene Schritte bleiben voll sichtbar.
+
+---
+
+### Datenmodell
+
+**Neue Tabelle: `workflow_state`**  
+Speichert nur das, was nicht aus vorhandenen Tabellen ableitbar ist.
+
+| Feld | Typ | Bedeutung |
+|------|-----|-----------|
+| `id` | UUID | Primärschlüssel |
+| `user_id` | UUID | Besitzer (RLS) |
+| `account_id` | UUID | Aktives Konto |
+| `week_iso` | Text | ISO-Woche z.B. `"2026-W21"` |
+| `visited_kalender_at` | Timestamp | Letzter Kalender-Besuch |
+| `visited_performance_at` | Timestamp | Letzter Performance-Besuch |
+| `trade_prepared_at` | Timestamp | Manuell bestätigt "Trade vorbereitet" |
+| `reset_at` | Timestamp | Zeitpunkt des letzten Resets |
+| `updated_at` | Timestamp | Auto-Update |
+
+RLS: Jeder Nutzer liest und schreibt nur seine eigenen Zeilen.
+
+**Auto-Erkennungs-Quellen (keine neuen Tabellen nötig):**
+
+| Schritt | Woher kommt die Info |
+|---------|---------------------|
+| Wochenvorbereitung | Bestehende `weekly_plans`-Tabelle: Eintrag für aktuelle ISO-Woche vorhanden? |
+| Morning Briefing | Bestehende `morning_briefings`-Tabelle: Eintrag für heute? |
+| Tagesplan | Bestehende `daily_plans`-Tabelle: Eintrag für heute? |
+| Trade geloggt | Bestehende `trades`-Tabelle: Mindestens ein Trade mit `entry_date = heute`? |
+| Trade analysiert | Bestehende `trades`-Tabelle: Trade von heute hat `ai_analysis` gesetzt? |
+| Wirtschaftskalender | Aus `workflow_state.visited_kalender_at` (Seitenbesuch-Tracking) |
+| Wochen-Review | Aus `workflow_state.visited_performance_at` (Seitenbesuch-Tracking) |
+| Trade vorbereiten | Aus `workflow_state.trade_prepared_at` (manueller Klick) |
+
+---
+
+### API-Endpunkte
+
+**`GET /api/workflow/progress`**  
+Aggregiert den kompletten Wochen-Status in einem Aufruf. Fragt alle oben genannten Tabellen ab, kombiniert die Ergebnisse und gibt ein einheitliches Fortschritts-Objekt zurück. Beinhaltet auch die Kalender-Warnung (High-Impact Events für Watchlist-Assets heute).
+
+**`POST /api/workflow/visit`**  
+Schreibt einen Seitenbesuch in `workflow_state`. Wird von den Seiten `/kalender` und `/performance` im Hintergrund aufgerufen, sobald die Seite lädt. Payload: `{ step: "kalender" | "performance" }`.
+
+**`POST /api/workflow/manual-step`**  
+Markiert den manuellen Schritt "Trade vorbereiten" als erledigt. Payload: `{ step: "trade_prepared" }`.
+
+**`POST /api/workflow/reset`**  
+Setzt `workflow_state` für die aktuelle Woche zurück (löscht Timestamps, setzt neue `week_iso`). Wird vom Reset-Button und automatisch durch die Reset-Logik ausgelöst.
+
+---
+
+### Reset-Logik
+
+1. **Automatisch (bevorzugt):** Beim Laden des Widgets wird geprüft, ob die gespeicherte `week_iso` kleiner ist als die aktuelle ISO-Woche. Falls ja → automatischer Reset auf neue Woche.
+2. **Push-Benachrichtigung:** Der bestehende Cron-Job aus PROJ-26 (`/api/cron/weekly-reminder`) bekommt einen zusätzlichen Schritt: er ruft `/api/workflow/reset` für alle betroffenen Nutzer auf.
+3. **Manuell:** Button "Neue Woche starten" ruft `POST /api/workflow/reset` direkt auf.
+
+---
+
+### Neuer Hook
+
+**`useWorkflowProgress`**  
+Kapselt alle API-Aufrufe für das Widget. Nutzt TanStack Query für Caching (30s Stale-Time — kein Echtzeit-Update nötig).  
+Gibt zurück: Liste der Schritte mit jeweiligem Status, Gesamtfortschritt, Kalender-Warnung, Reset-Funktion.
+
+---
+
+### Seitenbesuche tracken
+
+Kleine, nicht-blockierende Ergänzung in `/kalender` und `/performance`:  
+Beim Mounten der Seite wird `POST /api/workflow/visit` im Hintergrund abgefeuert (fire-and-forget, kein Fehler beim User wenn es fehlschlägt).
+
+---
+
+### Verpasste Schritte (EC-5)
+
+Tages-Schritte (Morning Briefing, Tagesplan, Kalender) gelten als "verpasst" wenn das jeweilige `entry_date` kleiner als heute ist und kein Eintrag vorhanden ist — aber **kein blocking**, der Workflow läuft weiter. Verpasste Schritte erscheinen grau mit "Verpasst"-Badge.
+
+---
+
+### Kalender-Warnung (AC-13/14)
+
+Der `GET /api/workflow/progress`-Endpunkt prüft beim Laden: Gibt es in den heutigen Kalender-Events (`economic_events`-Tabelle) High-Impact Ereignisse für Assets, die in der Watchlist des Nutzers stehen? Das Ergebnis wird inline im Kalender-Schritt angezeigt.
+
+---
+
+### Tech-Entscheidungen
+
+| Entscheidung | Begründung |
+|---|---|
+| Eigene `workflow_state`-Tabelle | Nur für das, was nirgendwo sonst gespeichert wird (Seitenbesuche, manueller Schritt) — minimale DB-Last |
+| Aggregierender GET-Endpunkt | Ein Aufruf statt 7 parallele Queries im Frontend — einfacher, weniger Netzwerk-Overhead |
+| TanStack Query mit 30s Cache | Kein Echtzeit nötig; verhindert unnötige Re-Fetches beim Dashboard-Scroll |
+| ISO-Woche als `week_iso` | Eindeutig, unabhängig von Zeitzonen-Grenzfällen; einfach zu vergleichen |
+| Seitenbesuch fire-and-forget | Fehlschlag darf UX nicht blockieren (EC-4 analog) |
+
+---
+
+### Abhängigkeiten (keine neuen Pakete nötig)
+
+Alle benötigten Pakete (Supabase, TanStack Query, Tailwind, shadcn/ui) sind bereits installiert. Keine neuen Dependencies.
+
+---
+
+### Nicht in Scope (v1)
+
+- Streak-Tracking über mehrere Wochen
+- Push-Benachrichtigung wenn Schritt seit X Stunden nicht erledigt
+- Konfigurierbares Hinzufügen/Entfernen von Schritten

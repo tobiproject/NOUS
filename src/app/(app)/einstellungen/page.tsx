@@ -1385,8 +1385,16 @@ function KnowledgeBaseTab() {
       })
       clearInterval(claudeTimer)
       claudeTimer = null
+      if (!res.ok) {
+        if (res.status === 504) {
+          toast.error('Zeitüberschreitung — PDF zu groß. Bitte in kleinere Teile aufteilen (max. ~50 Seiten).')
+        } else {
+          const d = await res.json().catch(() => ({})) as { error?: string }
+          toast.error(d.error ?? 'Verarbeitung fehlgeschlagen')
+        }
+        return
+      }
       const data = await res.json()
-      if (!res.ok) { toast.error(data.error ?? 'Verarbeitung fehlgeschlagen'); return }
       toast.success(`"${name}" hochgeladen und mit KI analysiert`)
       loadDocs()
     } catch (err) {

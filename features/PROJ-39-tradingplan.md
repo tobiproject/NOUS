@@ -1,6 +1,6 @@
 # PROJ-39 · Tradingplan
 
-**Status:** Approved  
+**Status:** Deployed  
 **Erstellt:** 2026-05-14  
 **Zuletzt aktualisiert:** 2026-05-14  
 **Typ:** Frontend + Backend + DB

@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
-export const maxDuration = 60
+export const maxDuration = 180
 
 const BodySchema = z.object({
   name: z.string().min(1),
@@ -50,14 +50,12 @@ export async function POST(req: NextRequest) {
     }, { status: 422 })
   }
 
-  // Extract content from each page using Vision AI
-  const pageTexts: string[] = []
+  // Extract content from all pages in parallel using Vision AI
+  const PROMPT = 'Extrahiere den gesamten Text dieser Seite. Beschreibe außerdem alle Diagramme, Charts, Tabellen und wichtigen visuellen Elemente präzise auf Deutsch. Gib alles vollständig wieder.'
 
+  let rawResults: (string | null)[]
   try {
-    for (let i = 0; i < pageImages.length; i++) {
-      const b64 = pageImages[i]
-      let pageContent = ''
-
+    rawResults = await Promise.all(pageImages.map(async (b64) => {
       if (provider === 'openai') {
         const openai = new OpenAI({ apiKey })
         const res = await openai.chat.completions.create({
@@ -66,18 +64,12 @@ export async function POST(req: NextRequest) {
           messages: [{
             role: 'user',
             content: [
-              {
-                type: 'image_url',
-                image_url: { url: `data:image/jpeg;base64,${b64}`, detail: 'high' },
-              },
-              {
-                type: 'text',
-                text: 'Extrahiere den gesamten Text dieser Seite. Beschreibe außerdem alle Diagramme, Charts, Tabellen und wichtigen visuellen Elemente präzise auf Deutsch. Gib alles vollständig wieder.',
-              },
+              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${b64}`, detail: 'high' } },
+              { type: 'text', text: PROMPT },
             ],
           }],
         })
-        pageContent = res.choices[0]?.message?.content ?? ''
+        return res.choices[0]?.message?.content ?? null
       } else {
         const anthropic = new Anthropic({ apiKey })
         const res = await anthropic.messages.create({
@@ -86,24 +78,14 @@ export async function POST(req: NextRequest) {
           messages: [{
             role: 'user',
             content: [
-              {
-                type: 'image',
-                source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
-              },
-              {
-                type: 'text',
-                text: 'Extrahiere den gesamten Text dieser Seite. Beschreibe außerdem alle Diagramme, Charts, Tabellen und wichtigen visuellen Elemente präzise auf Deutsch. Gib alles vollständig wieder.',
-              },
+              { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+              { type: 'text', text: PROMPT },
             ],
           }],
         })
-        pageContent = res.content[0]?.type === 'text' ? res.content[0].text : ''
+        return res.content[0]?.type === 'text' ? res.content[0].text : null
       }
-
-      if (pageContent.trim()) {
-        pageTexts.push(`--- Seite ${i + 1} ---\n${pageContent.trim()}`)
-      }
-    }
+    }))
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json({
@@ -112,6 +94,10 @@ export async function POST(req: NextRequest) {
         : `KI-Fehler: ${msg.slice(0, 200)}`,
     }, { status: 500 })
   }
+
+  const pageTexts = rawResults
+    .map((content, i) => content?.trim() ? `--- Seite ${i + 1} ---\n${content.trim()}` : null)
+    .filter((t): t is string => t !== null)
 
   if (pageTexts.length === 0) {
     return NextResponse.json({ error: 'KI konnte keinen Inhalt extrahieren.' }, { status: 422 })

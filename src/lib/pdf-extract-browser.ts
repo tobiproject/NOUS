@@ -3,7 +3,7 @@
 export async function renderPdfPagesToImages(
   file: File,
   maxPages = 8,
-  widthPx = 1200,
+  widthPx = 900,
 ): Promise<string[]> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -30,7 +30,7 @@ export async function renderPdfPagesToImages(
     await page.render({ canvasContext: ctx, viewport: scaled, canvas }).promise
 
     // JPEG at 0.75 quality — readable for OCR, small enough for API
-    images.push(canvas.toDataURL('image/jpeg', 0.75).split(',')[1])
+    images.push(canvas.toDataURL('image/jpeg', 0.65).split(',')[1])
   }
 
   return images

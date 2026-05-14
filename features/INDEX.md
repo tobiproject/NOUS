@@ -49,10 +49,10 @@
 | PROJ-33 | Watchlist per Konto | Deployed | [PROJ-33-watchlist-per-account.md](PROJ-33-watchlist-per-account.md) | 2026-05-04 |
 | PROJ-34 | Dashboard Loading State (kein Flash) | Deployed | [PROJ-34-dashboard-loading-state.md](PROJ-34-dashboard-loading-state.md) | 2026-05-04 |
 | PROJ-35 | Mobile Header Logo mit Slogan | Deployed | [PROJ-35-mobile-logo-slogan.md](PROJ-35-mobile-logo-slogan.md) | 2026-05-04 |
-| PROJ-36 | Onboarding Checklist (Dashboard) | Planned | [PROJ-36-onboarding-checklist.md](PROJ-36-onboarding-checklist.md) | 2026-05-09 |
+| PROJ-36 | Onboarding Checklist (Dashboard) | Architected | [PROJ-36-onboarding-checklist.md](PROJ-36-onboarding-checklist.md) | 2026-05-09 |
 | PROJ-37 | Anleitung (Permanente App-Erklärungsseite) | Deployed | [PROJ-37-anleitung-page.md](PROJ-37-anleitung-page.md) | 2026-05-09 |
 | PROJ-38 | Wirtschaftskalender (Custom Design, kein Widget) | Deployed | [PROJ-38-wirtschaftskalender.md](PROJ-38-wirtschaftskalender.md) | 2026-05-10 |
-| PROJ-39 | Tradingplan (Persönlicher Plan + KB-Integration) | Planned | [PROJ-39-tradingplan.md](PROJ-39-tradingplan.md) | 2026-05-14 |
+| PROJ-39 | Tradingplan (Persönlicher Plan + KB-Integration) | In Review | [PROJ-39-tradingplan.md](PROJ-39-tradingplan.md) | 2026-05-14 |
 
 <!-- Add features above this line -->
 

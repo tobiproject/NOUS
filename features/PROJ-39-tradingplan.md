@@ -1,7 +1,8 @@
 # PROJ-39 · Tradingplan
 
-**Status:** Planned  
+**Status:** In Review  
 **Erstellt:** 2026-05-14  
+**Zuletzt aktualisiert:** 2026-05-14  
 **Typ:** Frontend + Backend + DB
 
 ## Beschreibung
@@ -82,3 +83,205 @@ Persönlicher Tradingplan als eigener Tab in den Einstellungen (`/einstellungen?
 - Requires: PROJ-11 (Knowledge Base) — KB-Dokumente als Quelle für KI-Vorschläge
 - Requires: PROJ-30 (Multi-AI Provider) — User API-Key für KI-Generierung
 - Related: PROJ-16 (Strategie-Profil) — bleibt als Kurzprofil erhalten, kein Ersatz
+
+---
+
+## Tech Design (Solution Architect)
+
+**Status:** Architected — 2026-05-14
+
+### Komponentenstruktur
+
+```
+/einstellungen?tab=tradingplan
++-- TradingplanTab (neuer Tab-Inhalt, inline in einstellungen/page.tsx)
+    +-- [8x] TradingplanSection (Accordion-Item — eine pro Sektion)
+        +-- Accordion Header
+        |   +-- Sektions-Titel
+        |   +-- "Zuletzt gespeichert: DD.MM.YYYY HH:MM" (wenn Inhalt vorhanden)
+        +-- Accordion Body
+            +-- RuleList
+            |   +-- RuleItem (Klick → inline editierbar, X-Button zum Löschen)
+            |   +-- AddRuleInput (Eingabefeld + Enter fügt Regel hinzu)
+            +-- SectionTextarea (Freitext-Notizen, max. 5000 Zeichen)
+            +-- SectionFooter
+                +-- "KI-Vorschlag"-Button (deaktiviert wenn keine KB-Docs)
+                +-- "Speichern"-Button (nur für diese Sektion)
+    +-- KI-Preview Panel (erscheint unterhalb der Sektion bei aktiver KI-Anfrage)
+        +-- EditablePreviewArea (Vorschlag vollständig bearbeitbar)
+        +-- Quellenangabe ("Quelle: [Dokumentname], ca. [Abschnitt]")
+        +-- "Übernehmen"-Button (hängt Inhalt an bestehende Daten an)
+        +-- "Verwerfen"-Button (schließt Preview ohne Änderung)
+```
+
+### Datenmodell
+
+Neue Supabase-Tabelle: **`trading_plan_sections`**
+
+Jede Zeile repräsentiert eine Sektion des Tradingplans eines Users:
+
+| Feld | Typ | Beschreibung |
+|------|-----|-------------|
+| id | UUID | Primärschlüssel |
+| user_id | UUID | Verknüpfung mit Auth-User (RLS-Basis) |
+| section_key | Text | Feste ID der Sektion (z.B. `strategie_uebersicht`) |
+| rules | Text[] | Geordnete Liste von Regeln |
+| notes | Text | Freitext, max. 5000 Zeichen |
+| updated_at | Timestamp | Wann zuletzt gespeichert |
+
+- UNIQUE auf `(user_id, section_key)` — ein Eintrag pro User pro Sektion (AC-13)
+- RLS: User sieht und schreibt nur eigene Zeilen — keine Ausnahme
+
+Die 8 festen `section_key`-Werte:
+`strategie_uebersicht`, `setup_kriterien`, `entry_exit_regeln`, `risiko_regeln`, `psychologie_mindset`, `verbotene_verhaltensweisen`, `review_prozess`, `prop_firm_regeln`
+
+### Backend-Entscheidungen
+
+**Datenbank statt localStorage** — Tradingplan-Inhalte müssen geräteübergreifend verfügbar sein und als KI-Kontext in Analysen und Weekly Prep einfließen (AC-23). localStorage würde das verhindern.
+
+Zwei neue API-Routen:
+
+**`/api/trading-plan/`**
+- GET: Alle Sektionen des eingeloggten Users laden (gibt Array mit bis zu 8 Einträgen zurück)
+- POST: Eine Sektion speichern (section_key + rules + notes)
+
+**`/api/ai/trading-plan-suggestion/`**
+- POST: Nimmt `section_key` entgegen
+- Lädt alle KB-Dokumente des Users (bereits existierende `/api/knowledge-base`-Logik wiederverwenden)
+- Generiert KI-Vorschlag für die Sektion — mit Pflicht-Quellenangabe
+- Wenn keine relevanten KB-Inhalte: feste Fehlermeldung statt leerem Vorschlag
+
+### Tech-Entscheidungen (für PM)
+
+| Entscheidung | Warum |
+|---|---|
+| Tab inline in bestehender Einstellungsseite | Gleiche Tab-Infrastruktur wie Profil, Strategie, KB — kein neuer Route, kein neues Layout nötig |
+| Accordion (shadcn — bereits installiert) | 8 Sektionen würden als gestapelte Cards sehr lang — Accordion erlaubt fokussiertes Arbeiten an einer Sektion ohne Scrollen |
+| KI-Preview als Inline-Panel (kein Modal) | User soll Vorschlag direkt neben dem Kontext der Sektion editieren können — Modal würde die Regelliste verdecken |
+| Speichern pro Sektion, nicht global | Volle Kontrolle: User entscheidet wann welche Sektion gespeichert wird — kein unbeabsichtigtes Überschreiben anderer Sektionen |
+| Quellenangabe als KI-Pflicht-Feld | Transparenz über Halluzinationen — User soll selbst prüfen können, ob die Quelle das wirklich hergibt |
+| Vorschlag wird angehängt, nicht ersetzt | Bestehende Arbeit des Users bleibt erhalten — KI ergänzt, löscht nicht |
+
+### KI-Kontext-Integration (AC-23)
+
+Die bestehenden Routen `/api/ai/analysis/`, `/api/ai/weekly-prep/` und `/api/ai/analyze-period/` erhalten einen zusätzlichen Kontext-Block: den Inhalt des Tradingplans des Users (alle Sektionen zusammengefasst). Dieser wird als dritter Kontext-Baustein neben Strategie-Profil und Knowledge Base injiziert.
+
+## Implementation Notes (Frontend Developer)
+
+**Implementiert: 2026-05-14**
+
+### Was gebaut wurde
+
+- **DB-Migration:** `trading_plan_sections` Tabelle mit RLS (SELECT/INSERT/UPDATE/DELETE policies), UNIQUE auf `(user_id, section_key)`, Index auf `user_id`
+- **API GET/POST `/api/trading-plan/route.ts`:** Liest alle Sektionen des Users, speichert einzelne Sektion via Upsert. Input-Validierung mit Zod (section_key enum, rules max 100×1000 Zeichen, notes max 5000 Zeichen)
+- **API POST `/api/ai/trading-plan-suggestion/route.ts`:** Prüft KB-Dokumente, generiert KI-Vorschlag mit Pflicht-Quellenangabe im strukturierten Format (REGELN/NOTIZEN/QUELLE), parst die Antwort und gibt `{ rules, notes, source }` zurück. Bei leerer KB oder fehlenden relevanten Inhalten: 422 mit klarer Meldung
+- **`TradingplanTab`** in `src/app/(app)/einstellungen/page.tsx`: Neuer Tab "Tradingplan" neben den bestehenden Tabs. Accordion mit 8 Sektionen, pro Sektion: Regelliste (Add/Inline-Edit/Delete), Textarea (max 5000 Zeichen), KI-Vorschlag-Panel (editierbarer Preview, Quellenangabe, Übernehmen/Verwerfen), Per-Sektion-Speichern mit "Zuletzt gespeichert"-Timestamp im Accordion-Header
+
+### Abweichungen vom Architektur-Design
+
+- KI-Preview Panel erscheint inline in der Sektion (nicht unterhalb) — bessere UX weil kein Scrollen nötig
+- Accordion-Header zeigt grünen Dot wenn Sektion Inhalte hat (visuelles Feedback ohne zu öffnen)
+
+### AC-23: KI-Kontext-Integration
+
+Implementiert via `src/lib/trading-plan-context.ts`:
+- `getTradingPlanContext(userId)` liest alle Sektionen, formatiert sie als System-Prompt-Block
+- Eingebunden in `analyze-trade`, `analyze-period` und `weekly-prep` — parallel zu `getKnowledgeContext`, beide Kontexte werden zusammengeführt
+
+---
+
+### Keine neuen Pakete
+
+Alle benötigten Abhängigkeiten sind bereits installiert:
+- shadcn `Accordion` — bereits in `src/components/ui/accordion.tsx`
+- shadcn `Button`, `Input`, `Textarea` — vorhanden
+- Supabase Client — vorhanden
+- AI-Client (Multi-Provider) — via PROJ-30 vorhanden
+
+---
+
+## QA Test Results
+
+**QA Datum:** 2026-05-14  
+**Tester:** QA Engineer (PROJ-39)  
+**Status:** In Review — 1 Medium, 1 Low Bug
+
+### Acceptance Criteria
+
+| AC | Beschreibung | Ergebnis |
+|----|---|---|
+| AC-1 | Tab "Tradingplan" in /einstellungen | ✅ PASS |
+| AC-2 | Bestehender "Strategie"-Tab unverändert | ✅ PASS |
+| AC-3 | Alle 8 Sektionen als Accordion | ✅ PASS |
+| AC-4 | "Gespeichert: DD.MM.YYYY HH:MM" im Header | ✅ PASS |
+| AC-5 | Regel per Enter hinzufügen | ✅ PASS |
+| AC-6 | Inline-Edit per Klick | ✅ PASS |
+| AC-7 | X-Button löscht Regel | ✅ PASS |
+| AC-8 | Drag & Drop (optional nice-to-have) | ⚠️ SKIP (optional, GripVertical-Icon vorhanden) |
+| AC-9 | Freitextfeld pro Sektion | ✅ PASS |
+| AC-10 | Kein Zeichenlimit unter 5000 | ✅ PASS (maxLength=5000 + Zähler) |
+| AC-11 | "Speichern"-Button pro Sektion | ✅ PASS |
+| AC-12 | Lade-State + Erfolgs-Feedback | ✅ PASS (Spinner + Toast) |
+| AC-13 | UNIQUE auf (user_id, section_key) | ✅ PASS (DB-Constraint + Upsert) |
+| AC-14 | KI-Vorschlag-Button pro Sektion | ✅ PASS |
+| AC-15 | Button deaktiviert wenn keine KB-Docs | ✅ PASS |
+| AC-16 | KI generiert nur für eine Sektion | ✅ PASS |
+| AC-17 | Vorschlag in editierbarem Preview | ✅ PASS |
+| AC-18 | Quellenangabe zwingend | ✅ PASS |
+| AC-19 | Klare Meldung wenn kein KB-Inhalt | ✅ PASS (422 + Fehlermeldung) |
+| AC-20 | Vorschlag vollständig bearbeitbar | ✅ PASS |
+| AC-21 | "Übernehmen" hängt Inhalt an | ✅ PASS |
+| AC-22 | "Verwerfen" schließt Preview | ✅ PASS |
+| AC-23 | Tradingplan-Kontext in KI-Analysen | ✅ PASS (analyze-trade, weekly-prep) / ⚠️ teilweise (analyze-period fehlt KB-Kontext — Bug B-1) |
+
+### Edge Cases
+
+| EC | Beschreibung | Ergebnis |
+|----|---|---|
+| EC-1 | Keine KB-Docs → Button deaktiviert | ✅ PASS (UI disabled + "KB leer" Text) |
+| EC-2 | KB-Docs vorhanden, aber keine relevanten Inhalte | ✅ PASS (422 + klare Meldung) |
+| EC-3 | Weg navigieren ohne zu speichern | ✅ PASS (kein Auto-Save, keine Warnung — bewusst) |
+| EC-4 | Kein API-Key hinterlegt | ✅ PASS (KI-Route gibt Fehler zurück, UI zeigt aiError) |
+| EC-5 | KI-Request dauert lang | ✅ PASS (Spinner im Panel) |
+| EC-6 | Leere Sektion → kein "Zuletzt gespeichert" | ✅ PASS |
+| EC-7 | Langer KI-Vorschlag | ✅ PASS (scrollbarer Textarea-Preview) |
+
+### Sicherheits-Audit
+
+| Check | Ergebnis |
+|-------|---|
+| Auth-Prüfung auf beiden neuen API-Routen | ✅ PASS |
+| RLS aktiviert auf `trading_plan_sections` | ✅ PASS |
+| RLS-Policies: SELECT, INSERT, UPDATE, DELETE | ✅ PASS (alle 4 vorhanden, `auth.uid() = user_id`) |
+| UNIQUE-Constraint auf (user_id, section_key) | ✅ PASS |
+| Zod-Validierung: section_key enum, rules max 100×1000 Zeichen, notes max 5000 | ✅ PASS |
+| Zod-Validierung auf KI-Suggestion-Route | ✅ PASS |
+| Keine hardcodierten Secrets | ✅ PASS |
+| Cross-User-Datenzugriff unmöglich | ✅ PASS (RLS erzwingt user_id-Filterung auf DB-Ebene) |
+
+### Bugs
+
+#### B-1 · Medium: `analyze-period` fehlt Knowledge Base Kontext nach PROJ-39
+
+**Datei:** `src/app/api/ai/analyze-period/route.ts:87`  
+**Beschreibung:** Die Route setzt `system: tradingPlanContext ?? ''`. Damit fehlt der Knowledge-Base-Kontext in der Perioden-Analyse — dieser wird in `analyze-trade` und `weekly-prep` korrekt via `[knowledgeContext, tradingPlanContext].filter(Boolean)` zusammengeführt.  
+**Hinweis:** KB-Kontext war vor PROJ-39 in dieser Route nie enthalten (`system: ''`), daher ist es keine Regression. Die Implementation Notes behaupten aber "parallel zu getKnowledgeContext, beide Kontexte werden zusammengeführt" — das stimmt für analyze-period nicht.  
+**Reproduktion:** Wochen-/Monatsanalyse ausführen — KB-Dokumente werden nicht als KI-Kontext berücksichtigt.  
+**Fix:** KB-Kontext parallel laden und zusammenführen wie in `analyze-trade`.
+
+#### B-2 · Low: EC-1 API-Fehlermeldung bei leerer KB irreführend
+
+**Datei:** `src/app/api/ai/trading-plan-suggestion/route.ts:48`  
+**Beschreibung:** Wenn gar keine KB-Dokumente existieren, gibt die Route zurück: "Keine passenden Inhalte in deiner Knowledge Base gefunden". Diese Nachricht impliziert, Dokumente seien vorhanden aber ohne relevante Inhalte — korrekt wäre ein Hinweis, dass zuerst Dokumente hochgeladen werden sollen.  
+**Einschränkung:** In der Praxis erreicht kein User diesen Pfad, weil der KI-Button bereits im Frontend deaktiviert ist (hasKbDocs-Check). Nur direkte API-Aufrufe treffen diesen Pfad.  
+**Fix:** Für leere KB andere Message verwenden, z.B. "Bitte zuerst Dokumente in der Knowledge Base hochladen".
+
+### Tests
+
+- **Unit Tests:** 21 Tests in `route.test.ts` für beide neuen API-Routen — alle bestanden
+- **E2E Tests:** `tests/PROJ-39-tradingplan.spec.ts` mit 14 Tests (AC-1–AC-15, EC-6, Regressionen) — alle Tests skippen korrekt ohne Authentifizierung
+
+### Produktionsreife
+
+**NICHT BEREIT** für Deploy — Bug B-1 (Medium) sollte vor Deployment behoben werden.  
+B-2 ist Low-Priorität und kann nach Deploy gefixt werden.

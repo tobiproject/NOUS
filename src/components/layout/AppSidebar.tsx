@@ -3,203 +3,138 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, BookOpen, TrendingUp, Brain, ShieldCheck,
   CalendarDays, ClipboardList, GraduationCap,
-  Plus, GripVertical, Star, Map as MapIcon, Telescope,
+  ListChecks, Star, Map as MapIcon, Telescope, Settings, RefreshCw, Sparkles, Workflow,
+  PanelLeftClose, PanelLeftOpen, BookMarked,
 } from 'lucide-react'
-import {
-  DndContext,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
-import { ProfileSidebar } from './ProfileSidebar'
+import { useWorkflowProgress } from '@/hooks/useWorkflowProgress'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
 import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY, fetchProgressFromServer, setProgressFromServer } from '@/lib/anleitung-progress'
 import { getCurrentChangelog } from '@/lib/changelog'
+import { cn } from '@/lib/utils'
 
 const CURRENT = getCurrentChangelog()
 const RELEASE_VERSION = process.env.NEXT_PUBLIC_RELEASE_VERSION ?? CURRENT.version
-import { RefreshCw, Sparkles, X } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
+type NavItemDef = {
+  id: string
+  href: string
+  label: string
+  icon: React.ElementType
+  tooltip: string
+}
 
-type NavItem =
-  | { id: string; href: string; label: string; icon: React.ElementType; kbd: string | null; tooltip: string; isDivider?: false }
-  | { id: string; isDivider: true; href?: never; label?: never; icon?: never; kbd?: never; tooltip?: never }
+const NAV_ITEMS: Record<string, NavItemDef> = {
+  dashboard:          { id: 'dashboard',          href: '/dashboard',          label: 'Dashboard',          icon: LayoutDashboard, tooltip: 'Deine wichtigsten KPIs, offene Trades und tägliche Zusammenfassung' },
+  workflow:           { id: 'workflow',           href: '/workflow',           label: 'Tages-Workflow',     icon: Workflow,        tooltip: 'Dein täglicher Roter Faden — Schritt für Schritt durch die Trading-Woche' },
+  journal:            { id: 'journal',            href: '/journal',            label: 'Journal',            icon: BookOpen,        tooltip: 'Trades erfassen, bearbeiten und mit KI analysieren lassen' },
+  tagesplan:          { id: 'tagesplan',          href: '/tagesplan',          label: 'Tagesplan',          icon: ClipboardList,   tooltip: 'Tägliche Routine: Pre-Market Checklist, Fokus-Assets und Tagesnotizen' },
+  performance:        { id: 'performance',        href: '/performance',        label: 'Performance',        icon: TrendingUp,      tooltip: 'Statistiken, Equity-Kurve, Win-Rate und Setup-Auswertung' },
+  analysen:           { id: 'analysen',           href: '/analysen',           label: 'Analysen',           icon: Brain,           tooltip: 'KI-generierte Muster und Verhaltensanalysen aus deinem Journal' },
+  risk:               { id: 'risk',               href: '/risk',               label: 'Risk',               icon: ShieldCheck,     tooltip: 'Risiko-Regeln, Max-Drawdown, Tageslimit und Prop-Firm-Grenzen' },
+  wochenvorbereitung: { id: 'wochenvorbereitung', href: '/wochenvorbereitung', label: 'Wochenvorbereitung', icon: Telescope,       tooltip: 'Ziele für die Woche setzen, Fokus-Assets wählen und Events tracken' },
+  kalender:           { id: 'kalender',           href: '/kalender',           label: 'Kalender',           icon: CalendarDays,    tooltip: 'Wirtschaftskalender und High-Impact-Events in deiner Zeitzone' },
+  lernmodus:          { id: 'lernmodus',          href: '/lernmodus',          label: 'Lernen',             icon: GraduationCap,   tooltip: 'Quiz, Chart-Replay und KI-Coach zum Verbessern deiner Entscheidungen' },
+  watchlist:          { id: 'watchlist',          href: '/watchlist',          label: 'Watchlist',          icon: Star,            tooltip: 'Deine gehandelten Assets mit Kontraktwerten für die Risikoberechnung' },
+  roadmap:            { id: 'roadmap',            href: '/roadmap',            label: 'Roadmap',            icon: MapIcon,         tooltip: 'Deine Trader-Journey: Level, Stärken/Schwächen und nächste Schritte' },
+  anleitung:          { id: 'anleitung',          href: '/anleitung',          label: 'Anleitung',          icon: BookMarked,      tooltip: 'Schritt-für-Schritt Erklärung aller Nous-Features' },
+}
 
-const DEFAULT_NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard',          href: '/dashboard',          label: 'Dashboard',          icon: LayoutDashboard, kbd: 'G D', tooltip: 'Deine wichtigsten KPIs, offene Trades und tägliche Zusammenfassung' },
-  { id: 'journal',            href: '/journal',            label: 'Journal',            icon: BookOpen,        kbd: 'G J', tooltip: 'Trades erfassen, bearbeiten und mit KI analysieren lassen' },
-  { id: 'performance',        href: '/performance',        label: 'Performance',        icon: TrendingUp,      kbd: 'G P', tooltip: 'Statistiken, Equity-Kurve, Win-Rate und Setup-Auswertung' },
-  { id: 'divider-1',          isDivider: true },
-  { id: 'analysen',           href: '/analysen',           label: 'Analysen',           icon: Brain,           kbd: 'G A', tooltip: 'KI-generierte Muster und Verhaltensanalysen aus deinem Journal' },
-  { id: 'risk',               href: '/risk',               label: 'Risk',               icon: ShieldCheck,     kbd: 'G R', tooltip: 'Risiko-Regeln, Max-Drawdown, Tageslimit und Prop-Firm-Grenzen' },
-  { id: 'divider-2',          isDivider: true },
-  { id: 'wochenvorbereitung', href: '/wochenvorbereitung', label: 'Wochenvorbereitung', icon: Telescope,       kbd: null,  tooltip: 'Ziele für die Woche setzen, Fokus-Assets wählen und Events tracken' },
-  { id: 'kalender',           href: '/kalender',           label: 'Kalender',           icon: CalendarDays,    kbd: null,  tooltip: 'Wirtschaftskalender und High-Impact-Events in deiner Zeitzone' },
-  { id: 'tagesplan',          href: '/tagesplan',          label: 'Tagesplan',          icon: ClipboardList,   kbd: null,  tooltip: 'Tägliche Routine: Pre-Market Checklist, Fokus-Assets und Tagesnotizen' },
-  { id: 'divider-3',          isDivider: true },
-  { id: 'lernmodus',          href: '/lernmodus',          label: 'Lernen',             icon: GraduationCap,   kbd: null,  tooltip: 'Quiz, Chart-Replay und KI-Coach zum Verbessern deiner Entscheidungen' },
-  { id: 'watchlist',          href: '/watchlist',          label: 'Watchlist',          icon: Star,            kbd: null,  tooltip: 'Deine gehandelten Assets mit Kontraktwerten für die Risikoberechnung' },
-  { id: 'roadmap',            href: '/roadmap',            label: 'Roadmap',            icon: MapIcon,         kbd: null,  tooltip: 'Deine Trader-Journey: Level, Stärken/Schwächen und nächste Schritte' },
+const NAV_GROUPS: { label: string; color: string; ids: string[] }[] = [
+  { label: 'HEUTE',        color: '#ff8210', ids: ['journal', 'tagesplan'] },
+  { label: 'ANALYSE',      color: '#3b82f6', ids: ['performance', 'analysen', 'risk'] },
+  { label: 'VORBEREITUNG', color: '#22c55e', ids: ['wochenvorbereitung', 'kalender'] },
+  { label: 'MEHR',         color: '#8E8E93', ids: ['lernmodus', 'watchlist', 'roadmap', 'anleitung'] },
 ]
 
-const STORAGE_KEY = 'nous-sidebar-order'
-
-function loadOrder(): string[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
+function lerpColor(a: [number,number,number], b: [number,number,number], t: number): string {
+  const r = Math.round(a[0] + (b[0] - a[0]) * t)
+  const g = Math.round(a[1] + (b[1] - a[1]) * t)
+  const bl = Math.round(a[2] + (b[2] - a[2]) * t)
+  return `rgb(${r},${g},${bl})`
 }
 
-function saveOrder(ids: string[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids))
-  } catch {}
+function ringColor(pct: number): string {
+  // 0% = red, 50% = orange, 100% = green
+  const red:    [number,number,number] = [242, 54,  69]
+  const orange: [number,number,number] = [255, 130, 16]
+  const green:  [number,number,number] = [74,  222, 128]
+  if (pct <= 0.5) return lerpColor(red, orange, pct * 2)
+  return lerpColor(orange, green, (pct - 0.5) * 2)
 }
 
-function applyOrder(items: NavItem[], order: string[]) {
-  if (!order.length) return items
-  const map = new Map(items.map(i => [i.id, i]))
-  const ordered = order.flatMap(id => {
-    const item = map.get(id)
-    return item ? [item] : []
-  })
-  const known = new Set(order)
-  items.forEach(i => { if (!known.has(i.id)) ordered.push(i) })
-  return ordered
-}
+function WorkflowRing({ done, total }: { done: number; total: number }) {
+  const r = 8
+  const circ = 2 * Math.PI * r
+  const pct = total > 0 ? done / total : 0
+  const offset = circ * (1 - pct)
+  const complete = done === total && total > 0
+  const color = pct === 0 ? 'rgba(255,255,255,0.15)' : ringColor(pct)
+  const glowColor = pct === 0 ? 'none' : ringColor(pct)
 
-function SortableDivider({ id }: { id: string }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className="group flex items-center gap-1 px-2 py-0.5 cursor-grab active:cursor-grabbing"
-      suppressHydrationWarning
-      {...attributes}
-      {...listeners}
+    <svg
+      width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden
+      style={complete ? { filter: `drop-shadow(0 0 4px ${color})`, animation: 'ring-celebrate 0.5s ease' } : { filter: pct > 0 ? `drop-shadow(0 0 3px ${glowColor}80)` : 'none' }}
     >
-      <div className="flex-1 h-px" style={{ background: 'var(--border-raw)' }} />
-      <GripVertical className="h-2.5 w-2.5 opacity-0 group-hover:opacity-40 transition-opacity shrink-0" style={{ color: 'var(--fg-4)' }} />
-    </div>
+      <circle cx="10" cy="10" r={r} stroke="rgba(255,255,255,0.08)" strokeWidth="2.5" />
+      <circle
+        cx="10" cy="10" r={r}
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeDasharray={circ}
+        strokeDashoffset={offset}
+        transform="rotate(-90 10 10)"
+        style={{ transition: 'stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1), stroke 0.5s ease' }}
+      />
+    </svg>
   )
 }
 
 interface NavItemProps {
-  item: Extract<NavItem, { isDivider?: false }>
+  item: NavItemDef
   isActive: boolean
-  hasTodayPlan?: boolean
-  hasWatchlistItems?: boolean
-  hasWeeklyPrepReminder?: boolean
-  showTooltips?: boolean
+  dot?: { color: string; pulse?: boolean; glow?: string }
+  fillIcon?: boolean
 }
 
-function SortableNavItem({ item, isActive, hasTodayPlan, hasWatchlistItems, hasWeeklyPrepReminder, showTooltips }: NavItemProps) {
+function NavItemRow({ item, isActive, dot, fillIcon }: NavItemProps) {
   const [hovered, setHovered] = useState(false)
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  }
-
-  const showTagesplanDot = item.id === 'tagesplan' && hasTodayPlan
-  const showWeeklyPrepDot = item.id === 'wochenvorbereitung' && hasWeeklyPrepReminder
-  const watchlistActive = item.id === 'watchlist' && hasWatchlistItems
-
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center group"
+    <Link
+      href={item.href}
+      className={cn(
+        'flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13px] transition-colors duration-100',
+        isActive ? 'font-semibold' : 'font-medium'
+      )}
+      style={{
+        background: isActive ? 'rgba(255,130,16,0.1)' : hovered ? 'var(--bg-3)' : 'transparent',
+        color: isActive ? '#ff8210' : hovered ? 'var(--fg-1)' : 'var(--fg-2)',
+        borderLeft: isActive ? '2px solid #ff8210' : '2px solid transparent',
+        paddingLeft: isActive ? '10px' : '12px',
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Drag handle — only visible on hover */}
-      <button
-        {...attributes}
-        {...listeners}
-        suppressHydrationWarning
-        tabIndex={-1}
-        className="flex items-center justify-center w-4 h-6 shrink-0 cursor-grab active:cursor-grabbing ml-1"
-        style={{
-          color: 'var(--fg-4)',
-          opacity: hovered ? 1 : 0,
-          transition: 'opacity 100ms',
-        }}
-      >
-        <GripVertical className="h-3 w-3" />
-      </button>
-
-      <Tooltip delayDuration={600}>
-        <TooltipTrigger asChild>
-          <Link
-            href={item.href}
-            className={cn(
-              'flex flex-1 items-center gap-2.5 px-2 py-1.5 rounded text-[13px] transition-colors duration-100',
-              isActive ? 'font-semibold' : 'font-medium'
-            )}
-            style={{
-              background: isActive ? 'var(--bg-3)' : hovered ? 'var(--bg-3)' : 'transparent',
-              color: isActive ? 'var(--fg-1)' : 'var(--fg-2)',
-            }}
-          >
-            <item.icon
-              className="h-4 w-4 shrink-0"
-              style={watchlistActive ? { color: '#F59E0B', fill: '#F59E0B' } : undefined}
-            />
-            <span className="flex-1">{item.label}</span>
-
-            {showTagesplanDot && (
-              <span
-                className="w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ background: 'var(--long)' }}
-              />
-            )}
-            {showWeeklyPrepDot && (
-              <span
-                className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0"
-                style={{ background: 'var(--warn)', boxShadow: '0 0 4px var(--warn)' }}
-              />
-            )}
-          </Link>
-        </TooltipTrigger>
-        {showTooltips && item.tooltip && (
-          <TooltipContent side="right" className="max-w-[220px] text-xs">
-            {item.tooltip}
-          </TooltipContent>
-        )}
-      </Tooltip>
-    </div>
+      <item.icon
+        className="h-[15px] w-[15px] shrink-0"
+        style={fillIcon ? { color: '#F59E0B', fill: '#F59E0B' } : undefined}
+      />
+      <span className="flex-1">{item.label}</span>
+      {dot && (
+        <span
+          className={cn('w-1.5 h-1.5 rounded-full shrink-0', dot.pulse && 'animate-pulse')}
+          style={{ background: dot.color, boxShadow: dot.glow ? `0 0 4px ${dot.glow}` : undefined }}
+        />
+      )}
+    </Link>
   )
 }
 
@@ -207,18 +142,16 @@ export function AppSidebar() {
   const pathname = usePathname()
   const { user } = useAuth()
   const { activeAccount } = useAccountContext()
-  const [navItems, setNavItems] = useState(DEFAULT_NAV_ITEMS)
   const [hasTodayPlan, setHasTodayPlan] = useState(false)
   const [hasWeeklyPrepReminder, setHasWeeklyPrepReminder] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [changelogOpen, setChangelogOpen] = useState(false)
   const [anleitungPercent, setAnleitungPercent] = useState(0)
+  const [strategyName, setStrategyName] = useState<string | null>(null)
   const update = useVersionCheck()
+  const { data: workflowData } = useWorkflowProgress(activeAccount?.id)
 
-  // Track anleitung progress — sync from server on mount so desktop sees mobile progress
   useEffect(() => {
     const refresh = () => setAnleitungPercent(getAnleitungProgress().percent)
     refresh()
@@ -233,7 +166,6 @@ export function AppSidebar() {
     return () => window.removeEventListener('anleitung-progress-changed', refresh)
   }, [])
 
-  // Sync watchlist indicator via localStorage + cross-component events (no extra API call)
   useEffect(() => {
     setHasWatchlistItems(localStorage.getItem('nous-watchlist-has-items') === '1')
     const handle = (e: Event) => {
@@ -253,11 +185,13 @@ export function AppSidebar() {
       .catch(() => {})
   }, [])
 
-  // Restore saved order from localStorage (client-side only)
   useEffect(() => {
-    const order = loadOrder()
-    if (order.length) setNavItems(applyOrder(DEFAULT_NAV_ITEMS, order))
-  }, [])
+    if (!activeAccount?.id) return
+    fetch(`/api/strategy?account_id=${activeAccount.id}`)
+      .then(r => r.json())
+      .then(d => setStrategyName(d.strategy?.name ?? null))
+      .catch(() => {})
+  }, [activeAccount?.id])
 
   useEffect(() => {
     function check() {
@@ -274,9 +208,8 @@ export function AppSidebar() {
     return () => window.removeEventListener('weekly-prep-changed', check)
   }, [])
 
-  // Green dot on Tagesplan = morning briefing fully completed today
   useEffect(() => {
-    const check = () => {
+    function check() {
       const today = new Date().toISOString().split('T')[0]
       setHasTodayPlan(!!localStorage.getItem(`nous-morning-${today}`))
     }
@@ -285,209 +218,292 @@ export function AppSidebar() {
     return () => clearInterval(interval)
   }, [])
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  )
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('nous-sidebar-collapsed') === '1'
+  })
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    setNavItems(prev => {
-      const oldIdx = prev.findIndex(i => i.id === active.id)
-      const newIdx = prev.findIndex(i => i.id === over.id)
-      const next = arrayMove(prev, oldIdx, newIdx)
-      saveOrder(next.map(i => i.id))
+  const toggleCollapsed = () => {
+    setCollapsed(v => {
+      const next = !v
+      localStorage.setItem('nous-sidebar-collapsed', next ? '1' : '0')
       return next
     })
-  }, [])
+  }
+
+  const showSettingsDot = !!(update || anleitungPercent < 100 || hasWeeklyPrepReminder)
+  const initial = (displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()
+  const settingsActive = pathname.startsWith('/einstellungen')
+
+  // Map workflow step IDs to nav item IDs for green dots
+  const workflowDoneIds = new Set(
+    (workflowData?.steps ?? []).filter(s => s.done).map(s => {
+      if (s.id === 'trade_logged' || s.id === 'trade_analyzed') return 'journal'
+      if (s.id === 'briefing' || s.id === 'tagesplan') return 'tagesplan'
+      return s.id
+    })
+  )
+
+  function getDot(id: string): NavItemProps['dot'] | undefined {
+    if (workflowDoneIds.has(id)) return { color: '#4ade80' }
+    if (id === 'tagesplan' && hasTodayPlan) return { color: 'var(--long)' }
+    if (id === 'wochenvorbereitung' && hasWeeklyPrepReminder) return { color: 'var(--warn)', pulse: true, glow: 'var(--warn)' }
+    return undefined
+  }
 
   return (
     <>
-    {/* ── Collapsed sidebar (tablet 768–1023px) ── */}
-    <aside
-      className="hidden md:flex lg:hidden w-14 shrink-0 flex-col h-screen sticky top-0 items-center"
-      style={{ background: 'var(--bg-1)', borderRight: '1px solid var(--border-raw)' }}
-    >
-      {/* Logo mark */}
-      <div className="flex items-center justify-center py-4">
-        <Image src="/logo/nous-mark-white.svg" alt="NOUS" width={20} height={20} priority />
-      </div>
+      {/* ── Collapsed sidebar (tablet 768–1023px) ── */}
+      <aside
+        className="hidden md:flex lg:hidden w-14 shrink-0 flex-col h-screen sticky top-0 items-center"
+        style={{ background: 'var(--bg-1)', borderRight: '1px solid var(--border-raw)', borderRadius: '0 16px 16px 0' }}
+      >
+        <div className="flex items-center justify-center py-4">
+          <Image src="/logo/nous-mark-white.svg" alt="NOUS" width={20} height={20} priority />
+        </div>
 
-      {/* Nav icons */}
-      <nav className="flex-1 flex flex-col items-center gap-1 py-2 overflow-y-auto w-full px-1">
-        <TooltipProvider>
-          {navItems.map(item => {
-            if (item.isDivider) {
-              return <div key={item.id} className="w-6 my-1" style={{ height: '1px', background: 'var(--border-raw)' }} />
-            }
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-            return (
-              <Tooltip key={item.id} delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={item.href}
-                    className="flex items-center justify-center w-10 h-10 rounded transition-colors duration-100"
-                    style={{
-                      background: isActive ? 'var(--bg-3)' : 'transparent',
-                      color: isActive ? 'var(--fg-1)' : 'var(--fg-3)',
-                    }}
-                  >
-                    <item.icon className="h-5 w-5" />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="text-xs">{item.label}</TooltipContent>
-              </Tooltip>
-            )
-          })}
-        </TooltipProvider>
-      </nav>
+        {workflowData && (
+          <Link href="/dashboard" title="Tages-Workflow" className="flex items-center justify-center pb-3">
+            <WorkflowRing done={workflowData.done_count} total={workflowData.total} />
+          </Link>
+        )}
 
-      {/* Bottom: avatar + optional update dot */}
-      <div className="flex flex-col items-center pb-3 pt-2 w-full px-1" style={{ borderTop: '1px solid var(--border-raw)' }}>
-        <div className="relative">
-          <button
-            onClick={() => setProfileOpen(true)}
-            aria-label="Profil"
-            className="active:opacity-60"
-            style={{ width: 30, height: 30, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 0, border: 'none', cursor: 'pointer' }}
-          >
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
-            ) : (
-              <span style={{ fontSize: 12, fontWeight: 700 }}>
-                {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
-              </span>
-            )}
-          </button>
-          {(update || anleitungPercent < 100 || hasWeeklyPrepReminder) && (
-            <span
-              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-pulse border border-[var(--bg-1)]"
-              style={{ background: 'var(--brand-blue)', boxShadow: '0 0 5px var(--brand-blue)' }}
-            />
+        <nav className="flex-1 flex flex-col items-center overflow-y-auto w-full px-2 py-1 gap-0.5">
+          <TooltipProvider>
+            {NAV_GROUPS.map((group, gi) => (
+              <div key={group.label} className={cn('w-full flex flex-col items-center gap-0.5', gi > 0 && 'mt-1.5')}>
+                {gi > 0 && <div className="w-6 mb-1.5" style={{ height: '1px', background: 'var(--border-raw)' }} />}
+                {group.ids.map(id => {
+                  const item = NAV_ITEMS[id]
+                  if (!item) return null
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                  return (
+                    <Tooltip key={id} delayDuration={300}>
+                      <TooltipTrigger asChild>
+                        <Link
+                          href={item.href}
+                          className="flex items-center justify-center w-10 h-9 rounded-md transition-colors duration-100"
+                          style={{
+                            background: isActive ? 'var(--bg-3)' : 'transparent',
+                            color: isActive ? 'var(--fg-1)' : 'var(--fg-3)',
+                          }}
+                        >
+                          <item.icon
+                            className="h-[18px] w-[18px]"
+                            style={id === 'watchlist' && hasWatchlistItems ? { color: '#F59E0B', fill: '#F59E0B' } : undefined}
+                          />
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="text-xs">{item.label}</TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+              </div>
+            ))}
+          </TooltipProvider>
+        </nav>
+
+        <div className="flex flex-col items-center pb-3 pt-2 w-full px-2" style={{ borderTop: '1px solid var(--border-raw)' }}>
+          <TooltipProvider>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/einstellungen"
+                  className="relative flex items-center justify-center w-10 h-9 rounded-md transition-colors duration-100"
+                  style={{
+                    color: settingsActive ? 'var(--fg-1)' : 'var(--fg-3)',
+                    background: settingsActive ? 'var(--bg-3)' : 'transparent',
+                  }}
+                >
+                  <Settings className="h-[18px] w-[18px]" />
+                  {showSettingsDot && (
+                    <span
+                      className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse border border-[var(--bg-1)]"
+                      style={{ background: 'var(--brand-blue)', boxShadow: '0 0 4px var(--brand-blue)' }}
+                    />
+                  )}
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">Einstellungen</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </aside>
+
+      {/* ── Full sidebar (desktop ≥1024px) ── */}
+      <aside
+        className="relative shrink-0 hidden lg:flex flex-col h-screen sticky top-0 overflow-hidden group/sidebar"
+        style={{
+          background: 'var(--bg-1)',
+          borderRight: 'none',
+          borderRadius: '0 20px 20px 0',
+          width: collapsed ? 56 : 224,
+          transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)',
+          boxShadow: '1px 0 0 0 var(--border-raw)',
+        }}
+      >
+        {/* Header: logo + toggle */}
+        <div className="px-3 pt-4 pb-2 flex items-center justify-between gap-2 shrink-0">
+          {collapsed ? (
+            <div className="flex items-center justify-center w-full">
+              <Image src="/logo/nous-mark-white.svg" alt="NOUS" width={20} height={20} priority />
+            </div>
+          ) : (
+            <>
+              <Image src="/logo/nous-logo-slogan.svg" alt="NOUS" width={100} height={32} priority />
+              <div
+                className="shrink-0 flex items-center justify-center overflow-hidden"
+                style={{ width: 24, height: 24, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.15)', color: 'var(--brand-blue)', fontSize: 10, fontWeight: 700 }}
+              >
+                {avatarUrl
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={avatarUrl} alt="" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: '50%' }} />
+                  : initial}
+              </div>
+            </>
           )}
         </div>
-      </div>
-    </aside>
 
-    {/* ── Full sidebar (desktop ≥1024px) ── */}
-    <aside
-      className="w-56 shrink-0 hidden lg:flex flex-col h-screen sticky top-0"
-      style={{
-        background: 'var(--bg-1)',
-        borderRight: '1px solid var(--border-raw)',
-      }}
-    >
-      {/* Logo */}
-      <div className="px-4 py-4 pb-3">
-        <Image
-          src="/logo/nous-logo-slogan.svg"
-          alt="NOUS — Turn data into decisions"
-          width={130}
-          height={41}
-          priority
-        />
-      </div>
-
-      {/* Log trade CTA */}
-      <div className="px-3 pb-3">
-        <Button
-          asChild
-          className="w-full justify-start gap-2 h-8 text-[13px] font-semibold rounded"
-          style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
-        >
-          <Link href="/journal?new=1">
-            <Plus className="h-3.5 w-3.5" />
-            Log trade
-          </Link>
-        </Button>
-      </div>
-
-      {/* Navigation — draggable */}
-      <nav className="flex-1 flex flex-col gap-0 px-1 overflow-y-auto">
-        <TooltipProvider>
-          <DndContext id="sidebar-dnd" sensors={sensors} onDragEnd={handleDragEnd}>
-            <SortableContext
-              items={navItems.map(i => i.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {navItems.map(item => {
-                if (item.isDivider) {
-                  return <SortableDivider key={item.id} id={item.id} />
-                }
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-                return (
-                  <SortableNavItem
-                    key={item.id}
-                    item={item}
-                    isActive={isActive}
-                    hasTodayPlan={hasTodayPlan}
-                    hasWatchlistItems={hasWatchlistItems}
-                    hasWeeklyPrepReminder={hasWeeklyPrepReminder}
-                    showTooltips
-                  />
-                )
-              })}
-            </SortableContext>
-          </DndContext>
-        </TooltipProvider>
-      </nav>
-
-      {/* Bottom: profile info — click opens ProfileSidebar from left */}
-      <div
-        className="relative mt-auto px-2 pb-2 pt-2"
-        style={{ borderTop: '1px solid var(--border-raw)' }}
-      >
+        {/* Toggle button */}
         <button
-          onClick={() => setProfileOpen(true)}
-          aria-label="Profil"
-          className="flex items-center gap-2.5 px-2 py-2 w-full rounded hover:bg-white/5 active:bg-white/5 transition-colors text-left"
-          style={{ cursor: 'pointer', border: 'none', background: 'transparent' }}
+          onClick={toggleCollapsed}
+          className="mx-2 mb-2 flex items-center justify-center h-7 rounded-md transition-colors shrink-0"
+          style={{ color: 'var(--fg-4)', background: 'transparent', width: collapsed ? 40 : 'calc(100% - 16px)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+          title={collapsed ? 'Sidebar öffnen' : 'Sidebar schließen'}
         >
-          <div className="relative shrink-0" style={{ width: 30, height: 30 }}>
-            <div
+          {collapsed
+            ? <PanelLeftOpen className="h-3.5 w-3.5" />
+            : <PanelLeftClose className="h-3.5 w-3.5" />}
+        </button>
+
+        {/* Account + strategy */}
+        {!collapsed && activeAccount && (
+          <div className="px-4 pb-2 shrink-0 space-y-1">
+            <span className="text-[11px] truncate block" style={{ color: 'var(--fg-4)' }}>
+              {activeAccount.name}
+            </span>
+            <Link
+              href="/einstellungen?tab=strategie"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition-opacity hover:opacity-80 max-w-full"
               style={{
-                width: 30, height: 30, borderRadius: '50%',
-                background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)',
-                color: 'var(--brand-blue)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden',
+                background: strategyName ? 'rgba(59,130,246,0.12)' : 'var(--bg-3)',
+                color: strategyName ? '#60a5fa' : 'var(--fg-4)',
+                border: strategyName ? '1px solid rgba(59,130,246,0.2)' : '1px solid var(--border-raw)',
               }}
             >
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="Avatar" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
-              ) : (
-                <span style={{ fontSize: 12, fontWeight: 700 }}>
-                  {(displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
-                </span>
-              )}
-            </div>
-            {(update || anleitungPercent < 100 || hasWeeklyPrepReminder) && (
-              <span
-                className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-pulse border border-[var(--bg-1)]"
-                style={{ background: 'var(--brand-blue)', boxShadow: '0 0 5px var(--brand-blue)' }}
-              />
-            )}
+              <span className="truncate">{strategyName ?? 'Strategie setzen'}</span>
+            </Link>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--fg-1)' }}>
-              {displayName ?? user?.email ?? 'Profil'}
-            </div>
-            {activeAccount && (
-              <div className="text-[11px] truncate" style={{ color: 'var(--fg-3)' }}>
-                {activeAccount.name}
+        )}
+
+        {/* Workflow CTA */}
+        <div className="px-3 pb-3 shrink-0">
+          {collapsed ? (
+            <Link href="/workflow" className="flex items-center justify-center w-full py-1" title="Tages-Workflow">
+              {workflowData
+                ? <WorkflowRing done={workflowData.done_count} total={workflowData.total} />
+                : <ListChecks className="h-4 w-4" style={{ color: '#ff8210' }} />}
+            </Link>
+          ) : (
+            <Link
+              href="/workflow"
+              className="flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors"
+              style={{ background: 'var(--bg-3)', textDecoration: 'none' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-4)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
+            >
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-3.5 w-3.5 shrink-0" style={{ color: '#ff8210' }} />
+                <span className="text-[13px] font-semibold" style={{ color: 'var(--fg-1)' }}>Tages-Workflow</span>
               </div>
-            )}
-          </div>
-        </button>
-        {/* Version / Update card */}
-        {update ? (
-          <div
-            className="mx-2 mb-2 mt-1 rounded-lg px-3 py-2.5"
-            style={{ background: 'rgba(255,130,16,0.07)', border: '1px solid rgba(255,130,16,0.25)' }}
-          >
-            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-1.5">
+                {workflowData && workflowData.done_count < workflowData.total && (
+                  <span className="text-[11px] tabular-nums" style={{ color: 'var(--fg-4)' }}>
+                    {workflowData.done_count}/{workflowData.total}
+                  </span>
+                )}
+                {workflowData && <WorkflowRing done={workflowData.done_count} total={workflowData.total} />}
+              </div>
+            </Link>
+          )}
+        </div>
+
+        {/* Navigation — grouped */}
+        <nav className="flex-1 overflow-y-auto px-2 flex flex-col gap-4 py-1">
+          {collapsed ? (
+            /* Collapsed: icons only */
+            <TooltipProvider>
+              <div className="flex flex-col items-center gap-0.5">
+                {NAV_GROUPS.map((group, gi) => (
+                  <div key={group.label} className={cn('w-full flex flex-col items-center gap-0.5', gi > 0 && 'mt-2')}>
+                    {gi > 0 && <div className="w-6 mb-1" style={{ height: '1px', background: 'var(--border-raw)' }} />}
+                    {group.ids.map(id => {
+                      const item = NAV_ITEMS[id]
+                      if (!item) return null
+                      const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                      const dot = getDot(id)
+                      return (
+                        <Tooltip key={id} delayDuration={200}>
+                          <TooltipTrigger asChild>
+                            <Link
+                              href={item.href}
+                              className="relative flex items-center justify-center w-10 h-9 rounded-md transition-colors"
+                              style={{
+                                background: isActive ? `${group.color}18` : 'transparent',
+                                color: isActive ? group.color : 'var(--fg-3)',
+                              }}
+                            >
+                              <item.icon className="h-[17px] w-[17px]" />
+                              {dot && (
+                                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ background: dot.color }} />
+                              )}
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="text-xs">{item.label}</TooltipContent>
+                        </Tooltip>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            </TooltipProvider>
+          ) : (
+            /* Expanded: full labels */
+            NAV_GROUPS.map(group => (
+              <div key={group.label}>
+                <p
+                  className="px-3 mb-1"
+                  style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: group.color, textTransform: 'uppercase' }}
+                >
+                  {group.label}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {group.ids.map(id => {
+                    const item = NAV_ITEMS[id]
+                    if (!item) return null
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                    return (
+                      <NavItemRow
+                        key={id}
+                        item={item}
+                        isActive={isActive}
+                        dot={getDot(id)}
+                        fillIcon={id === 'watchlist' && hasWatchlistItems}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </nav>
+
+        {/* Update banner */}
+        {update && (
+          <div className="mx-3 mb-2 rounded-lg px-3 py-2.5" style={{ background: 'rgba(255,130,16,0.07)', border: '1px solid rgba(255,130,16,0.25)' }}>
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3 shrink-0" style={{ color: 'var(--brand-blue)' }} />
                 <span className="text-[11px] font-bold" style={{ color: 'var(--brand-blue)' }}>
@@ -496,80 +512,56 @@ export function AppSidebar() {
               </div>
               <button
                 onClick={() => window.location.reload()}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-opacity active:opacity-70 shrink-0"
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold shrink-0"
                 style={{ background: 'var(--brand-blue)', color: '#fff' }}
               >
                 <RefreshCw className="h-2.5 w-2.5" />
                 Laden
               </button>
             </div>
-            {[...update.features.slice(0, 2).map(c => ({ t: '+', c })), ...update.fixes.slice(0, 2).map(c => ({ t: '~', c }))].map(({ t, c }, i) => (
-              <div key={i} className="flex items-start gap-1">
-                <span className="text-[10px] shrink-0 leading-relaxed" style={{ color: t === '+' ? 'rgba(255,130,16,0.7)' : 'rgba(255,255,255,0.3)' }}>{t}</span>
-                <span className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>{c}</span>
-              </div>
-            ))}
           </div>
-        ) : (
-          <button
-            onClick={() => setChangelogOpen(v => !v)}
-            className="px-2 pt-0 pb-1 text-[10px] text-left w-full transition-opacity active:opacity-60"
-            style={{ color: 'var(--fg-4)' }}
-          >
-            v{RELEASE_VERSION} · {process.env.NEXT_PUBLIC_BUILD_DATE ?? ''}
-          </button>
         )}
 
-        {/* Changelog popup */}
-        {changelogOpen && !update && (
-          <div
-            className="absolute bottom-10 left-2 right-2 rounded-lg p-3 shadow-xl z-20"
-            style={{ background: '#1E2028', border: '1px solid rgba(255,255,255,0.12)' }}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-bold" style={{ color: 'var(--fg-1)' }}>
+        {/* Einstellungen */}
+        <div className="px-2 pb-3 pt-1 shrink-0" style={{ borderTop: '1px solid var(--border-raw)' }}>
+          {collapsed ? (
+            <TooltipProvider>
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <Link
+                    href="/einstellungen"
+                    className="relative flex items-center justify-center w-10 h-9 rounded-md mx-auto transition-colors"
+                    style={{ color: settingsActive ? 'var(--fg-1)' : 'var(--fg-3)', background: settingsActive ? 'var(--bg-3)' : 'transparent' }}
+                  >
+                    <Settings className="h-[17px] w-[17px]" />
+                    {showSettingsDot && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--brand-blue)' }} />}
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">Einstellungen</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <>
+              <NavItemRow
+                item={{ id: 'einstellungen', href: '/einstellungen', label: 'Einstellungen', icon: Settings, tooltip: '' }}
+                isActive={settingsActive}
+                dot={showSettingsDot ? { color: 'var(--brand-blue)', pulse: true, glow: 'var(--brand-blue)' } : undefined}
+              />
+              <p className="px-3 pt-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
                 v{RELEASE_VERSION}
-              </span>
-              <button onClick={() => setChangelogOpen(false)}>
-                <X className="h-3 w-3" style={{ color: 'var(--fg-4)' }} />
-              </button>
-            </div>
-            <p className="text-[10px] mb-2.5" style={{ color: 'var(--fg-4)' }}>{CURRENT.date}</p>
-            {CURRENT.features && CURRENT.features.length > 0 && (
-              <div className="mb-2">
-                <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--brand-blue)' }}>Neu</p>
-                {CURRENT.features.map((c, i) => (
-                  <div key={i} className="flex items-start gap-1.5">
-                    <span className="text-[11px] shrink-0 leading-relaxed" style={{ color: 'var(--brand-blue)' }}>+</span>
-                    <span className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{c}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {CURRENT.fixes && CURRENT.fixes.length > 0 && (
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,180,60,0.8)' }}>Gefixt</p>
-                {CURRENT.fixes.map((c, i) => (
-                  <div key={i} className="flex items-start gap-1.5">
-                    <span className="text-[11px] shrink-0 leading-relaxed" style={{ color: 'rgba(255,180,60,0.7)' }}>~</span>
-                    <span className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>{c}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </aside>
+              </p>
+            </>
+          )}
+        </div>
 
-    <ProfileSidebar
-      open={profileOpen}
-      onClose={() => setProfileOpen(false)}
-      displayName={displayName}
-      avatarUrl={avatarUrl}
-      side="left"
-      onAvatarUpdate={(url) => setAvatarUrl(url)}
-    />
+        {/* Thin handle — visible on hover */}
+        <div
+          className="absolute right-0 top-8 bottom-8 w-[3px] rounded-full cursor-col-resize opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200"
+          style={{ background: 'linear-gradient(to bottom, transparent, var(--border-strong), transparent)' }}
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Sidebar öffnen' : 'Sidebar schließen'}
+        />
+      </aside>
     </>
   )
 }

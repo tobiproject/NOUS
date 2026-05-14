@@ -165,6 +165,21 @@ export function useTrades() {
         screenshot_urls: input.screenshot_urls ?? [],
       }).select().single()
 
+      if (!error) {
+        const { count } = await supabase
+          .from('trades')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('account_id', activeAccount.id)
+        if (count && count % 10 === 0) {
+          fetch('/api/ai/update-coach', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account_id: activeAccount.id }),
+          }).catch(() => {})
+        }
+      }
+
       return { data, error }
     } finally {
       setIsMutating(false)

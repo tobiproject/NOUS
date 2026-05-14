@@ -15,6 +15,7 @@ import { InsightsPreview } from '@/components/ai/InsightsPreview'
 import { DailyPlanCTA } from '@/components/tagesplan/DailyPlanCTA'
 import { WeeklyPrepCard } from './WeeklyPrepCard'
 import { GuidedWorkflowWidget } from './GuidedWorkflowWidget'
+import { CoachProfileWidget } from './CoachProfileWidget'
 import type { Trade } from '@/hooks/useTrades'
 
 type PeriodDays = 7 | 30 | 90 | null
@@ -184,6 +185,9 @@ export function DashboardContent() {
 
         {/* Wochenvorbereitung */}
         <WeeklyPrepCard />
+
+        {/* Coach-Profil */}
+        <CoachProfileWidget />
 
         {/* KI Insights */}
         <InsightsPreview />

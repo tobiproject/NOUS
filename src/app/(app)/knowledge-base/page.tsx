@@ -60,9 +60,11 @@ export default function KnowledgeBasePage() {
     }
     setUploading(true)
     const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
+    const fileMB = (file.size / (1024 * 1024)).toFixed(1)
+    let claudeTimer: ReturnType<typeof setInterval> | null = null
     try {
-      // Step 1: Upload PDF directly to Supabase Storage (bypasses Vercel 4.5MB limit)
-      setUploadStatus('PDF wird hochgeladen…')
+      // Step 1: Upload PDF directly to Supabase Storage
+      setUploadStatus(`1/2 · Hochladen (${fileMB} MB)…`)
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { toast.error('Nicht eingeloggt'); return }
@@ -73,13 +75,22 @@ export default function KnowledgeBasePage() {
         .upload(storagePath, file, { contentType: 'application/pdf', upsert: false })
       if (uploadError) { toast.error('Upload fehlgeschlagen: ' + uploadError.message); return }
 
-      // Step 2: Claude liest das PDF direkt (Text + Zeichnungen)
-      setUploadStatus('KI liest das Dokument (Text + Zeichnungen)…')
+      // Step 2: Claude reads the PDF — show live elapsed seconds so user sees it's running
+      let elapsed = 0
+      setUploadStatus('2/2 · Claude liest Dokument… 0s')
+      claudeTimer = setInterval(() => {
+        elapsed++
+        setUploadStatus(`2/2 · Claude liest Dokument… ${elapsed}s`)
+      }, 1000)
+
       const res = await fetch('/api/knowledge-base/vision-extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storagePath, name, fileSize: file.size }),
       })
+      clearInterval(claudeTimer)
+      claudeTimer = null
+
       const data = await res.json()
       if (!res.ok) {
         await supabase.storage.from('knowledge-base').remove([storagePath])
@@ -92,6 +103,7 @@ export default function KnowledgeBasePage() {
       toast.error('Fehler beim Verarbeiten der Datei.')
       console.error(err)
     } finally {
+      if (claudeTimer) clearInterval(claudeTimer)
       setUploading(false)
       setUploadStatus('')
     }

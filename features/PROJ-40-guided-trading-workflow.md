@@ -1,6 +1,6 @@
 # PROJ-40 · Guided Trading Workflow (Roter Faden)
 
-**Status:** In Review  
+**Status:** Approved  
 **Erstellt:** 2026-05-14  
 **Typ:** Frontend + Backend + DB
 
@@ -267,7 +267,7 @@ Alle benötigten Pakete (Supabase, TanStack Query, Tailwind, shadcn/ui) sind ber
 
 **Datum:** 2026-05-14  
 **Tester:** QA Engineer  
-**Status: NOT READY — 1 High-Bug muss zuerst behoben werden**
+**Status: APPROVED — Alle Bugs behoben (fix(PROJ-40) commit 976d98e)**
 
 ### Acceptance Criteria
 

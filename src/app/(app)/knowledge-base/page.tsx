@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { renderPdfPagesToImages } from '@/lib/pdf-extract-browser'
+import { createClient } from '@/lib/supabase'
 
 interface KnowledgeDoc {
   id: string
@@ -61,45 +61,35 @@ export default function KnowledgeBasePage() {
     setUploading(true)
     const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
     try {
-      // Step 1: Render PDF pages as images in the browser (with per-page progress)
-      setUploadStatus('PDF wird geöffnet…')
-      const renderPromise = renderPdfPagesToImages(
-        file,
-        5,
-        900,
-        (current, total) => setUploadStatus(`Seite ${current} von ${total} wird vorbereitet…`),
-      )
-      const renderTimeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('render_timeout')), 90_000)
-      )
-      const pageImages = await Promise.race([renderPromise, renderTimeout])
+      // Step 1: Upload PDF directly to Supabase Storage (bypasses Vercel 4.5MB limit)
+      setUploadStatus('PDF wird hochgeladen…')
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { toast.error('Nicht eingeloggt'); return }
 
-      if (pageImages.length === 0) {
-        toast.error('PDF konnte nicht gerendert werden.')
-        return
-      }
+      const storagePath = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+      const { error: uploadError } = await supabase.storage
+        .from('knowledge-base')
+        .upload(storagePath, file, { contentType: 'application/pdf', upsert: false })
+      if (uploadError) { toast.error('Upload fehlgeschlagen: ' + uploadError.message); return }
 
-      // Step 2: Send images to Claude Vision for extraction
-      setUploadStatus(`KI liest ${pageImages.length} Seite${pageImages.length !== 1 ? 'n' : ''} (Text + Zeichnungen)…`)
+      // Step 2: Claude liest das PDF direkt (Text + Zeichnungen)
+      setUploadStatus('KI liest das Dokument (Text + Zeichnungen)…')
       const res = await fetch('/api/knowledge-base/vision-extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, fileSize: file.size, pageImages }),
+        body: JSON.stringify({ storagePath, name, fileSize: file.size }),
       })
       const data = await res.json()
       if (!res.ok) {
+        await supabase.storage.from('knowledge-base').remove([storagePath])
         toast.error(data.error ?? 'Verarbeitung fehlgeschlagen')
         return
       }
-      toast.success(`"${name}" hochgeladen — ${data.document?.pages ?? pageImages.length} Seiten mit KI analysiert`)
+      toast.success(`"${name}" hochgeladen und mit KI analysiert`)
       load()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : ''
-      if (msg === 'render_timeout') {
-        toast.error('PDF zu komplex zum Verarbeiten. Bitte "Text einfügen" verwenden.')
-      } else {
-        toast.error('Fehler beim Verarbeiten der Datei.')
-      }
+      toast.error('Fehler beim Verarbeiten der Datei.')
       console.error(err)
     } finally {
       setUploading(false)

@@ -1323,6 +1323,7 @@ function KnowledgeBaseTab() {
   const [docs, setDocs] = useState<KnowledgeDoc[]>([])
   const [kbLoading, setKbLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -1344,20 +1345,59 @@ function KnowledgeBaseTab() {
 
   const uploadFile = async (file: File) => {
     if (file.type !== 'application/pdf') { toast.error('Nur PDF-Dateien erlaubt'); return }
-    if (file.size > 20 * 1024 * 1024) { toast.error('Datei zu groß (max. 20 MB)'); return }
+    if (file.size > 100 * 1024 * 1024) { toast.error('Datei zu groß (max. 100 MB)'); return }
     setUploading(true)
-    const form = new FormData()
-    form.append('file', file)
-    const res = await fetch('/api/knowledge-base', { method: 'POST', body: form })
-    const data = await res.json()
-    setUploading(false)
-    if (!res.ok) { toast.error(data.error ?? 'Upload fehlgeschlagen'); return }
-    if (data.document?.status === 'error') {
-      toast.error(`"${file.name}" konnte nicht gelesen werden — Text einfügen als Alternative`)
-    } else {
-      toast.success(`"${file.name}" hochgeladen`)
+    setUploadStatus('1/3 · Startet…')
+    const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
+    const fileMB = (file.size / (1024 * 1024)).toFixed(1)
+    let claudeTimer: ReturnType<typeof setInterval> | null = null
+    try {
+      const urlRes = await fetch('/api/knowledge-base/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name }),
+      })
+      const urlData = await urlRes.json()
+      if (!urlRes.ok) { toast.error(urlData.error ?? 'Nicht eingeloggt — bitte Seite neu laden'); return }
+      const { signedUrl, storagePath } = urlData
+
+      setUploadStatus(`2/3 · Hochladen (${fileMB} MB)…`)
+      const formData = new FormData()
+      formData.append('cacheControl', '3600')
+      formData.append('', file)
+      const uploadRes = await fetch(signedUrl, { method: 'PUT', body: formData, headers: { 'x-upsert': 'false' } })
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text().catch(() => '')
+        toast.error(`Upload fehlgeschlagen (${uploadRes.status})`)
+        console.error('Storage upload error:', errText)
+        return
+      }
+      setUploadStatus('2/3 · Hochgeladen ✓')
+
+      let elapsed = 0
+      setUploadStatus('3/3 · Claude liest Dokument… 0s')
+      claudeTimer = setInterval(() => { elapsed++; setUploadStatus(`3/3 · Claude liest Dokument… ${elapsed}s`) }, 1000)
+
+      const res = await fetch('/api/knowledge-base/vision-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storagePath, name, fileSize: file.size }),
+      })
+      clearInterval(claudeTimer)
+      claudeTimer = null
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Verarbeitung fehlgeschlagen'); return }
+      toast.success(`"${name}" hochgeladen und mit KI analysiert`)
+      loadDocs()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error(`Fehler: ${msg}`)
+      console.error('PDF upload error:', err)
+    } finally {
+      if (claudeTimer) clearInterval(claudeTimer)
+      setUploading(false)
+      setUploadStatus('')
     }
-    loadDocs()
   }
 
   const handleFiles = (files: FileList | null) => {
@@ -1454,7 +1494,7 @@ function KnowledgeBaseTab() {
               {uploading ? (
                 <>
                   <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--brand-blue)' }} />
-                  <p className="text-sm" style={{ color: 'var(--fg-3)' }}>PDF wird verarbeitet…</p>
+                  <p className="text-sm" style={{ color: 'var(--fg-3)' }}>{uploadStatus || 'Startet…'}</p>
                 </>
               ) : (
                 <>
@@ -1465,7 +1505,7 @@ function KnowledgeBaseTab() {
                       Datei auswählen
                     </button>
                   </div>
-                  <p className="text-xs" style={{ color: 'var(--fg-4)' }}>Nur PDF · max. 20 MB · max. 10 Dokumente</p>
+                  <p className="text-xs" style={{ color: 'var(--fg-4)' }}>Nur PDF · max. 100 MB · max. 10 Dokumente</p>
                 </>
               )}
             </div>

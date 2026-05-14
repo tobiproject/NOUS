@@ -19,6 +19,7 @@ import { DrawdownChart } from './DrawdownChart'
 import { DrawdownPhaseTable } from './DrawdownPhaseTable'
 import { NewsAnalyseTab } from './NewsAnalyseTab'
 import { StandaloneRRSimulator } from './StandaloneRRSimulator'
+import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
 
 // ─── URL serialisation ────────────────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ export function PerformanceContent() {
 
   return (
     <div className="space-y-5">
+      <WorkflowVisitTracker step="performance" />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Performance & Statistik</h1>
         <p className="text-muted-foreground text-sm">Konto: {activeAccount.name}</p>

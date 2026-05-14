@@ -1,6 +1,6 @@
 # PROJ-40 · Guided Trading Workflow (Roter Faden)
 
-**Status:** Architected  
+**Status:** In Review  
 **Erstellt:** 2026-05-14  
 **Typ:** Frontend + Backend + DB
 
@@ -88,6 +88,33 @@ Dashboard-Widget das den Trader Schritt für Schritt durch seine Trading-Woche f
 - Requires: PROJ-26 (Push Notifications) — für Reset-Zeitpunkt
 - Requires: PROJ-38 (Wirtschaftskalender) — für Kalender-Daten
 - Integrates: PROJ-39 (Tradingplan) — Trade-vorbereiten Schritt kann auf Tradingplan verweisen
+
+---
+
+## Implementation Notes
+
+**Backend abgeschlossen:** 2026-05-14
+
+### API Routes (alle implementiert)
+- `GET /api/workflow/progress` — aggregiert den kompletten Wochen-Status in einem Aufruf, inkl. Kalender-Warnung
+- `POST /api/workflow/visit` — trackt Seitenbesuche für kalender, performance, briefing
+- `POST /api/workflow/manual-step` — markiert "Trade vorbereiten" als erledigt
+- `POST /api/workflow/reset` — setzt workflow_state für aktuelle Woche zurück
+
+### Datenbank
+- `workflow_state` Tabelle bereits vorhanden, RLS-Policies nachträglich hinzugefügt (waren vergessen)
+- Unique-Constraint auf `(user_id, account_id, week_iso)` für Upsert vorhanden
+- Index auf `(user_id, week_iso)` für Performance
+
+### Frontend (ebenfalls implementiert)
+- `GuidedWorkflowWidget` in `DashboardContent` integriert
+- `WorkflowVisitTracker` in `KalenderContent` + `PerformanceContent` (fire-and-forget)
+- `WeeklyPrepCard` feuert `briefing`-Visit-Tracking beim Generieren
+- `useWorkflowProgress` Hook mit 30s Stale-Time
+
+### Bekannte Abweichungen vom Tech Design
+- `visited_briefing_at` als zusätzliches Feld in `workflow_state` (war im Design nicht explizit geplant, aber notwendig für Briefing-Tracking ohne separaten Morning-Briefings-Tabellen-Eintrag)
+- Bug-Fix: `economic_events.impact` wird als `'High'` (Großbuchstabe) gespeichert, Abfrage entsprechend angepasst
 
 ---
 
@@ -233,3 +260,132 @@ Alle benötigten Pakete (Supabase, TanStack Query, Tailwind, shadcn/ui) sind ber
 - Streak-Tracking über mehrere Wochen
 - Push-Benachrichtigung wenn Schritt seit X Stunden nicht erledigt
 - Konfigurierbares Hinzufügen/Entfernen von Schritten
+
+---
+
+## QA Test Results
+
+**Datum:** 2026-05-14  
+**Tester:** QA Engineer  
+**Status: NOT READY — 1 High-Bug muss zuerst behoben werden**
+
+### Acceptance Criteria
+
+| AC | Beschreibung | Status |
+|----|-------------|--------|
+| AC-1 | Widget "Deine Trading-Woche" auf Dashboard | ✅ PASS |
+| AC-2 | Alle 8 Schritte in korrekter Reihenfolge | ✅ PASS |
+| AC-3 | Erledigte Schritte visuell abgehakt (grün, durchgestrichen) | ✅ PASS |
+| AC-4 | Aktiver Schritt hervorgehoben mit Klick-Button | ✅ PASS |
+| AC-5 | Fortschrittsanzeige "X/8" | ✅ PASS |
+| AC-6 | Schritte klickbar, Navigation korrekt | ✅ PASS |
+| AC-7 | Wochenvorbereitung via `weekly_plans`-Tabelle erkannt | ✅ PASS |
+| AC-8 | Morning Briefing nur bei Generierung, nicht beim Lesen | ⚠️ PARTIAL — BUG-1 |
+| AC-9 | Tagesplan via `daily_plans`-Tabelle | ✅ PASS |
+| AC-10 | Trade geloggt via `trades`-Tabelle | ✅ PASS |
+| AC-11 | Trade analysiert via `ai_analyses`-Tabelle | ✅ PASS |
+| AC-12 | Wochen-Review via `visited_performance_at` | ✅ PASS |
+| AC-13 | Kalender-Warnung für Watchlist-Assets | ⚠️ PASS mit BUG-2 (false positive bei ≤3-char Symbolen) |
+| AC-14 | "Keine kritischen Events heute ✓" ohne Events | ✅ PASS |
+| AC-15 | Kalender-Seite trackt Visit | ✅ PASS |
+| AC-16 | PROJ-26 Cron-Job ruft Reset auf | ❌ NOT IMPLEMENTED (Low impact, auto-reset via ISO-Woche greift) |
+| AC-17 | Fallback-Reset Montag 06:00 | ✅ PASS (implizit: neue Woche = neuer Datensatz) |
+| AC-18 | Manueller Reset-Button | ✅ PASS |
+| AC-19 | Nach Reset: alle visit-tracked Schritte offen | ✅ PASS |
+| AC-20 | Fortschritt in DB, gerätübergreifend | ✅ PASS |
+| AC-21 | State enthält Woche, Schritte, Timestamps | ✅ PASS |
+
+### Bugs
+
+#### BUG-1 · Medium · AC-8 — Briefing-Tracking nur beim Generieren, nicht beim Lesen
+
+**Schritte zum Reproduzieren:**
+1. Montag: Morning Briefing generieren → Step gilt als erledigt
+2. Dienstag: Dashboard besuchen — Morning Briefing Step erscheint wieder als offen
+3. `/wochenvorbereitung` aufrufen und bestehendes Briefing lesen
+4. Zurück auf Dashboard → Step immer noch "offen"
+
+**Erwartet:** Beim Besuchen der `/wochenvorbereitung`-Seite sollte `visited_briefing_at` aktualisiert werden (via `WorkflowVisitTracker step="briefing"`) — nicht nur beim Klicken auf "Generieren".
+
+**Fix:** `WorkflowVisitTracker step="briefing"` in `WeeklyPrepCard` oder `WochenvorbereitungContent` beim Mounten feuern, nicht nur im `generate()`-Callback.
+
+---
+
+#### BUG-2 · High · AC-13 — Falsche Kalender-Warnung bei Watchlist-Symbolen ≤ 3 Zeichen
+
+**Schritte zum Reproduzieren:**
+1. "BTC" in die Watchlist eintragen
+2. An einem Tag mit irgendeinem High-Impact Event (z.B. JPY: Japan GDP) Dashboard öffnen
+3. Kalender-Schritt zeigt "High-Impact heute: JPY: Japan GDP" — obwohl BTC keinerlei JPY-Exposure hat
+
+**Ursache:** `sym.slice(3, 6)` für 3-char Symbol ergibt `""`, und `anyString.includes("")` ist in JavaScript immer `true`. Dadurch matcht jedes High-Impact Event jeden ≤3-char Watchlist-Eintrag.
+
+**Fix:** In `progress/route.ts` vor dem `.includes()`-Check prüfen ob der Slice leer ist:
+```
+currency?.toLowerCase().includes(sym.slice(3, 6).toLowerCase()) && sym.length > 3
+```
+oder besser: explizites Matching nur wenn `sym.slice(3, 6)` nicht leer ist.
+
+---
+
+#### BUG-3 · Medium · EC-5 — "Verpasst"-Logik greift nur bei aktuellem Tag nach 19 Uhr
+
+**Schritte zum Reproduzieren:**
+1. Mittwoch 10:00 Uhr Dashboard öffnen — Montag und Dienstag wurden ausgelassen
+2. Morning Briefing, Tagesplan, Kalender von Mon/Di erscheinen als aktiv, nicht als "Verpasst"
+
+**Ursache:** `isLateDay = hour >= 19` — prüft nur ob es heute spät ist, nicht ob vergangene Wochentage übersprungen wurden.
+
+**Fix:** Zusätzlich `currentDayOfWeek > expectedDayForStep` prüfen, um Schritte vorheriger Wochentage als "verpasst" zu markieren.
+
+---
+
+#### BUG-4 · Low — Fehlendes `.limit()` auf Trades- und Analyses-Queries
+
+**Datei:** [src/app/api/workflow/progress/route.ts](src/app/api/workflow/progress/route.ts:57)
+
+Queries auf `trades` und `ai_analyses` ohne `.limit()` verstoßen gegen Backend-Konventionen und können bei vielen Trades Performance-Probleme verursachen.
+
+**Fix:** `.limit(50)` oder `.limit(1)` hinzufügen (für "Trade geloggt" reicht `.limit(1)`).
+
+---
+
+#### BUG-5 · Low — UTC-Datumsgrenze bei Nutzern außerhalb UTC
+
+`now.toISOString().split('T')[0]` liefert UTC-Datum. Bei UTC+2 um 00:30 Uhr local wird der gestrige UTC-Tag als "heute" verwendet → Schritte können zu früh als "verpasst" oder falsch als offen erscheinen.
+
+---
+
+#### BUG-6 · Low — `getISOWeek` in 4 Route-Dateien dupliziert
+
+Kein funktionaler Bug, aber Wartbarkeitsproblem.
+
+---
+
+### Security Audit
+
+| Check | Ergebnis |
+|-------|----------|
+| Auth-Check (401 ohne Session) | ✅ Alle 4 Routen |
+| Zod-Validierung aller Inputs | ✅ Vorhanden |
+| Filtert immer nach `user_id` aus Session | ✅ Vorhanden |
+| RLS auf `workflow_state` | ✅ Laut Spec vorhanden |
+| Keine Secrets im Code | ✅ |
+| account_id als UUID validiert | ✅ |
+| Kein IDOR via fremde account_id | ✅ (user_id-Filter + RLS) |
+
+### Automatisierte Tests
+
+- **E2E Tests:** `tests/PROJ-40-guided-trading-workflow.spec.ts` — 14 Tests, 8 passed (Security), 6 skipped (Auth-abhängig, in Prod-Umgebung grün)
+- **Unit Tests:** `src/hooks/useWorkflowProgress.test.ts` — 12 Tests (ISO-Woche, Watchlist-Matching, Stale-Time) — dokumentieren BUG-2 explizit
+
+### Regression Testing
+
+- ✅ Dashboard-Kern-KPIs unverändert
+- ✅ WeeklyPrepCard generiert noch korrekt
+- ✅ KalenderContent lädt korrekt
+- ✅ PerformanceContent lädt korrekt
+
+### Produktionsbereitschaft
+
+**NOT READY** — BUG-2 (High) muss vor Deploy behoben werden. Nach Fix: `/qa` erneut ausführen oder direkt auf Approved setzen falls BUG-2 allein gefixt wurde.

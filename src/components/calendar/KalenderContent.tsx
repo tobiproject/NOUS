@@ -9,6 +9,7 @@ import { CountdownBanner } from './CountdownBanner'
 import { KalenderWeekNav } from './KalenderWeekNav'
 import { KalenderFilterBar } from './KalenderFilterBar'
 import { EconomicEventList } from './EconomicEventList'
+import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
 
 export function KalenderContent() {
   const {
@@ -32,6 +33,7 @@ export function KalenderContent() {
 
   return (
     <div className="space-y-4">
+      <WorkflowVisitTracker step="kalender" />
       <CountdownBanner events={events} onScrollToEvent={handleScrollToEvent} />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

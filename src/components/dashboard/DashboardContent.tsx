@@ -14,6 +14,7 @@ import { TradeDetailSheet } from '@/components/journal/TradeDetailSheet'
 import { InsightsPreview } from '@/components/ai/InsightsPreview'
 import { DailyPlanCTA } from '@/components/tagesplan/DailyPlanCTA'
 import { WeeklyPrepCard } from './WeeklyPrepCard'
+import { GuidedWorkflowWidget } from './GuidedWorkflowWidget'
 import type { Trade } from '@/hooks/useTrades'
 
 type PeriodDays = 7 | 30 | 90 | null
@@ -174,6 +175,9 @@ export function DashboardContent() {
         ) : metrics ? (
           <RecentTradesTable trades={metrics.recentTrades} onTradeClick={handleTradeClick} />
         ) : null}
+
+        {/* Guided Workflow */}
+        <GuidedWorkflowWidget />
 
         {/* Tagesplan CTA */}
         <DailyPlanCTA />

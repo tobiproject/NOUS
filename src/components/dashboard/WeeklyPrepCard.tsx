@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { Sparkles, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAccountContext } from '@/contexts/AccountContext'
 
 export function WeeklyPrepCard() {
+  const { activeAccount } = useAccountContext()
   const [prep, setPrep] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(true)
@@ -18,6 +20,13 @@ export function WeeklyPrepCard() {
         const data = await res.json()
         setPrep(data.prep)
         setExpanded(true)
+        if (activeAccount?.id) {
+          fetch('/api/workflow/visit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account_id: activeAccount.id, step: 'briefing' }),
+          }).catch(() => {})
+        }
       }
     } finally {
       setLoading(false)

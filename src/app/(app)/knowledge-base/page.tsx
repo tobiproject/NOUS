@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { extractTextFromPdf } from '@/lib/pdf-extract-browser'
+import { renderPdfPagesToImages } from '@/lib/pdf-extract-browser'
 
 interface KnowledgeDoc {
   id: string
@@ -29,6 +29,7 @@ export default function KnowledgeBasePage() {
   const [docs, setDocs] = useState<KnowledgeDoc[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -53,39 +54,42 @@ export default function KnowledgeBasePage() {
       toast.error('Nur PDF-Dateien erlaubt')
       return
     }
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error('Datei zu groß (max. 50 MB)')
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error('Datei zu groß (max. 100 MB)')
       return
     }
     setUploading(true)
+    const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
     try {
-      // Extract text in the browser — no server timeout, no native module issues
-      const text = await extractTextFromPdf(file)
+      // Step 1: Render PDF pages as images in the browser
+      setUploadStatus('Seiten werden vorbereitet…')
+      const pageImages = await renderPdfPagesToImages(file, 8)
 
-      if (!text.trim()) {
-        toast.error('Kein lesbarer Text gefunden. Das PDF ist vermutlich gescannt — bitte Tab "Text einfügen" nutzen.')
+      if (pageImages.length === 0) {
+        toast.error('PDF konnte nicht gerendert werden.')
         return
       }
 
-      const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
-
-      const res = await fetch('/api/knowledge-base/text', {
+      // Step 2: Send images to Claude Vision for extraction
+      setUploadStatus(`KI analysiert ${pageImages.length} Seite${pageImages.length !== 1 ? 'n' : ''} (Text + Zeichnungen)…`)
+      const res = await fetch('/api/knowledge-base/vision-extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, text }),
+        body: JSON.stringify({ name, fileSize: file.size, pageImages }),
       })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.error ?? 'Speichern fehlgeschlagen')
+        toast.error(data.error ?? 'Verarbeitung fehlgeschlagen')
         return
       }
-      toast.success(`"${name}" hochgeladen (${text.length.toLocaleString('de')} Zeichen extrahiert)`)
+      toast.success(`"${name}" hochgeladen — ${data.document?.pages ?? pageImages.length} Seiten mit KI analysiert`)
       load()
     } catch (err) {
-      toast.error('PDF konnte nicht gelesen werden. Bitte "Text einfügen" nutzen.')
+      toast.error('Fehler beim Verarbeiten der Datei.')
       console.error(err)
     } finally {
       setUploading(false)
+      setUploadStatus('')
     }
   }
 
@@ -206,7 +210,7 @@ export default function KnowledgeBasePage() {
               {uploading ? (
                 <>
                   <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--brand-blue)' }} />
-                  <p className="text-sm" style={{ color: 'var(--fg-3)' }}>PDF wird verarbeitet…</p>
+                  <p className="text-sm" style={{ color: 'var(--fg-3)' }}>{uploadStatus || 'PDF wird verarbeitet…'}</p>
                 </>
               ) : (
                 <>

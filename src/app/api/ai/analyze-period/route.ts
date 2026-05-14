@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { callAI } from '@/lib/ai-client'
 import { PERIOD_ANALYSIS_TOOL, buildPeriodPrompt } from '@/lib/ai-prompts'
+import { getKnowledgeContext } from '@/lib/knowledge-context'
+import { getTradingPlanContext } from '@/lib/trading-plan-context'
 import type { Trade } from '@/hooks/useTrades'
 
 const BodySchema = z.object({
@@ -71,6 +73,13 @@ async function runPeriodAnalysis(
       }
     }
 
+    // Load knowledge base and trading plan context in parallel
+    const [knowledgeContext, tradingPlanContext] = await Promise.all([
+      getKnowledgeContext(userId),
+      getTradingPlanContext(userId),
+    ])
+    const systemPrompt = [knowledgeContext, tradingPlanContext].filter(Boolean).join('\n\n---\n\n')
+
     // Call Claude with retry
     let lastError: Error | null = null
     let result: unknown = null
@@ -80,7 +89,7 @@ async function runPeriodAnalysis(
       try {
         const aiResponse = await callAI({
           userId,
-          system: '',
+          system: systemPrompt,
           messages: [{
             role: 'user',
             content: buildPeriodPrompt(type, periodStart, periodEnd, trades as Trade[], prevStats),

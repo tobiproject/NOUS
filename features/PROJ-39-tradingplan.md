@@ -1,6 +1,6 @@
 # PROJ-39 · Tradingplan
 
-**Status:** In Review  
+**Status:** Approved  
 **Erstellt:** 2026-05-14  
 **Zuletzt aktualisiert:** 2026-05-14  
 **Typ:** Frontend + Backend + DB
@@ -261,13 +261,10 @@ Alle benötigten Abhängigkeiten sind bereits installiert:
 
 ### Bugs
 
-#### B-1 · Medium: `analyze-period` fehlt Knowledge Base Kontext nach PROJ-39
+#### ~~B-1 · Medium: `analyze-period` fehlt Knowledge Base Kontext nach PROJ-39~~ ✅ BEHOBEN
 
-**Datei:** `src/app/api/ai/analyze-period/route.ts:87`  
-**Beschreibung:** Die Route setzt `system: tradingPlanContext ?? ''`. Damit fehlt der Knowledge-Base-Kontext in der Perioden-Analyse — dieser wird in `analyze-trade` und `weekly-prep` korrekt via `[knowledgeContext, tradingPlanContext].filter(Boolean)` zusammengeführt.  
-**Hinweis:** KB-Kontext war vor PROJ-39 in dieser Route nie enthalten (`system: ''`), daher ist es keine Regression. Die Implementation Notes behaupten aber "parallel zu getKnowledgeContext, beide Kontexte werden zusammengeführt" — das stimmt für analyze-period nicht.  
-**Reproduktion:** Wochen-/Monatsanalyse ausführen — KB-Dokumente werden nicht als KI-Kontext berücksichtigt.  
-**Fix:** KB-Kontext parallel laden und zusammenführen wie in `analyze-trade`.
+**Behoben in:** `fix(PROJ-39): Load KB context in analyze-period alongside trading plan`  
+KB-Kontext wird jetzt parallel zu `getTradingPlanContext` geladen und via `[knowledgeContext, tradingPlanContext].filter(Boolean).join(...)` zusammengeführt — analog zu `analyze-trade` und `weekly-prep`.
 
 #### B-2 · Low: EC-1 API-Fehlermeldung bei leerer KB irreführend
 
@@ -283,5 +280,4 @@ Alle benötigten Abhängigkeiten sind bereits installiert:
 
 ### Produktionsreife
 
-**NICHT BEREIT** für Deploy — Bug B-1 (Medium) sollte vor Deployment behoben werden.  
-B-2 ist Low-Priorität und kann nach Deploy gefixt werden.
+**BEREIT** für Deploy — B-1 behoben. B-2 ist Low-Priorität und kann nach Deploy gefixt werden.

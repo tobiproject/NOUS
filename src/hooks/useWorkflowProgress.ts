@@ -38,7 +38,8 @@ export function useWorkflowProgress(accountId: string | null | undefined) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/workflow/progress?account_id=${accountId}`)
+      const tz = encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)
+      const res = await fetch(`/api/workflow/progress?account_id=${accountId}&tz=${tz}`)
       if (!res.ok) throw new Error('Failed to load workflow progress')
       const json = await res.json()
       setData(json)

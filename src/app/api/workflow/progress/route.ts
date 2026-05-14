@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getISOWeekString, getLocalDateInfo } from '@/lib/workflow-utils'
 
-function getISOWeek(date: Date): string {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  const weekNum = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
-  return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`
-}
-
-function getMondayOfCurrentWeek(date: Date): string {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  d.setDate(diff)
-  return d.toISOString().split('T')[0]
+function getMondayStr(todayStr: string, dayOfWeek: number): string {
+  const [y, m, d] = todayStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  date.setDate(date.getDate() + diffToMonday)
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${mm}-${dd}`
 }
 
 export async function GET(req: NextRequest) {
@@ -27,9 +21,11 @@ export async function GET(req: NextRequest) {
   if (!accountId) return NextResponse.json({ error: 'account_id required' }, { status: 400 })
 
   const now = new Date()
-  const todayStr = now.toISOString().split('T')[0]
-  const weekIso = getISOWeek(now)
-  const mondayStr = getMondayOfCurrentWeek(now)
+  const tz = req.nextUrl.searchParams.get('tz') ?? 'UTC'
+  const { todayStr, hour: localHour, dayOfWeek: localDayOfWeek } = getLocalDateInfo(now, tz)
+  const weekIso = getISOWeekString(now)
+  const mondayStr = getMondayStr(todayStr, localDayOfWeek)
+
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - (now.getDay() || 7) + 1)
   weekStart.setHours(0, 0, 0, 0)
@@ -54,14 +50,15 @@ export async function GET(req: NextRequest) {
         .eq('plan_date', todayStr)
         .maybeSingle(),
 
-      // 3. Trades today
+      // 3. Trades today (limit 50 — well above any realistic daily trade count)
       supabase
         .from('trades')
         .select('id')
         .eq('user_id', user.id)
         .eq('account_id', accountId)
         .gte('traded_at', `${todayStr}T00:00:00.000Z`)
-        .lt('traded_at', `${todayStr}T23:59:59.999Z`),
+        .lt('traded_at', `${todayStr}T23:59:59.999Z`)
+        .limit(50),
 
       // 4. AI analysis for today's trades
       supabase
@@ -70,7 +67,8 @@ export async function GET(req: NextRequest) {
         .eq('user_id', user.id)
         .eq('account_id', accountId)
         .eq('status', 'completed')
-        .gte('created_at', `${todayStr}T00:00:00.000Z`),
+        .gte('created_at', `${todayStr}T00:00:00.000Z`)
+        .limit(50),
 
       // 5. Workflow state for this week
       supabase
@@ -106,13 +104,22 @@ export async function GET(req: NextRequest) {
       .eq('impact', 'High')
 
     if (events && events.length > 0) {
-      const relevantEvents = events.filter((e: { currency: string }) =>
-        watchlistSymbols.some(sym =>
-          sym.toLowerCase().includes(e.currency?.toLowerCase() ?? '') ||
-          e.currency?.toLowerCase().includes(sym.slice(0, 3).toLowerCase()) ||
-          e.currency?.toLowerCase().includes(sym.slice(3, 6).toLowerCase())
-        )
-      )
+      const relevantEvents = events.filter((e: { currency: string }) => {
+        const curr = (e.currency ?? '').toLowerCase()
+        if (!curr) return false
+        return watchlistSymbols.some(sym => {
+          const symLow = sym.toLowerCase()
+          // Currency appears in symbol name (e.g. EUR in EURUSD)
+          if (symLow.includes(curr)) return true
+          // Symbol's base (first 3 chars) matches currency
+          const base = symLow.slice(0, 3)
+          if (base && curr.includes(base)) return true
+          // Symbol's quote (chars 3–6) matches currency — guard against empty slice
+          const quote = symLow.slice(3, 6)
+          if (quote && curr.includes(quote)) return true
+          return false
+        })
+      })
       if (relevantEvents.length > 0) {
         const names = relevantEvents.slice(0, 2).map((e: { title: string; currency: string }) => `${e.currency}: ${e.title}`)
         calendarWarning = names.join(', ')
@@ -147,9 +154,13 @@ export async function GET(req: NextRequest) {
     ? state.trade_prepared_at.startsWith(todayStr)
     : false
 
-  // Missed logic: daily steps are "missed" if hour >= 19 and not done
-  const hour = now.getHours()
-  const isLateDay = hour >= 19
+  // Missed logic for daily steps:
+  // - After 19:00 local time: end of current trading day
+  // - Wednesday or later (dayOfWeek >= 3) after 12:00: late in the week,
+  //   step from earlier in the day is effectively missed
+  const isLateDay = localHour >= 19
+  const isLaterInWeek = localDayOfWeek >= 3 && localHour >= 12
+  const isMissedDaily = isLateDay || isLaterInWeek
 
   const steps = [
     {
@@ -168,7 +179,7 @@ export async function GET(req: NextRequest) {
       category: 'daily' as const,
       href: '/kalender',
       done: kalenderVisited,
-      missed: !kalenderVisited && isLateDay,
+      missed: !kalenderVisited && isMissedDaily,
       calendarWarning,
     },
     {
@@ -178,7 +189,7 @@ export async function GET(req: NextRequest) {
       category: 'daily' as const,
       href: '/wochenvorbereitung',
       done: briefingVisited,
-      missed: !briefingVisited && isLateDay,
+      missed: !briefingVisited && isMissedDaily,
     },
     {
       id: 'tagesplan',
@@ -187,7 +198,7 @@ export async function GET(req: NextRequest) {
       category: 'daily' as const,
       href: '/tagesplan',
       done: !!dailyPlan,
-      missed: !dailyPlan && isLateDay,
+      missed: !dailyPlan && isMissedDaily,
     },
     {
       id: 'trade_prepared',

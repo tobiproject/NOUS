@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createClient } from '@supabase/supabase-js'
+import { getISOWeekString } from '@/lib/workflow-utils'
 
-function getISOWeek(date: Date): number {
+function getISOWeekNumber(date: Date): number {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7))
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
   })
   if (!dueSettings.length) return NextResponse.json({ sent: 0, skipped: settings.length })
 
-  const kw = getISOWeek(new Date())
+  const kw = getISOWeekNumber(new Date())
   const nextKw = kw + 1
   const dayName = new Date().getDay() === 6 ? 'Samstag' : 'Sonntag'
 
@@ -123,5 +124,26 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ sent: pushSent + emailSent, push: pushSent, email: emailSent })
+  // AC-16: Reset workflow_state for all notified users so the new week starts clean.
+  // Uses the week_iso that is currently ending (the one being replaced by next week).
+  const currentWeekIso = getISOWeekString(now)
+  const resetResults = await Promise.allSettled(
+    dueSettings.map(s =>
+      supabase
+        .from('workflow_state')
+        .update({
+          visited_kalender_at: null,
+          visited_performance_at: null,
+          visited_briefing_at: null,
+          trade_prepared_at: null,
+          reset_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        })
+        .eq('user_id', s.user_id)
+        .eq('week_iso', currentWeekIso)
+    )
+  )
+  const workflowResets = resetResults.filter(r => r.status === 'fulfilled').length
+
+  return NextResponse.json({ sent: pushSent + emailSent, push: pushSent, email: emailSent, workflow_resets: workflowResets })
 }

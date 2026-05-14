@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-
-function getISOWeek(date: Date): string {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  const weekNum = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
-  return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`
-}
+import { getISOWeekString } from '@/lib/workflow-utils'
 
 const schema = z.object({
   account_id: z.string().uuid(),
@@ -27,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   const { account_id, step } = parsed.data
   const now = new Date()
-  const weekIso = getISOWeek(now)
+  const weekIso = getISOWeekString(now)
 
   const fieldMap = {
     kalender: 'visited_kalender_at',

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { AssetMultiPicker } from '@/components/watchlist/AssetMultiPicker'
 import { WeeklyPrepCard } from '@/components/dashboard/WeeklyPrepCard'
+import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
 import { format, startOfWeek, addWeeks, addDays, getISOWeek } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -105,6 +106,7 @@ export default function WochenvorbereitungPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
+      <WorkflowVisitTracker step="briefing" />
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

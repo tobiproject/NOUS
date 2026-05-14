@@ -12,13 +12,19 @@ function getISOWeek(date: Date): string {
 }
 
 // ─── Pure helper: matchesWatchlist ──────────────────────────────────────────
-// Mirrors the matching logic in /api/workflow/progress/route.ts
+// Mirrors the FIXED matching logic in /api/workflow/progress/route.ts
 function matchesWatchlist(currency: string, watchlistSymbols: string[]): boolean {
-  return watchlistSymbols.some(sym =>
-    sym.toLowerCase().includes(currency?.toLowerCase() ?? '') ||
-    currency?.toLowerCase().includes(sym.slice(0, 3).toLowerCase()) ||
-    currency?.toLowerCase().includes(sym.slice(3, 6).toLowerCase())
-  )
+  const curr = (currency ?? '').toLowerCase()
+  if (!curr) return false
+  return watchlistSymbols.some(sym => {
+    const symLow = sym.toLowerCase()
+    if (symLow.includes(curr)) return true
+    const base = symLow.slice(0, 3)
+    if (base && curr.includes(base)) return true
+    const quote = symLow.slice(3, 6)
+    if (quote && curr.includes(quote)) return true
+    return false
+  })
 }
 
 // ─── Pure helper: stale check ────────────────────────────────────────────────
@@ -77,14 +83,15 @@ describe('matchesWatchlist (calendar warning logic)', () => {
     expect(matchesWatchlist('EUR', [])).toBe(false)
   })
 
-  // Documents Bug-2: 3-char symbol like "BTC" causes empty-string match
-  it('BUG-2: 3-char symbol creates empty-string false-positive match for any currency', () => {
-    // sym.slice(3, 6) === '' for 'BTC', and any string includes ''
-    // This causes every high-impact event to match — a false positive
-    const btcResult = matchesWatchlist('JPY', ['BTC'])
-    // Current (buggy) behavior: returns true because ''.includes('') = true
-    // Expected (correct) behavior: should return false since BTC has no JPY exposure
-    expect(btcResult).toBe(true) // documents the bug — should be false after fix
+  it('3-char symbol (BTC) does not false-positive match an unrelated currency (BUG-2 fixed)', () => {
+    // Before fix: sym.slice(3,6) === '' caused ''.includes('') = true → false positive
+    // After fix: empty quote slice is guarded, so no spurious match
+    expect(matchesWatchlist('JPY', ['BTC'])).toBe(false)
+  })
+
+  it('3-char symbol (BTC) still matches if currency is literally in the symbol', () => {
+    // 'btc'.includes('btc') is true — real match should still work
+    expect(matchesWatchlist('BTC', ['BTC'])).toBe(true)
   })
 })
 

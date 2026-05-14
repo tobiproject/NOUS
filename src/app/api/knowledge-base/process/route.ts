@@ -4,8 +4,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 export const maxDuration = 60
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
+  // Use lib/ path to bypass index.js test-file loading (known v1 issue in serverless)
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require('pdf-parse')
+  const pdfParse = require('pdf-parse/lib/pdf-parse.js')
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error('timeout')), 45_000)
   )

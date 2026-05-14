@@ -51,6 +51,7 @@ const NAV_ITEMS = [
   { href: '/einstellungen?tab=api-key&solo=1',           icon: Key,         label: 'API Key' },
   { href: '/einstellungen?tab=knowledge-base&solo=1',    icon: BookOpen,    label: 'Knowledge Base' },
   { href: '/einstellungen?tab=benachrichtigungen&solo=1',icon: Bell,        label: 'Benachrichtigungen' },
+  { href: '/einstellungen?tab=tradingplan&solo=1',       icon: Sparkles,    label: 'Tradingplan' },
   { href: '/anleitung',                                  icon: HelpCircle,  label: 'Anleitung', isAnleitung: true },
 ]
 

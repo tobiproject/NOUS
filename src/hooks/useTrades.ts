@@ -38,6 +38,7 @@ export interface Trade {
   news_event_name: string | null
   news_impact_level: 'high' | 'medium' | 'low' | null
   news_timing_minutes: number | null
+  emotional_checkin: string | null
   created_at: string
   updated_at: string
 }
@@ -76,6 +77,7 @@ export interface CreateTradeInput {
   news_event_name?: string | null
   news_impact_level?: 'high' | 'medium' | 'low' | null
   news_timing_minutes?: number | null
+  emotional_checkin?: string
 }
 
 export interface TradesPage {

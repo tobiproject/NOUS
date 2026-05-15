@@ -2,17 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAccountContext } from '@/contexts/AccountContext'
-import { useTrades, Trade } from '@/hooks/useTrades'
-import { Card, CardContent } from '@/components/ui/card'
+import { toast } from 'sonner'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Loader2, Send, MessageSquare } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Loader2, Send, Mic, MicOff, Brain, CheckCircle2, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
-import { de } from 'date-fns/locale'
+import Link from 'next/link'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -20,62 +18,75 @@ interface Message {
   created_at: string
 }
 
-const MAX_MESSAGES = 20
+interface InsightCounts {
+  total: number
+  confirmed: number
+  pending: number
+}
 
 export function CoachPage() {
   const { activeAccount } = useAccountContext()
-  const { fetchTrades } = useTrades()
-  const [trades, setTrades] = useState<Trade[]>([])
-  const [tradesLoading, setTradesLoading] = useState(true)
-  const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isStreaming, setIsStreaming] = useState(false)
+  const [insightCounts, setInsightCounts] = useState<InsightCounts | null>(null)
+  const [isListening, setIsListening] = useState(false)
+  const [speechSupported, setSpeechSupported] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
 
   useEffect(() => {
-    const load = async () => {
-      setTradesLoading(true)
-      const page = await fetchTrades({}, 1)
-      setTrades(page.trades)
-      setTradesLoading(false)
+    setSpeechSupported(
+      typeof window !== 'undefined' &&
+      ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+    )
+    return () => {
+      recognitionRef.current?.stop()
     }
-    load()
-  }, [fetchTrades])
+  }, [])
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isStreaming])
+  const fetchInsightCounts = useCallback(async () => {
+    if (!activeAccount) return
+    try {
+      const res = await fetch(`/api/ai/coach-insights?account_id=${activeAccount.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setInsightCounts(data.counts ?? null)
+      }
+    } catch {
+      // non-blocking
+    }
+  }, [activeAccount])
 
-  const loadConversation = useCallback(async (tradeId: string) => {
+  const loadConversation = useCallback(async () => {
     if (!activeAccount) return
     setIsLoading(true)
-    setMessages([])
-    setConversationId(null)
     try {
-      const res = await fetch(
-        `/api/coach/conversation?trade_id=${tradeId}&account_id=${activeAccount.id}`
-      )
-      const data = await res.json()
+      const res = await fetch(`/api/ai/coach-chat?account_id=${activeAccount.id}`)
       if (res.ok) {
-        setMessages(data.messages || [])
-        setConversationId(data.id || null)
+        const data = await res.json()
+        setMessages(data.messages ?? [])
+        setConversationId(data.id ?? null)
       }
     } finally {
       setIsLoading(false)
     }
   }, [activeAccount])
 
-  const handleTradeSelect = async (tradeId: string) => {
-    setSelectedTradeId(tradeId)
-    await loadConversation(tradeId)
-  }
+  useEffect(() => {
+    loadConversation()
+    fetchInsightCounts()
+  }, [loadConversation, fetchInsightCounts])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isStreaming])
 
   const handleSend = async () => {
-    if (!input.trim() || !selectedTradeId || !activeAccount || isStreaming) return
-    if (messages.length >= MAX_MESSAGES) return
+    if (!input.trim() || !activeAccount || isStreaming) return
 
     const userMessage: Message = {
       role: 'user',
@@ -87,12 +98,11 @@ export function CoachPage() {
     setIsStreaming(true)
 
     try {
-      const res = await fetch('/api/coach/conversation', {
+      const res = await fetch('/api/ai/coach-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           account_id: activeAccount.id,
-          trade_id: selectedTradeId,
           conversation_id: conversationId,
           message: userMessage.content,
         }),
@@ -100,15 +110,16 @@ export function CoachPage() {
 
       if (!res.ok || !res.body) {
         setIsStreaming(false)
+        // Remove the optimistic user message on hard failure
+        setMessages(prev => prev.filter((_, i) => i !== prev.length - 1))
+        toast.error('Coach nicht erreichbar — bitte versuche es erneut.')
         return
       }
 
-      // Handle streaming response
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let assistantContent = ''
 
-      // Add placeholder assistant message
       setMessages(prev => [
         ...prev,
         { role: 'assistant', content: '', created_at: new Date().toISOString() },
@@ -118,7 +129,6 @@ export function CoachPage() {
         const { done, value } = await reader.read()
         if (done) break
         const chunk = decoder.decode(value, { stream: true })
-        // Parse SSE chunks
         const lines = chunk.split('\n')
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -140,7 +150,6 @@ export function CoachPage() {
                 })
               }
             } catch {
-              // not JSON, raw text delta
               assistantContent += data
               setMessages(prev => {
                 const updated = [...prev]
@@ -154,81 +163,105 @@ export function CoachPage() {
           }
         }
       }
+
+      // Refresh insight counts after response (insights are extracted async)
+      setTimeout(() => fetchInsightCounts(), 3000)
     } finally {
       setIsStreaming(false)
     }
   }
 
-  const selectedTrade = trades.find(t => t.id === selectedTradeId)
-  const messageCount = messages.length
-  const atLimit = messageCount >= MAX_MESSAGES
+  const toggleSpeech = () => {
+    if (!speechSupported) return
+
+    if (isListening) {
+      recognitionRef.current?.stop()
+      setIsListening(false)
+      return
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'de-DE'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+
+    recognition.onresult = (event: { results: { transcript: string }[][] }) => {
+      const transcript = event.results[0][0].transcript
+      setInput(prev => prev ? `${prev} ${transcript}` : transcript)
+      setIsListening(false)
+    }
+    recognition.onerror = () => setIsListening(false)
+    recognition.onend = () => setIsListening(false)
+
+    recognition.start()
+    recognitionRef.current = recognition
+    setIsListening(true)
+  }
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
-      <div className="flex items-center gap-3">
+      {/* Header */}
+      <div className="flex items-center gap-3 shrink-0">
         <h1 className="text-2xl font-semibold tracking-tight">KI-Coach</h1>
-        {selectedTradeId && (
-          <span className="text-sm text-muted-foreground ml-auto">
-            {messageCount}/{MAX_MESSAGES} Nachrichten
+        <span className="text-sm text-muted-foreground ml-auto">
+          {messages.length > 0 && `${messages.length} Nachrichten`}
+        </span>
+      </div>
+
+      {/* Context Banner */}
+      {insightCounts && insightCounts.total > 0 && (
+        <div className="shrink-0 flex items-center gap-3 rounded-lg px-4 py-2.5 bg-muted/40 border border-border/60 text-sm">
+          <Brain className="h-4 w-4 text-purple-400 shrink-0" />
+          <span className="text-muted-foreground flex-1">
+            <span className="text-foreground font-medium">{insightCounts.confirmed}</span> aktive Erkenntnisse
+            {insightCounts.pending > 0 && (
+              <>
+                {' · '}
+                <span className="text-amber-400 font-medium">{insightCounts.pending}</span> warten auf Bestätigung
+              </>
+            )}
           </span>
-        )}
-      </div>
-
-      {/* Trade selector */}
-      <div className="flex items-center gap-3">
-        {tradesLoading ? (
-          <Skeleton className="h-9 w-72" />
-        ) : (
-          <Select onValueChange={handleTradeSelect} value={selectedTradeId ?? ''}>
-            <SelectTrigger className="w-72">
-              <SelectValue placeholder="Trade auswählen..." />
-            </SelectTrigger>
-            <SelectContent>
-              {trades.length === 0 ? (
-                <SelectItem value="__empty" disabled>
-                  Keine Trades vorhanden
-                </SelectItem>
-              ) : (
-                trades.map(trade => (
-                  <SelectItem key={trade.id} value={trade.id}>
-                    {trade.asset} · {trade.direction === 'long' ? 'Long' : 'Short'} ·{' '}
-                    {format(new Date(trade.traded_at), 'dd.MM.yy', { locale: de })}
-                    {trade.outcome === 'win' ? ' ✓' : trade.outcome === 'loss' ? ' ✗' : ''}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-
-      {!selectedTradeId ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
-          <MessageSquare className="h-10 w-10 text-muted-foreground/40" />
-          <p className="text-muted-foreground">Wähle einen Trade aus um das Gespräch zu starten.</p>
+          {insightCounts.pending > 0 && (
+            <Link href="/einstellungen?tab=coach-memory" className="shrink-0">
+              <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10 cursor-pointer transition-colors">
+                <Clock className="h-3 w-3 mr-1" />
+                Bestätigen
+              </Badge>
+            </Link>
+          )}
+          {insightCounts.pending === 0 && insightCounts.confirmed > 0 && (
+            <Link href="/einstellungen?tab=coach-memory" className="shrink-0">
+              <Badge variant="outline" className="text-xs border-purple-500/40 text-purple-400 hover:bg-purple-500/10 cursor-pointer transition-colors">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Verwalten
+              </Badge>
+            </Link>
+          )}
         </div>
-      ) : isLoading ? (
+      )}
+
+      {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <Card className="flex-1 flex flex-col overflow-hidden">
-          {/* Trade context bar */}
-          {selectedTrade && (
-            <div className="px-4 py-2 border-b bg-muted/30 text-xs text-muted-foreground flex gap-4 flex-wrap">
-              <span className="font-medium text-foreground">{selectedTrade.asset}</span>
-              <span>{selectedTrade.direction === 'long' ? 'Long' : 'Short'}</span>
-              {selectedTrade.setup_type && <span>{selectedTrade.setup_type}</span>}
-              <span>{format(new Date(selectedTrade.traded_at), 'dd. MMM yyyy', { locale: de })}</span>
-            </div>
-          )}
-
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-3">
               {messages.length === 0 && !isStreaming && (
-                <p className="text-sm text-muted-foreground text-center py-6">
-                  Sende eine erste Nachricht und dein KI-Coach startet das Gespräch.
-                </p>
+                <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                  <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <Brain className="h-6 w-6 text-purple-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Dein psychologischer Coach</p>
+                    <p className="text-xs text-muted-foreground max-w-xs">
+                      Schreib was dich beschäftigt — nach einem Trade, nach einem schwierigen Tag oder einfach wenn du über dein Trading nachdenken willst.
+                    </p>
+                  </div>
+                </div>
               )}
               {messages.map((msg, i) => (
                 <MessageBubble key={i} message={msg} />
@@ -252,19 +285,14 @@ export function CoachPage() {
           </ScrollArea>
 
           <div className="p-3 border-t space-y-2">
-            {atLimit && (
-              <p className="text-xs text-muted-foreground text-center">
-                Maximale Gesprächslänge erreicht — lass uns das Gespräch zusammenfassen.
-              </p>
-            )}
             <div className="flex gap-2">
               <Textarea
-                placeholder={atLimit ? 'Gesprächslimit erreicht' : 'Deine Antwort...'}
+                placeholder="Was beschäftigt dich heute?"
                 rows={2}
-                className="resize-none text-sm"
+                className="resize-none text-sm flex-1"
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                disabled={atLimit || isStreaming}
+                disabled={isStreaming}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
@@ -272,18 +300,32 @@ export function CoachPage() {
                   }
                 }}
               />
-              <Button
-                size="icon"
-                className="h-auto"
-                onClick={handleSend}
-                disabled={!input.trim() || atLimit || isStreaming}
-              >
-                {isStreaming ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
+              <div className="flex flex-col gap-2">
+                {speechSupported && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={isListening ? 'destructive' : 'outline'}
+                    className="h-9 w-9 shrink-0"
+                    onClick={toggleSpeech}
+                    title={isListening ? 'Aufnahme stoppen' : 'Spracheingabe'}
+                  >
+                    {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </Button>
                 )}
-              </Button>
+                <Button
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  onClick={handleSend}
+                  disabled={!input.trim() || isStreaming}
+                >
+                  {isStreaming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </Card>

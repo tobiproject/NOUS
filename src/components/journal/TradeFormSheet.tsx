@@ -57,6 +57,7 @@ const schema = z.object({
   emotion_after: z.string().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().max(5000, 'Maximal 5000 Zeichen').optional(),
+  emotional_checkin: z.string().max(500, 'Maximal 500 Zeichen').optional(),
   chart_url: z.string().url('Keine gültige URL').max(500).optional().or(z.literal('')),
   news_event_present: z.enum(['yes', 'no', 'unknown']).optional(),
   news_event_name: z.string().max(100).optional(),
@@ -466,6 +467,7 @@ export function TradeFormSheet({
       emotion_after: '',
       tags: [],
       notes: '',
+      emotional_checkin: '',
     },
   })
 
@@ -488,6 +490,7 @@ export function TradeFormSheet({
         emotion_after: editingTrade.emotion_after ?? '',
         tags: editingTrade.tags ?? [],
         notes: editingTrade.notes ?? '',
+        emotional_checkin: editingTrade.emotional_checkin ?? '',
         news_event_present: editingTrade.news_event_present === true ? 'yes' : editingTrade.news_event_present === false ? 'no' : 'unknown',
         news_event_name: editingTrade.news_event_name ?? '',
         news_impact_level: editingTrade.news_impact_level ?? undefined,
@@ -513,6 +516,7 @@ export function TradeFormSheet({
         emotion_after: '',
         tags: [],
         notes: '',
+        emotional_checkin: '',
       })
       setExistingUrls([])
       setNewFiles([])
@@ -564,6 +568,7 @@ export function TradeFormSheet({
       news_event_name: values.news_event_present === 'yes' ? (values.news_event_name || null) : null,
       news_impact_level: values.news_event_present === 'yes' ? (values.news_impact_level ?? null) : null,
       news_timing_minutes: values.news_event_present === 'yes' ? (values.news_timing_minutes ?? null) : null,
+      emotional_checkin: values.emotional_checkin || undefined,
     }
 
     if (isEdit && editingTrade) {
@@ -602,6 +607,19 @@ export function TradeFormSheet({
       }
 
       toast.success('Trade erfasst')
+
+      // Fire-and-forget: emotional check-in analysis
+      if (values.emotional_checkin?.trim()) {
+        fetch('/api/ai/trade-checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            trade_id: trade.id,
+            account_id: activeAccount.id,
+            checkin_text: values.emotional_checkin.trim(),
+          }),
+        }).catch(() => {})
+      }
 
       // Save analysis reminder — localStorage (in-app banner) + DB (push notification)
       if (reminderHours !== 'none') {
@@ -973,6 +991,34 @@ export function TradeFormSheet({
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="emotional_checkin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex justify-between items-center">
+                        <span>Check-in für den Coach</span>
+                        <span className={cn(
+                          'text-xs tabular-nums',
+                          (field.value?.length ?? 0) > 450 ? 'text-amber-400' : 'text-muted-foreground'
+                        )}>
+                          {field.value?.length ?? 0}/500
+                        </span>
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          placeholder="Wie fühlst du dich gerade — was geht dir durch den Kopf?"
+                          className="resize-none text-sm"
+                          disabled={isMutating}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}

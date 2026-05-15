@@ -24,6 +24,7 @@ import { AssetMultiPicker } from '@/components/watchlist/AssetMultiPicker'
 import { AccountCard } from '@/components/accounts/AccountCard'
 import { AccountCreateDialog } from '@/components/accounts/AccountCreateDialog'
 import { AccountDeleteDialog } from '@/components/accounts/AccountDeleteDialog'
+import { CoachInsightsSection } from '@/components/lernmodus/coach/CoachInsightsSection'
 
 interface Strategy {
   name: string
@@ -2181,7 +2182,7 @@ function TradingplanTab() {
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 
-type TabId = 'profil' | 'strategie' | 'konten' | 'api-key' | 'knowledge-base' | 'benachrichtigungen' | 'tradingplan'
+type TabId = 'profil' | 'strategie' | 'konten' | 'api-key' | 'knowledge-base' | 'benachrichtigungen' | 'tradingplan' | 'coach-memory'
 
 const TAB_LABELS: Record<TabId, string> = {
   'profil':              'Profil',
@@ -2191,6 +2192,7 @@ const TAB_LABELS: Record<TabId, string> = {
   'knowledge-base':      'Knowledge Base',
   'benachrichtigungen':  'Benachrichtigungen',
   'tradingplan':         'Tradingplan',
+  'coach-memory':        'Coach Memory',
 }
 
 function EinstellungenInner() {
@@ -2213,6 +2215,7 @@ function EinstellungenInner() {
     'knowledge-base':     <KnowledgeBaseTab />,
     'benachrichtigungen': <BenachrichtigungenTab />,
     'tradingplan':        <TradingplanTab />,
+    'coach-memory':       <CoachInsightsSection />,
   }
 
   if (solo) {
@@ -2261,6 +2264,7 @@ function EinstellungenInner() {
             <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
             <TabsTrigger value="benachrichtigungen">Benachrichtigungen</TabsTrigger>
             <TabsTrigger value="tradingplan">Tradingplan</TabsTrigger>
+            <TabsTrigger value="coach-memory">Coach Memory</TabsTrigger>
           </TabsList>
         </div>
 
@@ -2271,6 +2275,7 @@ function EinstellungenInner() {
         <TabsContent value="knowledge-base"><KnowledgeBaseTab /></TabsContent>
         <TabsContent value="benachrichtigungen"><BenachrichtigungenTab /></TabsContent>
         <TabsContent value="tradingplan"><TradingplanTab /></TabsContent>
+        <TabsContent value="coach-memory"><CoachInsightsSection /></TabsContent>
       </Tabs>
     </div>
   )

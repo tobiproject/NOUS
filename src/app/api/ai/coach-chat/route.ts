@@ -68,6 +68,15 @@ export async function POST(req: NextRequest) {
 
   const { account_id, conversation_id, message } = parsed.data
 
+  // Verify account belongs to user
+  const { data: account } = await supabase
+    .from('accounts')
+    .select('id')
+    .eq('id', account_id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 })
+
   // Load existing conversation
   let conversationRow: {
     id: string

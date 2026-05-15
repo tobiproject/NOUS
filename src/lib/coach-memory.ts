@@ -177,23 +177,20 @@ export async function summarizeOldConversations(
   try {
     const supabase = await createServerSupabaseClient()
 
+    // Summarize conversations older than 14 days that haven't been summarized yet
+    const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+
     const { data: unsummarized } = await supabase
       .from('coach_conversations')
       .select('id, messages, created_at')
       .eq('user_id', userId)
       .eq('is_summarized', false)
       .not('messages', 'eq', '[]')
+      .lt('created_at', cutoff)
       .order('created_at', { ascending: true })
       .limit(5)
 
     if (!unsummarized?.length) return
-
-    const { count } = await supabase
-      .from('coach_conversations')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-
-    if ((count ?? 0) <= 20) return
 
     for (const conv of unsummarized) {
       const msgs = conv.messages as Array<{ role: string; content: string }>

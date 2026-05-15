@@ -101,10 +101,15 @@ Regeln:
         .order('created_at', { ascending: false })
         .limit(10)
 
-      const isDuplicate = existing?.some(
-        (e: { insight: string }) =>
-          e.insight.toLowerCase().slice(0, 40) === result.insight.toLowerCase().slice(0, 40)
-      )
+      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
+      const newNorm = normalize(result.insight)
+      const isDuplicate = existing?.some((e: { insight: string }) => {
+        const existNorm = normalize(e.insight)
+        // Consider duplicate if 80%+ of the shorter string overlaps with the other
+        const shorter = Math.min(newNorm.length, existNorm.length)
+        const overlap = newNorm.slice(0, shorter) === existNorm.slice(0, shorter)
+        return overlap && shorter >= 20
+      })
       if (isDuplicate) return
 
       await supabase.from('coach_memory_insights').insert({

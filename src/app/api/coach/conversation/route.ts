@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAnthropicClient } from '@/lib/anthropic'
+import { getMemoryInsights, formatInsightsForPrompt, extractAndSaveInsights } from '@/lib/coach-memory'
 
 const MAX_MESSAGES = 20
 
@@ -77,15 +78,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Maximale Gesprächslänge erreicht' }, { status: 422 })
   }
 
+  // Load memory insights for this user
+  const insights = await getMemoryInsights(user.id, account_id)
+  const insightBlock = formatInsightsForPrompt(insights)
+
   // Build conversation history for Claude
-  const tradeContext = `Du bist ein Trading-Coach der die Sokrates-Methode anwendet. Du coachst einen Trader zu folgendem Trade:
+  const tradeContext = [
+    insightBlock,
+    `─── TRADE-COACHING (Sokrates-Methode) ───────────────────────────────────────
+Du coachst diesen Trader zu folgendem spezifischen Trade:
 Asset: ${trade.asset}, Richtung: ${trade.direction}, Entry: ${trade.entry_price}, SL: ${trade.sl_price}, TP: ${trade.tp_price}, Setup: ${trade.setup_type ?? 'unbekannt'}, Strategie: ${trade.strategy ?? 'unbekannt'}, Ergebnis: ${trade.outcome ?? 'noch unbekannt'}, P&L: ${trade.result_currency ?? 'noch unbekannt'}, Notizen: ${trade.notes ?? 'keine'}.
 
 Regeln:
 - Stelle offene Fragen, gib keine direkten Antworten
+- Wenn du ein bekanntes Muster aus den gespeicherten Erkenntnissen erkennst, sprich es direkt an
 - Erst bei der letzten Nachricht (Nachricht ${MAX_MESSAGES}) darfst du eine Zusammenfassung und Bewertung geben
 - Antworte immer auf Deutsch
-- Erste Nachricht: Starte mit einer offenen Frage über den Trade (keine Bewertung)`
+- Erste Nachricht: Starte mit einer offenen Frage über den Trade (keine Bewertung)`,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 
   const isFirstMessage = existingMessages.length === 0
   const claudeMessages: Array<{ role: 'user' | 'assistant'; content: string }> = []
@@ -170,6 +182,13 @@ Regeln:
           encoder.encode(`data: ${JSON.stringify({ type: 'conversation_id', id: convId })}\n\n`)
         )
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+
+        // Fire-and-forget: extract insights from trade coaching conversation
+        const allMessages = updatedMessages.map((m: { role: string; content: string }) => ({
+          role: m.role,
+          content: m.content,
+        }))
+        extractAndSaveInsights(user.id, account_id, allMessages, 'conversation', anthropic)
       } catch (err) {
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'KI nicht verfügbar' })}\n\n`)

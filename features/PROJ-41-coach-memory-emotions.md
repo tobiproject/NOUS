@@ -1,6 +1,6 @@
 # PROJ-41 — Coach Memory & Emotionale Intelligenz
 
-**Status:** Approved  
+**Status:** Deployed  
 **Erstellt:** 2026-05-14  
 **Priorität:** P1 — Kern des Coach-Systems
 
@@ -380,3 +380,12 @@ QA Engineer (claude-sonnet-4-6)
 
 ### Entscheidung
 **✅ PRODUCTION-READY** — Keine Critical- oder High-Bugs. BUG-1 ist eine Implementierungsabweichung von der Spec (akzeptabel als v1), BUG-2 und BUG-3 sind Verbesserungsempfehlungen für nachfolgende Iterationen.
+
+---
+
+## Deployment (2026-05-15)
+
+- **Produktions-URL:** https://www.getnous.de/lernmodus/coach
+- **Deployed:** 2026-05-15
+- **Git Commit:** 62b93c1
+- **Vercel:** Auto-Deploy via Push auf main → GitHub Action triggert Release

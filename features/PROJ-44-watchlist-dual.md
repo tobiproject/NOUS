@@ -1,6 +1,6 @@
 # PROJ-44 — Watchlist: Allgemein vs. Heutige Trading-Watchlist
 
-**Status:** Approved  
+**Status:** Deployed  
 **Erstellt:** 2026-05-15  
 **Feature-ID:** PROJ-44  
 **Abhängigkeiten:** PROJ-23 (Watchlist), PROJ-33 (Watchlist per Konto), PROJ-39 (Tagesplan), PROJ-38 (Wirtschaftskalender)

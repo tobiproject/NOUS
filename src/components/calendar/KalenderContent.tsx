@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { useEconomicCalendar } from '@/hooks/useEconomicCalendar'
 import { useWatchlist } from '@/hooks/useWatchlist'
+import { useDailyWatchlist } from '@/hooks/useDailyWatchlist'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { getCategoryColor } from '@/lib/category-colors'
 import { CountdownBanner } from './CountdownBanner'
@@ -22,7 +23,12 @@ export function KalenderContent() {
   } = useEconomicCalendar()
 
   const { items: watchlistItems } = useWatchlist(activeAccount?.id)
-  const watchlistSymbols = watchlistItems.map(i => i.symbol)
+  const { todaySymbols } = useDailyWatchlist(activeAccount?.id)
+
+  // Prefer today's watchlist; fall back to general watchlist if today is empty
+  const watchlistSymbols = todaySymbols.length > 0
+    ? todaySymbols
+    : watchlistItems.map(i => i.symbol)
 
   // Symbol → Farbe aus der Watchlist (eigene Farbe des Users oder Kategorie-Farbe)
   const watchlistColorMap = useMemo(() => {

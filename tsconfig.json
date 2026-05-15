@@ -37,6 +37,7 @@
   ],
   "exclude": [
     "node_modules",
-    "my-video"
+    "my-video",
+    "tests"
   ]
 }

@@ -45,17 +45,6 @@ function getEventDescription(title: string): string | null {
   return null
 }
 
-const AFFECTED_ASSETS: Record<string, string[]> = {
-  USD: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'Gold', 'US Treasuries', 'DXY'],
-  EUR: ['EUR/USD', 'EUR/GBP', 'EUR/JPY', 'DAX'],
-  GBP: ['GBP/USD', 'EUR/GBP', 'FTSE 100'],
-  JPY: ['USD/JPY', 'EUR/JPY', 'GBP/JPY', 'Nikkei 225'],
-  CAD: ['USD/CAD', 'Oil'],
-  AUD: ['AUD/USD', 'AUD/JPY', 'ASX 200'],
-  NZD: ['NZD/USD', 'NZD/JPY'],
-  CHF: ['USD/CHF', 'EUR/CHF'],
-  CNY: ['AUD/USD', 'Copper'],
-}
 
 interface HistoryEntry {
   date: string
@@ -90,7 +79,6 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
   const [tradeStats, setTradeStats] = useState<TradeStats | null | undefined>(undefined)
   const [tradeHistoryLoading, setTradeHistoryLoading] = useState(true)
 
-  const affectedAssets = AFFECTED_ASSETS[event.currency] ?? []
   const description = getEventDescription(event.title)
 
   // On mount: if no local cache, fetch from DB (syncs across devices)
@@ -211,25 +199,14 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
             </span>
           )
         })}
-        {affectedAssets
-          .filter(a => !matchedSymbols.some(m => m.toUpperCase() === a.toUpperCase()))
-          .map(asset => (
-            <span
-              key={asset}
-              className="px-2 py-0.5 rounded text-xs"
-              style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
-            >
-              {asset}
-            </span>
-          ))}
       </div>
 
       {/* Data summary */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Previous', value: event.previous },
-          { label: 'Forecast', value: event.forecast },
-          { label: 'Actual', isActual: true },
+          { label: 'Vorherig', value: event.previous },
+          { label: 'Prognose', value: event.forecast },
+          { label: 'Aktuell', isActual: true },
         ].map(({ label, value, isActual }) => (
           <div key={label} className="rounded-md p-2 text-center" style={{ background: 'var(--bg-3)' }}>
             <div className="text-xs mb-1" style={{ color: 'var(--fg-4)' }}>{label}</div>
@@ -255,7 +232,7 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
               <table className="w-full text-xs">
                 <thead>
                   <tr style={{ background: 'var(--bg-3)' }}>
-                    {['Datum', 'Previous', 'Forecast', 'Actual'].map(h => (
+                    {['Datum', 'Vorherig', 'Prognose', 'Aktuell'].map(h => (
                       <th key={h} className="px-2 py-1 text-right first:text-left font-medium" style={{ color: 'var(--fg-4)' }}>{h}</th>
                     ))}
                   </tr>
@@ -399,7 +376,7 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
               >
                 <p>
                   <strong style={{ color: 'var(--fg-2)' }}>Event-Daten:</strong>{' '}
-                  Actual: {event.actual ?? '—'} · Forecast: {event.forecast ?? '—'} · Previous: {event.previous ?? '—'}
+                  Aktuell: {event.actual ?? '—'} · Prognose: {event.forecast ?? '—'} · Vorherig: {event.previous ?? '—'}
                 </p>
                 <p>
                   <strong style={{ color: 'var(--fg-2)' }}>Watchlist-Matches:</strong>{' '}

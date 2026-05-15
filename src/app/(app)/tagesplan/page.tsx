@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { DailyPlanForm } from '@/components/tagesplan/DailyPlanForm'
 import { useDailyPlan, type DailyPlan } from '@/hooks/useDailyPlan'
 import { useAccountContext } from '@/contexts/AccountContext'
+import { DailyWatchlistPanel } from '@/components/watchlist/DailyWatchlistPanel'
 
 const BIAS_CONFIG = {
   bullish: { label: 'Bullish', icon: TrendingUp, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
@@ -112,6 +113,17 @@ export default function TagesplanPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Tagesplan</h1>
         <p className="text-muted-foreground text-sm">Starte strukturiert in deinen Trading-Tag</p>
+      </div>
+
+      {/* Heutige Trading-Watchlist */}
+      <div className="rounded-lg border border-border/60 bg-card p-6 space-y-3">
+        <div>
+          <h2 className="text-base font-semibold">Heutige Trading-Watchlist</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Assets auf die du dich heute aktiv fokussierst
+          </p>
+        </div>
+        <DailyWatchlistPanel accountId={activeAccount?.id} />
       </div>
 
       {/* Today's form */}

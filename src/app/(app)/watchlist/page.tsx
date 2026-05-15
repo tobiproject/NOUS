@@ -4,10 +4,12 @@ import { useState, useRef, useEffect } from 'react'
 import { Plus, Trash2, Star, Loader2, ChevronDown, ChevronUp, Check, Search, Flag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useWatchlist, type WatchlistItem } from '@/hooks/useWatchlist'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { cn } from '@/lib/utils'
 import { searchAssets, type AssetEntry } from '@/lib/asset-database'
+import { DailyWatchlistPanel } from '@/components/watchlist/DailyWatchlistPanel'
 
 // ─── Category metadata ────────────────────────────────────────────────────────
 
@@ -643,70 +645,91 @@ export default function WatchlistPage() {
         </p>
       </div>
 
-      {/* Symbolsuche */}
-      <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
-        <p className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>Symbolsuche</p>
-        <AssetSearchPicker existingSymbols={existingSymbols} onAdd={handleAdd} />
-      </div>
+      <Tabs defaultValue="general">
+        <TabsList className="mb-4">
+          <TabsTrigger value="general">Allgemein</TabsTrigger>
+          <TabsTrigger value="today">Heute</TabsTrigger>
+        </TabsList>
 
-      {/* Watchlist */}
-      <div className="rounded-xl p-4 space-y-4" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>
-            Deine Watchlist
-            {items.length > 0 && (
-              <span className="ml-2 text-[11px] font-normal" style={{ color: 'var(--fg-4)' }}>
-                {items.length} Assets
-              </span>
-            )}
-          </p>
-          {items.length > 0 && (
-            <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
-              Fähnchen klicken → Farbe & Gruppe ändern
-            </span>
-          )}
-        </div>
+        {/* ── Allgemeine Watchlist ── */}
+        <TabsContent value="general" className="space-y-4">
+          {/* Symbolsuche */}
+          <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
+            <p className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>Symbolsuche</p>
+            <AssetSearchPicker existingSymbols={existingSymbols} onAdd={handleAdd} />
+          </div>
 
-        {loading ? (
-          <div className="flex items-center gap-2 text-sm py-4" style={{ color: 'var(--fg-4)' }}>
-            <Loader2 className="h-4 w-4 animate-spin" />Laden…
-          </div>
-        ) : items.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8">
-            <Star className="h-8 w-8 opacity-20" style={{ color: 'var(--fg-4)' }} />
-            <p className="text-sm" style={{ color: 'var(--fg-4)' }}>Noch keine Assets — oben suchen und hinzufügen.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {grouped.map(group => (
-              <div key={group.value}>
-                {/* Category header — white text, colored divider */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--fg-1)' }}>
-                    {group.label}
+          {/* Watchlist items */}
+          <div className="rounded-xl p-4 space-y-4" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>
+                Deine Watchlist
+                {items.length > 0 && (
+                  <span className="ml-2 text-[11px] font-normal" style={{ color: 'var(--fg-4)' }}>
+                    {items.length} Assets
                   </span>
-                  <div className="flex-1 h-px" style={{ background: group.bg }} />
-                  <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
-                    {group.items.length}
-                  </span>
-                </div>
-                {/* Items */}
-                <div className="space-y-1">
-                  {group.items.map(item => (
-                    <WatchlistRow
-                      key={item.id}
-                      item={item}
-                      removing={removingId === item.id}
-                      onRemove={() => handleRemove(item.id)}
-                      onUpdate={patch => updateItem(item.id, patch).then(() => {})}
-                    />
-                  ))}
-                </div>
+                )}
+              </p>
+              {items.length > 0 && (
+                <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
+                  Fähnchen klicken → Farbe & Gruppe ändern
+                </span>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm py-4" style={{ color: 'var(--fg-4)' }}>
+                <Loader2 className="h-4 w-4 animate-spin" />Laden…
               </div>
-            ))}
+            ) : items.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8">
+                <Star className="h-8 w-8 opacity-20" style={{ color: 'var(--fg-4)' }} />
+                <p className="text-sm" style={{ color: 'var(--fg-4)' }}>Noch keine Assets — oben suchen und hinzufügen.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {grouped.map(group => (
+                  <div key={group.value}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--fg-1)' }}>
+                        {group.label}
+                      </span>
+                      <div className="flex-1 h-px" style={{ background: group.bg }} />
+                      <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
+                        {group.items.length}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {group.items.map(item => (
+                        <WatchlistRow
+                          key={item.id}
+                          item={item}
+                          removing={removingId === item.id}
+                          onRemove={() => handleRemove(item.id)}
+                          onUpdate={patch => updateItem(item.id, patch).then(() => {})}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </TabsContent>
+
+        {/* ── Heutige Trading-Watchlist ── */}
+        <TabsContent value="today">
+          <div className="rounded-xl p-4 space-y-4" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>Heutige Trading-Watchlist</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--fg-4)' }}>
+                Assets auf die du dich heute aktiv fokussierst — steuert Hervorhebungen im Wirtschaftskalender.
+              </p>
+            </div>
+            <DailyWatchlistPanel accountId={activeAccount?.id} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

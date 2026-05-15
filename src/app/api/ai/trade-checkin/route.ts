@@ -101,15 +101,17 @@ Regeln:
         .order('created_at', { ascending: false })
         .limit(10)
 
-      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
-      const newNorm = normalize(result.insight)
-      const isDuplicate = existing?.some((e: { insight: string }) => {
-        const existNorm = normalize(e.insight)
-        // Consider duplicate if 80%+ of the shorter string overlaps with the other
-        const shorter = Math.min(newNorm.length, existNorm.length)
-        const overlap = newNorm.slice(0, shorter) === existNorm.slice(0, shorter)
-        return overlap && shorter >= 20
-      })
+      const wordSet = (s: string) =>
+        new Set(s.toLowerCase().replace(/[^a-zäöüß0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3))
+      const similarity = (a: Set<string>, b: Set<string>): number => {
+        if (!a.size || !b.size) return 0
+        const intersection = [...a].filter(w => b.has(w)).length
+        return intersection / Math.min(a.size, b.size)
+      }
+      const newWords = wordSet(result.insight)
+      const isDuplicate = existing?.some((e: { insight: string }) =>
+        similarity(newWords, wordSet(e.insight)) >= 0.65
+      )
       if (isDuplicate) return
 
       await supabase.from('coach_memory_insights').insert({

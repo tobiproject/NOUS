@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Loader2, TrendingUp, Zap, ChevronDown, ChevronUp } from 'lucide-react'
+import { Loader2, TrendingUp, Zap, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
 import type { EconomicEvent } from '@/types/calendar'
 import type { TradeHistoryEntry, TradeStats } from '@/app/api/calendar/event-trade-history/route'
 import { format, parseISO } from 'date-fns'
@@ -62,6 +62,8 @@ interface Props {
 
 const LS_KEY = (eventId: string) => `ki-briefing-${eventId}`
 
+type WatchlistAnalysisState = 'idle' | 'loading' | 'streaming' | 'done' | 'error'
+
 export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbols = [], watchlistColorMap = {} }: Props) {
   const [analysis, setAnalysis] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null
@@ -70,6 +72,9 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [showGrounding, setShowGrounding] = useState(false)
+
+  const [watchlistAnalysis, setWatchlistAnalysis] = useState<string>('')
+  const [watchlistAnalysisState, setWatchlistAnalysisState] = useState<WatchlistAnalysisState>('idle')
 
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [historyLoading, setHistoryLoading] = useState(true)
@@ -171,6 +176,51 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
       setAnalysisError('Verbindungsfehler. Bitte erneut versuchen.')
     } finally {
       setAnalysisLoading(false)
+    }
+  }
+
+  const showWatchlistButton = event.impact === 'High' || matchedSymbols.length > 0
+
+  const handleWatchlistAnalysis = async () => {
+    setWatchlistAnalysisState('loading')
+    setWatchlistAnalysis('')
+    try {
+      const res = await fetch('/api/ai/calendar-impact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventName: event.title,
+          country: event.currency,
+          impactLevel: event.impact,
+          actual: event.actual ?? null,
+          forecast: event.forecast ?? null,
+          previous: event.previous ?? null,
+          watchlistSymbols,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        setWatchlistAnalysis(err.error?.includes('API-Key')
+          ? 'Kein KI API-Key hinterlegt. Bitte in Einstellungen → KI-Provider eintragen.'
+          : (err.error ?? 'Fehler bei der Analyse.'))
+        setWatchlistAnalysisState('error')
+        return
+      }
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let accumulated = ''
+      let firstChunk = true
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        accumulated += decoder.decode(value, { stream: true })
+        setWatchlistAnalysis(accumulated)
+        if (firstChunk) { setWatchlistAnalysisState('streaming'); firstChunk = false }
+      }
+      setWatchlistAnalysisState('done')
+    } catch {
+      setWatchlistAnalysis('Verbindungsfehler. Bitte erneut versuchen.')
+      setWatchlistAnalysisState('error')
     }
   }
 
@@ -337,6 +387,63 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
             )}
             &nbsp;·&nbsp;{format(parseISO(event.trade_indicator.entry_time), 'HH:mm', { locale: de })}
           </span>
+        </div>
+      )}
+
+      {/* ── Watchlist Impact ─────────────────────────────────────────── */}
+      {showWatchlistButton && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--fg-4)' }}>
+            Watchlist Impact
+          </p>
+
+          {watchlistAnalysisState === 'idle' && (
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={handleWatchlistAnalysis}>
+              <Sparkles size={11} />
+              KI-Analyse: Auswirkung auf meine Watchlist
+            </Button>
+          )}
+
+          {watchlistAnalysisState === 'loading' && (
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" disabled>
+              <Loader2 size={11} className="animate-spin" />
+              Analysiere…
+            </Button>
+          )}
+
+          {(watchlistAnalysisState === 'streaming' || watchlistAnalysisState === 'done' || watchlistAnalysisState === 'error') && (
+            <div
+              className="rounded-md p-3 text-xs leading-relaxed space-y-2"
+              style={{
+                background: 'var(--bg-3)',
+                border: '1px solid var(--border-raw)',
+                color: watchlistAnalysisState === 'error' ? 'var(--short)' : 'var(--fg-2)',
+              }}
+            >
+              {watchlistAnalysis.split('\n').map((line, i) => {
+                if (!line.trim()) return null
+                const formatted = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                return <p key={i} dangerouslySetInnerHTML={{ __html: formatted }} />
+              })}
+              {watchlistAnalysisState === 'streaming' && (
+                <span
+                  className="inline-block w-1.5 h-3 ml-0.5 animate-pulse rounded-sm"
+                  style={{ background: 'var(--fg-3)' }}
+                />
+              )}
+              {(watchlistAnalysisState === 'done' || watchlistAnalysisState === 'error') && (
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={() => { setWatchlistAnalysisState('idle'); setWatchlistAnalysis('') }}
+                    className="text-[11px] transition-opacity hover:opacity-80"
+                    style={{ color: 'var(--fg-4)' }}
+                  >
+                    {watchlistAnalysisState === 'error' ? 'Erneut versuchen' : 'Neu analysieren'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

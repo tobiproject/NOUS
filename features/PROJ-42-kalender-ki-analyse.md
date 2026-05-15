@@ -1,6 +1,6 @@
 # PROJ-42 — Kalender: KI-Analyse "Auswirkung auf meine Watchlist"
 
-**Status:** Approved  
+**Status:** Deployed  
 **Erstellt:** 2026-05-15  
 **Feature-ID:** PROJ-42  
 **Bereich:** Wirtschaftskalender (`/kalender`)

@@ -54,10 +54,11 @@
 | PROJ-38 | Wirtschaftskalender (Custom Design, kein Widget) | Deployed | [PROJ-38-wirtschaftskalender.md](PROJ-38-wirtschaftskalender.md) | 2026-05-10 |
 | PROJ-39 | Tradingplan (Persönlicher Plan + KB-Integration) | Planned | [PROJ-39-tradingplan.md](PROJ-39-tradingplan.md) | 2026-05-14 |
 | PROJ-40 | Guided Trading Workflow (Roter Faden) | Deployed | [PROJ-40-guided-trading-workflow.md](PROJ-40-guided-trading-workflow.md) | 2026-05-14 |
+| PROJ-41 | Coach Memory & Emotionale Intelligenz | Approved | [PROJ-41-coach-memory-emotions.md](PROJ-41-coach-memory-emotions.md) | 2026-05-14 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-41
+## Next Available ID: PROJ-42
 
 ## Build Order (Empfohlen)
 

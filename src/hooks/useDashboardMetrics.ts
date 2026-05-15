@@ -31,6 +31,7 @@ export interface DashboardMetrics {
   equityCurve: EquityPoint[]
   topStrategy: TopStrategy | null
   recentTrades: Trade[]
+  allTrades: Trade[]
   allTradeCount: number
 }
 
@@ -215,6 +216,7 @@ export function useDashboardMetrics() {
       equityCurve,
       topStrategy,
       recentTrades,
+      allTrades: trades,
       allTradeCount: trades.length,
     }
   }, [activeAccount, supabase])

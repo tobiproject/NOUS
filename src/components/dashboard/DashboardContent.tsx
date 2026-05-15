@@ -3,28 +3,17 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAccountContext } from '@/contexts/AccountContext'
-import { useDashboardMetrics, type DashboardMetrics, type EquityPoint } from '@/hooks/useDashboardMetrics'
+import { useDashboardMetrics, type DashboardMetrics } from '@/hooks/useDashboardMetrics'
 import { useRiskAlerts, type RiskAlert } from '@/hooks/useRiskAlerts'
 import { RiskAlertBanner } from '@/components/risk/RiskAlertBanner'
-import { KpiRow } from './KpiRow'
-import { EquityCurveChart } from './EquityCurveChart'
-import { TopStrategyCard } from './TopStrategyCard'
-import { RecentTradesTable } from './RecentTradesTable'
-import { TradeDetailSheet } from '@/components/journal/TradeDetailSheet'
+import { DashboardTabs } from './DashboardTabs'
 import { InsightsPreview } from '@/components/ai/InsightsPreview'
 import { DailyPlanCTA } from '@/components/tagesplan/DailyPlanCTA'
 import { WeeklyPrepCard } from './WeeklyPrepCard'
 import { GuidedWorkflowWidget } from './GuidedWorkflowWidget'
 import { CoachProfileWidget } from './CoachProfileWidget'
+import { TradeDetailSheet } from '@/components/journal/TradeDetailSheet'
 import type { Trade } from '@/hooks/useTrades'
-
-type PeriodDays = 7 | 30 | 90 | null
-
-function filterByPeriod(points: EquityPoint[], days: PeriodDays): EquityPoint[] {
-  if (days === null) return points
-  const cutoff = new Date(Date.now() - days * 86400000).toISOString().split('T')[0]
-  return points.filter(p => p.date >= cutoff)
-}
 
 export function DashboardContent() {
   const { activeAccount, isLoading: accountLoading } = useAccountContext()
@@ -34,7 +23,6 @@ export function DashboardContent() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [alerts, setAlerts] = useState<RiskAlert[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [period, setPeriod] = useState<PeriodDays>(30)
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
@@ -48,7 +36,7 @@ export function DashboardContent() {
     setIsLoading(true)
     try {
       const [m, a] = await Promise.all([
-        fetchMetrics(null), // fetch all trades; period filtering happens in UI
+        fetchMetrics(null),
         fetchTodayAlerts(),
       ])
       setMetrics(m)
@@ -72,8 +60,6 @@ export function DashboardContent() {
     setDetailOpen(true)
   }
 
-  const visibleCurve = metrics ? filterByPeriod(metrics.equityCurve, period) : []
-
   if (accountLoading) {
     return (
       <div className="space-y-5">
@@ -82,8 +68,8 @@ export function DashboardContent() {
           <Skeleton className="h-7 w-48 rounded" />
           <Skeleton className="h-3 w-24 rounded" />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
         </div>
         <Skeleton className="h-72 rounded-lg" />
         <Skeleton className="h-56 rounded-lg" />
@@ -122,6 +108,7 @@ export function DashboardContent() {
   return (
     <>
       <div className="space-y-5">
+        {/* Greeting */}
         <div className="flex items-end justify-between">
           <div>
             <div className="eyebrow mb-1">{now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
@@ -139,57 +126,31 @@ export function DashboardContent() {
           <RiskAlertBanner alerts={alerts} onDismiss={handleDismiss} />
         )}
 
-        {/* KPI row */}
+        {/* Tab-driven KPIs, chart, strategy, trades */}
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
-          </div>
-        ) : metrics ? (
-          <KpiRow metrics={metrics} />
-        ) : null}
-
-        {/* Middle row: chart + strategy */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            <Skeleton className="h-72 rounded-lg lg:col-span-3" />
-            <Skeleton className="h-72 rounded-lg lg:col-span-2" />
-          </div>
-        ) : metrics ? (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            <div className="lg:col-span-3">
-              <EquityCurveChart
-                allPoints={visibleCurve}
-                startBalance={activeAccount.start_balance}
-                currentPeriod={period}
-                onPeriodChange={setPeriod}
-              />
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
             </div>
-            <div className="lg:col-span-2">
-              <TopStrategyCard strategy={metrics.topStrategy} />
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              <Skeleton className="h-72 rounded-lg lg:col-span-3" />
+              <Skeleton className="h-72 rounded-lg lg:col-span-2" />
             </div>
+            <Skeleton className="h-56 rounded-lg" />
           </div>
-        ) : null}
-
-        {/* Recent trades */}
-        {isLoading ? (
-          <Skeleton className="h-56 rounded-lg" />
         ) : metrics ? (
-          <RecentTradesTable trades={metrics.recentTrades} onTradeClick={handleTradeClick} />
+          <DashboardTabs
+            metrics={metrics}
+            startBalance={activeAccount.start_balance}
+            onTradeClick={handleTradeClick}
+          />
         ) : null}
 
-        {/* Guided Workflow */}
+        {/* Tab-independent widgets */}
         <GuidedWorkflowWidget />
-
-        {/* Tagesplan CTA */}
         <DailyPlanCTA />
-
-        {/* Wochenvorbereitung */}
         <WeeklyPrepCard />
-
-        {/* Coach-Profil */}
         <CoachProfileWidget />
-
-        {/* KI Insights */}
         <InsightsPreview />
       </div>
 

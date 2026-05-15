@@ -9,9 +9,10 @@ import type { Trade } from '@/hooks/useTrades'
 interface Props {
   trades: Trade[]
   onTradeClick: (trade: Trade) => void
+  emptyMessage?: string
 }
 
-export function RecentTradesTable({ trades, onTradeClick }: Props) {
+export function RecentTradesTable({ trades, onTradeClick, emptyMessage }: Props) {
   const header = (
     <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-raw)' }}>
       <div>
@@ -25,7 +26,7 @@ export function RecentTradesTable({ trades, onTradeClick }: Props) {
 
   const empty = (
     <p className="text-sm px-5 py-6" style={{ color: 'var(--fg-3)' }}>
-      No trades yet. Start logging to build your edge.
+      {emptyMessage ?? 'No trades yet. Start logging to build your edge.'}
     </p>
   )
 

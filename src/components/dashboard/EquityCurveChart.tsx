@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ReferenceLine, ResponsiveContainer,
@@ -9,19 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { EquityPoint } from '@/hooks/useDashboardMetrics'
 
-const PERIODS = [
-  { label: '7T', days: 7 },
-  { label: '30T', days: 30 },
-  { label: '90T', days: 90 },
-  { label: 'Gesamt', days: null },
-] as const
-
-type PeriodDays = 7 | 30 | 90 | null
-
 interface TooltipProps {
   active?: boolean
   payload?: Array<{ value: number; payload: EquityPoint }>
-  label?: string
 }
 
 function CustomTooltip({ active, payload }: TooltipProps) {
@@ -45,11 +34,9 @@ function CustomTooltip({ active, payload }: TooltipProps) {
 interface Props {
   allPoints: EquityPoint[]
   startBalance: number
-  onPeriodChange: (days: PeriodDays) => void
-  currentPeriod: PeriodDays
 }
 
-export function EquityCurveChart({ allPoints, startBalance, onPeriodChange, currentPeriod }: Props) {
+export function EquityCurveChart({ allPoints, startBalance }: Props) {
   const hasData = allPoints.length >= 2
   const isProfit = allPoints.length > 0 && allPoints[allPoints.length - 1].balance >= startBalance
 
@@ -62,24 +49,8 @@ export function EquityCurveChart({ allPoints, startBalance, onPeriodChange, curr
 
   return (
     <Card className="border-border/60 h-full">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+      <CardHeader className="pb-2">
         <CardTitle className="text-base">Equity Curve</CardTitle>
-        <div className="flex gap-1">
-          {PERIODS.map(({ label, days }) => (
-            <button
-              key={label}
-              onClick={() => onPeriodChange(days as PeriodDays)}
-              className={cn(
-                'px-2.5 py-1 text-xs rounded-md transition-colors',
-                currentPeriod === days
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
       </CardHeader>
       <CardContent className="pt-2">
         {!hasData ? (

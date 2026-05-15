@@ -445,6 +445,7 @@ export function TradeFormSheet({
   const [newFiles, setNewFiles] = useState<ScreenshotFile[]>([])
   const [notesRewriting, setNotesRewriting] = useState(false)
   const [reminderHours, setReminderHours] = useState<string>('none')
+  const [strategyCustomMode, setStrategyCustomMode] = useState(false)
 
   const isEdit = !!editingTrade
 
@@ -499,6 +500,8 @@ export function TradeFormSheet({
       })
       setExistingUrls(editingTrade.screenshot_urls ?? [])
       setNewFiles([])
+      const editStrategy = editingTrade.strategy ?? ''
+      setStrategyCustomMode(!!editStrategy && !strategySuggestions.includes(editStrategy))
     } else if (open && !editingTrade) {
       form.reset({
         traded_at: nowDatetimeLocal(),
@@ -520,8 +523,9 @@ export function TradeFormSheet({
       })
       setExistingUrls([])
       setNewFiles([])
+      setStrategyCustomMode(false)
     }
-  }, [open, editingTrade, form])
+  }, [open, editingTrade, form]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup preview URLs on unmount
   useEffect(() => {
@@ -892,12 +896,36 @@ export function TradeFormSheet({
                       <FormItem>
                         <FormLabel>Strategie</FormLabel>
                         <FormControl>
-                          <>
-                            <Input list="strategy-suggestions" placeholder="z.B. ICT Concepts" {...field} />
-                            <datalist id="strategy-suggestions">
-                              {strategySuggestions.map(s => <option key={s} value={s} />)}
-                            </datalist>
-                          </>
+                          <div className="space-y-2">
+                            <Select
+                              value={strategyCustomMode ? '__custom__' : (field.value ?? '')}
+                              onValueChange={v => {
+                                if (v === '__custom__') {
+                                  setStrategyCustomMode(true)
+                                } else {
+                                  setStrategyCustomMode(false)
+                                  field.onChange(v)
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Strategie auswählen…" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {strategySuggestions.map(s => (
+                                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                                ))}
+                                <SelectItem value="__custom__">Freitext eingeben…</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {strategyCustomMode && (
+                              <Input
+                                placeholder="Strategiename eingeben…"
+                                value={field.value ?? ''}
+                                onChange={e => field.onChange(e.target.value)}
+                              />
+                            )}
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

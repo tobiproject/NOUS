@@ -279,3 +279,145 @@ Fehlermeldung für leere KB geändert von "Keine passenden Inhalte in deiner Kno
 ### Produktionsreife
 
 **BEREIT** für Deploy — B-1 behoben. B-2 ist Low-Priorität und kann nach Deploy gefixt werden.
+
+---
+
+## Erweiterung: Multi-Strategie-Auswahl
+
+**Status:** Deployed — 2026-05-15
+
+### Problem
+
+Aktuell kann ein User pro Konto nur eine aktive Strategie festlegen. Im Trade-Formular gibt es ein Freitext-Feld für den Strategienamen. Das bedeutet:
+- Kein Dropdown aus gespeicherten Strategien
+- Keine konsistente Zuordnung (Tippfehler führen zu Split-Stats)
+- Kein Wechsel zwischen Strategien ohne in die Einstellungen zu gehen
+
+### Lösung
+
+1. **Mehrere Strategien pro Konto**: `UNIQUE(user_id, account_id)` auf `user_strategy` wurde gedropt — mehrere Strategien pro Konto möglich.
+2. **Trade-Formular**: Strategie-Freitext → Dropdown mit gespeicherten Strategien (+ Option "Neue Strategie eingeben")
+3. **Einstellungen → Strategie-Tab**: Liste aller Strategien mit Hinzufügen/Bearbeiten/Löschen
+
+### User Stories
+
+- **US-M1**: Als Trader möchte ich mehrere Strategien definieren und beim Trade-Eintrag eine auswählen, damit meine Statistiken sauber nach Strategie getrennt sind.
+- **US-M2**: Als Trader möchte ich im Trade-Formular aus einem Dropdown meiner gespeicherten Strategien wählen statt den Namen jedes Mal einzutippen.
+- **US-M3**: Als Trader möchte ich Strategien in den Einstellungen anlegen, umbenennen und löschen.
+
+### DB-Änderungen
+
+- `UNIQUE(user_id, account_id)` auf `user_strategy` gedropt — mehrere Strategien pro Konto möglich ✅
+- `trades.strategy` bleibt Text (für Backward-Compatibility mit alten Trades)
+
+### API-Änderungen (Backend — done 2026-05-15)
+
+| Route | Methode | Verhalten |
+|-------|---------|-----------|
+| `GET /api/strategy?account_id=...` | GET | Gibt `{ strategies: [] }` zurück (vorher `{ strategy: {} }`) |
+| `POST /api/strategy` | POST | Erstellt neue Strategie (kein Upsert mehr) |
+| `PUT /api/strategy/[id]` | PUT | Aktualisiert Strategie by ID |
+| `DELETE /api/strategy/[id]` | DELETE | Löscht Strategie, gibt `tradesAffected` zurück |
+
+Bestehende Aufrufer (AppSidebar, StrategieTab, roadmap, weekly-prep, weekly-suggestions) wurden auf neues Response-Format und multi-row-safe Queries aktualisiert.
+
+### Geänderte Dateien (Frontend — done 2026-05-15)
+
+| Datei | Änderung |
+|-------|---------|
+| `src/components/journal/TradeFormSheet.tsx` | Strategie-Feld: Freitext → shadcn `Select` mit gespeicherten Strategien + "Freitext eingeben…"-Option |
+| `src/app/(app)/einstellungen/page.tsx` → Strategie-Tab | Multi-Strategy-Liste (alle Strategien des Kontos), Inline-Anlegen, Löschen mit Bestätigung, Klick wählt Strategie zum Bearbeiten |
+| `src/components/journal/JournalContent.tsx` | `strategySuggestions` wird jetzt von `/api/strategy` geladen statt von `getUniqueValues('strategy')` |
+
+### Acceptance Criteria
+
+- [x] AC-M1: Im Trade-Formular erscheint ein Dropdown statt Freitext für die Strategie
+- [x] AC-M2: Das Dropdown zeigt alle gespeicherten Strategien des aktiven Kontos
+- [x] AC-M3: Option "Freitext eingeben…" öffnet ein Inline-Eingabefeld unterhalb des Dropdowns
+- [x] AC-M4: Im Einstellungen-Strategie-Tab sind alle Strategien aufgelistet
+- [x] AC-M5: Strategien können umbenannt (via Editor), gelöscht und hinzugefügt werden
+- [x] AC-M6: Beim Löschen einer Strategie: inline Bestätigungsrow + Toast mit `tradesAffected`-Zahl nach Deletion
+- [x] AC-M7: Alte Trades mit Freitext-Strategienamen bleiben unverändert erhalten (trades.strategy ist Text, kein FK)
+
+---
+
+## QA Test Results (Multi-Strategie-Erweiterung)
+
+**QA Datum:** 2026-05-15
+**Tester:** /qa agent
+**Status:** Approved — alle Bugs behoben 2026-05-15
+
+### Acceptance Criteria
+
+| AC | Beschreibung | Ergebnis |
+|----|---|---|
+| AC-M1 | Trade-Formular zeigt Select-Dropdown statt Freitext | ✅ PASS |
+| AC-M2 | Dropdown zeigt gespeicherte Strategien des aktiven Kontos | ✅ PASS |
+| AC-M3 | "Freitext eingeben…" öffnet Inline-Eingabefeld | ✅ PASS |
+| AC-M4 | Einstellungen-Strategie-Tab listet alle Strategien auf | ✅ PASS |
+| AC-M5 | Umbenennen, Löschen, Hinzufügen funktioniert | ✅ PASS |
+| AC-M6 | Inline Lösch-Bestätigungsrow + Toast mit tradesAffected | ✅ PASS |
+| AC-M7 | Alte Trades bleiben erhalten (kein FK, Text-Feld) | ✅ PASS |
+
+**Acceptance Criteria: 7/7 implementiert**
+
+---
+
+### Bugs
+
+#### ~~Bug #1 — Medium: PUT /api/strategy/[id] — 404-Check ist toter Code~~ ✅ BEHOBEN
+
+**Behoben:** `.select('id')` an das `update()`-Chain angehängt — 404 feuert wenn `data.length === 0` (kein Row gematched). TypeScript-kompatibler Fix; `select(..., { count })` war auf `.update()` nicht gültig.
+
+---
+
+#### ~~Bug #2 — Medium: Doppelte Strategienamen möglich~~ ✅ BEHOBEN
+
+**Behoben:** Im POST-Handler wird jetzt vor dem Insert ein Uniqueness-Check per `select(...count: 'exact'...)` gemacht. Bei Duplikat → 409 mit Meldung "Eine Strategie mit diesem Namen existiert bereits."
+
+---
+
+#### ~~Bug #3 — Low: Ungültige HTML-Schachtelung im Löschen-Button~~ ✅ BEHOBEN
+
+**Behoben:** `<span role="button">` in `<button>` ersetzt durch zwei separate `<button>` Elemente in einem `<div>` — valides HTML, korrekte Accessibility mit `aria-label`.
+
+---
+
+### Sicherheits-Audit
+
+| Check | Ergebnis |
+|-------|---|
+| Auth-Prüfung auf allen neuen Routen (GET, POST, PUT, DELETE) | ✅ PASS |
+| PUT/DELETE filter `.eq('user_id', user.id)` — Cross-User-Schutz | ✅ PASS |
+| RLS auf `user_strategy` Tabelle | ✅ PASS (pre-existing) |
+| Zod-Validierung: name max 100, rules max 30×500 chars, description max 5000 | ✅ PASS |
+| Keine hardcodierten Secrets | ✅ PASS |
+| XSS: Strategy-Namen werden in React gerendert (escaped by default) | ✅ PASS |
+| tradesAffected: Zählt nur — löscht KEINE Trades (korrekt) | ✅ PASS |
+
+---
+
+### Regressions-Test
+
+| Bereich | Ergebnis |
+|---------|---|
+| AppSidebar zeigt `strategies[0].name` korrekt | ✅ PASS |
+| `roadmap/route.ts` holt neueste Strategie via `.limit(1).maybeSingle()` | ✅ PASS |
+| `weekly-prep/route.ts` gleicher Ansatz | ✅ PASS |
+| `weekly-suggestions/route.ts` filtert korrekt nach `account_id` | ✅ PASS |
+| `JournalContent.tsx` mappt `strategies.map(s => s.name)` korrekt | ✅ PASS |
+| Einstellungen bestehende Tabs (Profil, Konten, KB, Tradingplan) unberührt | ✅ PASS |
+
+---
+
+### Tests
+
+- **Unit Tests (neu):** 18 Tests in `src/app/api/strategy/route.test.ts` + `src/app/api/strategy/[id]/route.test.ts` — alle bestanden
+- **E2E Tests (neu):** `tests/PROJ-39-multi-strategie.spec.ts` — 24 Tests, alle skippen korrekt ohne Auth
+- **Bestehende Suite:** 2 failed / 9 passed (2 pre-existing failures in `analyze-trade` + `analyze-period` — unrelated)
+
+---
+
+### Produktionsreife
+
+**BEREIT** — Alle Bugs behoben, 18/18 Unit Tests grün, 7/7 ACs erfüllt.

@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
     .from('user_strategy')
     .select('name, description, rules, preferred_timeframes, instruments')
     .eq('user_id', user.id)
+    .eq('account_id', account_id)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   const tradeCount = trades?.length ?? 0

@@ -24,6 +24,8 @@ export async function POST() {
     .from('user_strategy')
     .select('name, description, rules, preferred_timeframes, instruments')
     .eq('user_id', user.id)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   const tradesSummary = !trades?.length

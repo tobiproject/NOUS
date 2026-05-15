@@ -8,7 +8,7 @@ import {
   LayoutDashboard, BookOpen, TrendingUp, Brain, ShieldCheck,
   CalendarDays, ClipboardList, GraduationCap,
   ListChecks, Star, Map as MapIcon, Telescope, Settings, RefreshCw, Sparkles, Workflow,
-  PanelLeftClose, PanelLeftOpen, BookMarked,
+  PanelLeftClose, BookMarked,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/hooks/useAuth'
@@ -189,7 +189,7 @@ export function AppSidebar() {
     if (!activeAccount?.id) return
     fetch(`/api/strategy?account_id=${activeAccount.id}`)
       .then(r => r.json())
-      .then(d => setStrategyName(d.strategy?.name ?? null))
+      .then(d => setStrategyName(d.strategies?.[0]?.name ?? null))
       .catch(() => {})
   }, [activeAccount?.id])
 
@@ -364,19 +364,6 @@ export function AppSidebar() {
           )}
         </div>
 
-        {/* Toggle button */}
-        <button
-          onClick={toggleCollapsed}
-          className="mx-2 mb-2 flex items-center justify-center h-7 rounded-md transition-colors shrink-0"
-          style={{ color: 'var(--fg-4)', background: 'transparent', width: collapsed ? 40 : 'calc(100% - 16px)' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-          title={collapsed ? 'Sidebar öffnen' : 'Sidebar schließen'}
-        >
-          {collapsed
-            ? <PanelLeftOpen className="h-3.5 w-3.5" />
-            : <PanelLeftClose className="h-3.5 w-3.5" />}
-        </button>
 
         {/* Account + strategy */}
         {!collapsed && activeAccount && (
@@ -554,13 +541,41 @@ export function AppSidebar() {
           )}
         </div>
 
-        {/* Thin handle — visible on hover */}
-        <div
-          className="absolute right-0 top-8 bottom-8 w-[3px] rounded-full cursor-col-resize opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200"
-          style={{ background: 'linear-gradient(to bottom, transparent, var(--border-strong), transparent)' }}
-          onClick={toggleCollapsed}
-          title={collapsed ? 'Sidebar öffnen' : 'Sidebar schließen'}
-        />
+        {/* Toggle tab — on the right border line */}
+        {!collapsed && (
+          <button
+            onClick={toggleCollapsed}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-4 h-8 transition-all duration-150"
+            style={{
+              background: 'var(--bg-3)',
+              color: 'var(--fg-4)',
+              borderRadius: '0 6px 6px 0',
+              borderTop: '1px solid var(--border-raw)',
+              borderRight: '1px solid var(--border-raw)',
+              borderBottom: '1px solid var(--border-raw)',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--fg-1)'
+              ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-4)'
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--fg-4)'
+              ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-3)'
+            }}
+            title="Sidebar schließen"
+          >
+            <PanelLeftClose className="h-3 w-3" />
+          </button>
+        )}
+        {/* Thin expand handle — visible when collapsed */}
+        {collapsed && (
+          <div
+            className="absolute right-0 top-8 bottom-8 w-[3px] cursor-col-resize opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200"
+            style={{ background: 'linear-gradient(to bottom, transparent, var(--border-strong), transparent)' }}
+            onClick={toggleCollapsed}
+            title="Sidebar öffnen"
+          />
+        )}
       </aside>
     </>
   )

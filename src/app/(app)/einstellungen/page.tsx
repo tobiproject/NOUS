@@ -740,59 +740,133 @@ function FontSizeSection() {
 
 // ─── Tab: Strategie ─────────────────────────────────────────────────────────
 
+type FullStrategy = Strategy & { id: string }
+
 function StrategieTab() {
   const { activeAccount } = useAccountContext()
-  const [strategy, setStrategy] = useState<Strategy>(EMPTY)
+  const [strategies, setStrategies] = useState<FullStrategy[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [editFields, setEditFields] = useState<Strategy>(EMPTY)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [newRule, setNewRule] = useState('')
+  const [addingNew, setAddingNew] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [creatingNew, setCreatingNew] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleteInfo, setDeleteInfo] = useState<{ name: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!activeAccount?.id) return
     setLoading(true)
-    fetch(`/api/strategy?account_id=${activeAccount.id}`).then(r => r.json()).then(stratData => {
-      if (stratData.strategy) {
-        setStrategy({
-          name: stratData.strategy.name || '',
-          description: stratData.strategy.description || '',
-          rules: stratData.strategy.rules || [],
-          preferred_timeframes: stratData.strategy.preferred_timeframes || [],
-          instruments: stratData.strategy.instruments || [],
-        })
-      } else {
-        setStrategy(EMPTY)
-      }
-    }).finally(() => setLoading(false))
+    fetch(`/api/strategy?account_id=${activeAccount.id}`)
+      .then(r => r.json())
+      .then(data => {
+        const list: FullStrategy[] = data.strategies ?? []
+        setStrategies(list)
+        if (list.length > 0) {
+          setSelectedId(list[0].id)
+          setEditFields({ name: list[0].name || '', description: list[0].description || '', rules: list[0].rules || [], preferred_timeframes: list[0].preferred_timeframes || [], instruments: list[0].instruments || [] })
+        } else {
+          setSelectedId(null)
+        }
+      })
+      .finally(() => setLoading(false))
   }, [activeAccount?.id])
 
+  const selectStrategy = (s: FullStrategy) => {
+    setSelectedId(s.id)
+    setEditFields({ name: s.name, description: s.description, rules: s.rules, preferred_timeframes: s.preferred_timeframes, instruments: s.instruments })
+    setSaved(false)
+    setAddingNew(false)
+  }
+
   const save = useCallback(async () => {
-    if (!activeAccount?.id) return
+    if (!selectedId) return
     setSaving(true)
-    const res = await fetch('/api/strategy', {
-      method: 'POST',
+    const res = await fetch(`/api/strategy/${selectedId}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account_id: activeAccount.id, ...strategy }),
+      body: JSON.stringify(editFields),
     })
     setSaving(false)
     if (res.ok) {
+      setStrategies(prev => prev.map(s => s.id === selectedId ? { ...s, ...editFields } : s))
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     }
-  }, [strategy])
+  }, [editFields, selectedId])
+
+  const createNew = async () => {
+    const name = newName.trim()
+    if (!name || !activeAccount?.id) return
+    setCreatingNew(true)
+    const res = await fetch('/api/strategy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: activeAccount.id, name, description: '', rules: [], preferred_timeframes: [], instruments: [] }),
+    })
+    setCreatingNew(false)
+    if (res.ok) {
+      const data = await res.json()
+      const newS: FullStrategy = { id: data.id, name, description: '', rules: [], preferred_timeframes: [], instruments: [] }
+      setStrategies(prev => [...prev, newS])
+      setSelectedId(data.id)
+      setEditFields({ name, description: '', rules: [], preferred_timeframes: [], instruments: [] })
+      setAddingNew(false)
+      setNewName('')
+    }
+  }
+
+  const requestDelete = (s: FullStrategy) => {
+    setConfirmDeleteId(s.id)
+    setDeleteInfo({ name: s.name })
+  }
+
+  const doDelete = async () => {
+    if (!confirmDeleteId) return
+    setDeleting(true)
+    const res = await fetch(`/api/strategy/${confirmDeleteId}`, { method: 'DELETE' })
+    setDeleting(false)
+    if (res.ok) {
+      const data = await res.json()
+      if (data.tradesAffected > 0) {
+        toast.warning(`Strategie gelöscht. ${data.tradesAffected} Trade${data.tradesAffected === 1 ? '' : 's'} referenzieren sie noch.`)
+      } else {
+        toast.success('Strategie gelöscht.')
+      }
+      const deletedId = confirmDeleteId
+      setStrategies(prev => {
+        const next = prev.filter(s => s.id !== deletedId)
+        if (selectedId === deletedId) {
+          if (next.length > 0) {
+            setSelectedId(next[0].id)
+            setEditFields({ name: next[0].name, description: next[0].description, rules: next[0].rules, preferred_timeframes: next[0].preferred_timeframes, instruments: next[0].instruments })
+          } else {
+            setSelectedId(null)
+          }
+        }
+        return next
+      })
+      setConfirmDeleteId(null)
+      setDeleteInfo(null)
+    }
+  }
 
   const addRule = () => {
     const r = newRule.trim()
     if (!r) return
-    setStrategy(s => ({ ...s, rules: [...s.rules, r] }))
+    setEditFields(s => ({ ...s, rules: [...s.rules, r] }))
     setNewRule('')
   }
 
   const removeRule = (i: number) =>
-    setStrategy(s => ({ ...s, rules: s.rules.filter((_, j) => j !== i) }))
+    setEditFields(s => ({ ...s, rules: s.rules.filter((_, j) => j !== i) }))
 
   const toggleTF = (tf: string) =>
-    setStrategy(s => ({
+    setEditFields(s => ({
       ...s,
       preferred_timeframes: s.preferred_timeframes.includes(tf)
         ? s.preferred_timeframes.filter(t => t !== tf)
@@ -807,113 +881,231 @@ function StrategieTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
-          Definiere deine Trading-Strategie — die KI nutzt dieses Profil für alle Analysen.
-        </p>
-        <div className="flex gap-2 shrink-0">
-          <Button
-            onClick={() => setStrategy(EXAMPLE_STRATEGY)}
-            className="h-8 px-3 text-[13px] font-semibold rounded"
-            style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
-          >
-            Beispiel laden
-          </Button>
-          <Button
-            onClick={save}
-            disabled={saving}
-            className="h-8 px-4 text-[13px] font-semibold rounded"
-            style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : saved ? <Check className="h-4 w-4 mr-2" /> : null}
-            {saved ? 'Gespeichert' : 'Speichern'}
-          </Button>
-        </div>
-      </div>
-
-      <Section title="Strategie-Name">
-        <Input
-          value={strategy.name}
-          onChange={e => setStrategy(s => ({ ...s, name: e.target.value }))}
-          placeholder="z.B. Trend-Following mit Breakout-Entries"
-        />
-      </Section>
-
-      <Section title="Beschreibung" subtitle="Kurze Zusammenfassung deines Ansatzes">
-        <Textarea
-          rows={4}
-          value={strategy.description}
-          onChange={e => setStrategy(s => ({ ...s, description: e.target.value }))}
-          placeholder="Beschreibe deinen Trading-Stil, Ansatz und Philosophie…"
-          className="resize-none"
-        />
-      </Section>
-
-      <Section title="Trading-Regeln" subtitle="Konkrete Regeln, die dein Setup definieren">
-        <div className="space-y-2">
-          {strategy.rules.map((rule, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-2 rounded px-3 py-2"
-              style={{ background: 'var(--bg-3)' }}
+      {/* Strategy list */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold" style={{ color: 'var(--fg-2)' }}>
+            Strategien ({strategies.length})
+          </p>
+          {!addingNew && (
+            <Button
+              onClick={() => { setAddingNew(true); setNewName('') }}
+              className="h-7 px-3 text-[13px] font-semibold rounded gap-1"
+              style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
             >
-              <span className="num text-xs shrink-0 mt-0.5" style={{ color: 'var(--fg-4)' }}>
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <span className="text-sm flex-1" style={{ color: 'var(--fg-1)' }}>{rule}</span>
-              <button onClick={() => removeRule(i)}>
-                <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
-              </button>
-            </div>
-          ))}
+              <Plus className="h-3.5 w-3.5" />
+              Neue Strategie
+            </Button>
+          )}
+        </div>
+
+        {addingNew && (
           <div className="flex gap-2">
             <Input
-              value={newRule}
-              onChange={e => setNewRule(e.target.value)}
-              placeholder="Neue Regel hinzufügen…"
-              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addRule())}
+              autoFocus
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="Name der neuen Strategie…"
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); createNew() }
+                if (e.key === 'Escape') { setAddingNew(false); setNewName('') }
+              }}
             />
             <Button
-              type="button"
-              onClick={addRule}
-              className="h-8 px-3 shrink-0 rounded"
-              style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+              onClick={createNew}
+              disabled={creatingNew || !newName.trim()}
+              className="h-9 px-3 shrink-0 rounded"
+              style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
             >
-              <Plus className="h-4 w-4" />
+              {creatingNew ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Anlegen'}
+            </Button>
+            <Button
+              onClick={() => { setAddingNew(false); setNewName('') }}
+              className="h-9 w-9 p-0 shrink-0 rounded"
+              style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+            >
+              <X className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-      </Section>
+        )}
 
-      <Section title="Bevorzugte Timeframes">
-        <div className="flex flex-wrap gap-2">
-          {TIMEFRAME_OPTIONS.map(tf => {
-            const active = strategy.preferred_timeframes.includes(tf)
-            return (
-              <button
-                key={tf}
-                onClick={() => toggleTF(tf)}
-                className="num text-xs font-semibold px-3 py-1.5 rounded transition-colors"
+        {strategies.length === 0 && !addingNew && (
+          <p className="text-sm py-4 text-center" style={{ color: 'var(--fg-4)' }}>
+            Noch keine Strategien angelegt.
+          </p>
+        )}
+
+        {strategies.map(s => (
+          <div key={s.id}>
+            {confirmDeleteId === s.id ? (
+              <div
+                className="flex items-center gap-3 rounded px-3 py-2.5"
+                style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+              >
+                <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: '#ef4444' }} />
+                <span className="text-sm flex-1" style={{ color: 'var(--fg-2)' }}>
+                  „{deleteInfo?.name}" wirklich löschen? Alte Trades bleiben erhalten.
+                </span>
+                <Button
+                  onClick={doDelete}
+                  disabled={deleting}
+                  className="h-7 px-3 text-[12px] font-semibold rounded shrink-0"
+                  style={{ background: '#ef4444', color: '#fff', border: 'none' }}
+                >
+                  {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Löschen'}
+                </Button>
+                <Button
+                  onClick={() => { setConfirmDeleteId(null); setDeleteInfo(null) }}
+                  className="h-7 px-3 text-[12px] font-semibold rounded shrink-0"
+                  style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+                >
+                  Abbrechen
+                </Button>
+              </div>
+            ) : (
+              <div
+                className="flex items-center gap-2 rounded transition-colors"
                 style={{
-                  background: active ? 'var(--brand-blue)' : 'var(--bg-3)',
-                  color: active ? '#fff' : 'var(--fg-2)',
-                  border: `1px solid ${active ? 'var(--brand-blue)' : 'var(--border-raw)'}`,
+                  background: selectedId === s.id ? 'var(--bg-3)' : 'transparent',
+                  border: `1px solid ${selectedId === s.id ? 'var(--brand-blue)' : 'var(--border-raw)'}`,
                 }}
               >
-                {tf}
-              </button>
-            )
-          })}
-        </div>
-      </Section>
+                <button
+                  type="button"
+                  className="flex-1 px-3 py-2.5 text-left text-sm font-medium"
+                  onClick={() => selectStrategy(s)}
+                  style={{ color: selectedId === s.id ? 'var(--fg-1)' : 'var(--fg-2)' }}
+                >
+                  {s.name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => requestDelete(s)}
+                  className="p-1 mr-1.5 rounded hover:bg-red-500/10 transition-colors shrink-0"
+                  aria-label={`Strategie "${s.name}" löschen`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
 
-      <Section title="Instrumente / Märkte" subtitle="Welche Assets tradest du? Aus deiner Watchlist wählen.">
-        <AssetMultiPicker
-          value={strategy.instruments}
-          onChange={instruments => setStrategy(s => ({ ...s, instruments }))}
-          placeholder="Asset aus Watchlist…"
-        />
-      </Section>
+      {/* Editor for selected strategy */}
+      {selectedId && (
+        <>
+          <div className="h-px" style={{ background: 'var(--border-raw)' }} />
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
+              Die KI nutzt dieses Profil für alle Analysen.
+            </p>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                onClick={() => setEditFields(EXAMPLE_STRATEGY)}
+                className="h-8 px-3 text-[13px] font-semibold rounded"
+                style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+              >
+                Beispiel laden
+              </Button>
+              <Button
+                onClick={save}
+                disabled={saving}
+                className="h-8 px-4 text-[13px] font-semibold rounded"
+                style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : saved ? <Check className="h-4 w-4 mr-2" /> : null}
+                {saved ? 'Gespeichert' : 'Speichern'}
+              </Button>
+            </div>
+          </div>
+
+          <Section title="Strategie-Name">
+            <Input
+              value={editFields.name}
+              onChange={e => setEditFields(s => ({ ...s, name: e.target.value }))}
+              placeholder="z.B. Trend-Following mit Breakout-Entries"
+            />
+          </Section>
+
+          <Section title="Beschreibung" subtitle="Kurze Zusammenfassung deines Ansatzes">
+            <Textarea
+              rows={4}
+              value={editFields.description}
+              onChange={e => setEditFields(s => ({ ...s, description: e.target.value }))}
+              placeholder="Beschreibe deinen Trading-Stil, Ansatz und Philosophie…"
+              className="resize-none"
+            />
+          </Section>
+
+          <Section title="Trading-Regeln" subtitle="Konkrete Regeln, die dein Setup definieren">
+            <div className="space-y-2">
+              {editFields.rules.map((rule, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-2 rounded px-3 py-2"
+                  style={{ background: 'var(--bg-3)' }}
+                >
+                  <span className="num text-xs shrink-0 mt-0.5" style={{ color: 'var(--fg-4)' }}>
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="text-sm flex-1" style={{ color: 'var(--fg-1)' }}>{rule}</span>
+                  <button onClick={() => removeRule(i)}>
+                    <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
+                  </button>
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <Input
+                  value={newRule}
+                  onChange={e => setNewRule(e.target.value)}
+                  placeholder="Neue Regel hinzufügen…"
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addRule())}
+                />
+                <Button
+                  type="button"
+                  onClick={addRule}
+                  className="h-8 px-3 shrink-0 rounded"
+                  style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Bevorzugte Timeframes">
+            <div className="flex flex-wrap gap-2">
+              {TIMEFRAME_OPTIONS.map(tf => {
+                const active = editFields.preferred_timeframes.includes(tf)
+                return (
+                  <button
+                    key={tf}
+                    onClick={() => toggleTF(tf)}
+                    className="num text-xs font-semibold px-3 py-1.5 rounded transition-colors"
+                    style={{
+                      background: active ? 'var(--brand-blue)' : 'var(--bg-3)',
+                      color: active ? '#fff' : 'var(--fg-2)',
+                      border: `1px solid ${active ? 'var(--brand-blue)' : 'var(--border-raw)'}`,
+                    }}
+                  >
+                    {tf}
+                  </button>
+                )
+              })}
+            </div>
+          </Section>
+
+          <Section title="Instrumente / Märkte" subtitle="Welche Assets tradest du? Aus deiner Watchlist wählen.">
+            <AssetMultiPicker
+              value={editFields.instruments}
+              onChange={instruments => setEditFields(s => ({ ...s, instruments }))}
+              placeholder="Asset aus Watchlist…"
+            />
+          </Section>
+        </>
+      )}
     </div>
   )
 }
@@ -2220,7 +2412,7 @@ function EinstellungenInner() {
 
   if (solo) {
     return (
-      <div className="space-y-6 max-w-2xl">
+      <div className="space-y-6 max-w-4xl">
         <div>
           <button
             onClick={() => router.back()}
@@ -2243,7 +2435,7 @@ function EinstellungenInner() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-4xl">
       <div>
         <div className="eyebrow mb-1">Mein Konto</div>
         <h1

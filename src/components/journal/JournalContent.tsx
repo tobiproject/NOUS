@@ -77,13 +77,13 @@ export function JournalContent() {
   const currentPage = Number(searchParams.get('page') ?? '1')
   const filters = paramsToFilters(searchParams)
 
-  // Load unique values for suggestions (once per account)
+  // Load suggestions (once per account)
   useEffect(() => {
     if (!activeAccount) return
     Promise.all([
       getUniqueValues('asset'),
       getUniqueValues('setup_type'),
-      getUniqueValues('strategy'),
+      fetch(`/api/strategy?account_id=${activeAccount.id}`).then(r => r.json()).then(d => (d.strategies ?? []).map((s: { name: string }) => s.name)),
     ]).then(([assets, setups, strategies]) => {
       setAssetSuggestions(assets)
       setSetupSuggestions(setups)

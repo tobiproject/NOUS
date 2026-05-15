@@ -22,7 +22,9 @@ export async function POST() {
     .from('user_strategy')
     .select('name, description, rules')
     .eq('user_id', user.id)
-    .single()
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (!trades || trades.length < 5) {
     return NextResponse.json({ error: 'Zu wenige Trades für eine Analyse (mind. 5 nötig).' }, { status: 422 })
@@ -111,10 +113,10 @@ export async function GET() {
 
   const [{ data }, { data: strategy }, { count }, { data: latestTrade }, { data: latestStrategy }] = await Promise.all([
     supabase.from('user_roadmap').select('data, generated_at').eq('user_id', user.id).single(),
-    supabase.from('user_strategy').select('name').eq('user_id', user.id).maybeSingle(),
+    supabase.from('user_strategy').select('name').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('trades').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     supabase.from('trades').select('created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('user_strategy').select('updated_at').eq('user_id', user.id).maybeSingle(),
+    supabase.from('user_strategy').select('updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
   // Staleness: roadmap is outdated if trades or strategy were changed after last analysis

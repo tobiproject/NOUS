@@ -52,13 +52,16 @@
 | PROJ-36 | Onboarding Checklist (Dashboard) | Architected | [PROJ-36-onboarding-checklist.md](PROJ-36-onboarding-checklist.md) | 2026-05-09 |
 | PROJ-37 | Anleitung (Permanente App-Erklärungsseite) | Deployed | [PROJ-37-anleitung-page.md](PROJ-37-anleitung-page.md) | 2026-05-09 |
 | PROJ-38 | Wirtschaftskalender (Custom Design, kein Widget) | Deployed | [PROJ-38-wirtschaftskalender.md](PROJ-38-wirtschaftskalender.md) | 2026-05-10 |
-| PROJ-39 | Tradingplan (Persönlicher Plan + KB-Integration) | Planned | [PROJ-39-tradingplan.md](PROJ-39-tradingplan.md) | 2026-05-14 |
+| PROJ-39 | Tradingplan (Persönlicher Plan + KB-Integration) | Deployed | [PROJ-39-tradingplan.md](PROJ-39-tradingplan.md) | 2026-05-14 |
 | PROJ-40 | Guided Trading Workflow (Roter Faden) | Deployed | [PROJ-40-guided-trading-workflow.md](PROJ-40-guided-trading-workflow.md) | 2026-05-14 |
 | PROJ-41 | Coach Memory & Emotionale Intelligenz | Deployed | [PROJ-41-coach-memory-emotions.md](PROJ-41-coach-memory-emotions.md) | 2026-05-14 |
+| PROJ-42 | Kalender: KI-Analyse "Auswirkung auf meine Watchlist" | Planned | [PROJ-42-kalender-ki-analyse.md](PROJ-42-kalender-ki-analyse.md) | 2026-05-15 |
+| PROJ-43 | Dashboard-Tab Navigation (Heute / Woche / Monat) | In Review | [PROJ-43-dashboard-tab-navigation.md](PROJ-43-dashboard-tab-navigation.md) | 2026-05-15 |
+| PROJ-44 | Watchlist: Allgemein vs. Heutige Trading-Watchlist | Architected | [PROJ-44-watchlist-dual.md](PROJ-44-watchlist-dual.md) | 2026-05-15 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-42
+## Next Available ID: PROJ-45
 
 ## Build Order (Empfohlen)
 

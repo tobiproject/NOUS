@@ -55,7 +55,7 @@
 | PROJ-39 | Tradingplan (Persönlicher Plan + KB-Integration) | Deployed | [PROJ-39-tradingplan.md](PROJ-39-tradingplan.md) | 2026-05-14 |
 | PROJ-40 | Guided Trading Workflow (Roter Faden) | Deployed | [PROJ-40-guided-trading-workflow.md](PROJ-40-guided-trading-workflow.md) | 2026-05-14 |
 | PROJ-41 | Coach Memory & Emotionale Intelligenz | Deployed | [PROJ-41-coach-memory-emotions.md](PROJ-41-coach-memory-emotions.md) | 2026-05-14 |
-| PROJ-42 | Kalender: KI-Analyse "Auswirkung auf meine Watchlist" | Planned | [PROJ-42-kalender-ki-analyse.md](PROJ-42-kalender-ki-analyse.md) | 2026-05-15 |
+| PROJ-42 | Kalender: KI-Analyse "Auswirkung auf meine Watchlist" | Architected | [PROJ-42-kalender-ki-analyse.md](PROJ-42-kalender-ki-analyse.md) | 2026-05-15 |
 | PROJ-43 | Dashboard-Tab Navigation (Heute / Woche / Monat) | In Review | [PROJ-43-dashboard-tab-navigation.md](PROJ-43-dashboard-tab-navigation.md) | 2026-05-15 |
 | PROJ-44 | Watchlist: Allgemein vs. Heutige Trading-Watchlist | Deployed | [PROJ-44-watchlist-dual.md](PROJ-44-watchlist-dual.md) | 2026-05-15 |
 

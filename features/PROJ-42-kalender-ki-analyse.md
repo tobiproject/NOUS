@@ -1,6 +1,6 @@
 # PROJ-42 — Kalender: KI-Analyse "Auswirkung auf meine Watchlist"
 
-**Status:** Planned  
+**Status:** Architected  
 **Erstellt:** 2026-05-15  
 **Feature-ID:** PROJ-42  
 **Bereich:** Wirtschaftskalender (`/kalender`)
@@ -150,8 +150,158 @@ Rationale: Verhindert unnötige Buttons bei Low-Impact-Events ohne Watchlist-Bez
 
 ## Nächste Schritte
 
-1. `/architecture` — Tech-Design: Prompt-Struktur, Filterlogik für Button-Sichtbarkeit, Streaming-Implementierung
-2. `/frontend` — UI-Integration in `EconomicEventDetail.tsx`, Streaming-Komponente
+1. ~~`/architecture`~~ — ✅ Done
+2. `/frontend` — UI-Integration in `EconomicEventDetail.tsx`, Streaming-Bereich
 3. `/backend` — API Route `/api/ai/calendar-impact`
 4. `/qa` — Tests gegen Acceptance Criteria
 5. `/deploy` — Deploy auf Vercel
+
+---
+
+## Tech Design (Solution Architect)
+
+**Erstellt:** 2026-05-15
+
+---
+
+### Überblick
+
+PROJ-42 fügt eine zweite, klar abgegrenzte KI-Funktion zu `EconomicEventDetail` hinzu. Die bestehende "KI-Briefing"-Funktion (gecacht, trade-statistik-fokussiert) bleibt unverändert. Die neue "KI-Analyse: Auswirkung auf meine Watchlist"-Funktion ergänzt sie: schneller, ungecacht, rein watchlist-fokussiert.
+
+---
+
+### Komponenten-Struktur
+
+```
+EconomicEventDetail (src/components/calendar/EconomicEventDetail.tsx)
+  [bestehend, unverändert]
+  +-- Beschreibung
+  +-- Watchlist-Badges (matchedSymbols)
+  +-- Kennzahlen-Grid (Vorherig / Prognose / Aktuell)
+  +-- Letzte Releases (Historik-Tabelle)
+  +-- Deine Geschichte mit diesem Event (Trade-Statistik)
+  +-- Trade Indicator (dieser Woche)
+  +-- KI-Briefing-Sektion (BESTEHEND — bleibt unverändert)
+  |
+  +-- [NEU] Watchlist-Impact-Sektion
+      |  [nur sichtbar wenn: impact === 'high' ODER matchedSymbols.length > 0]
+      |
+      +-- Button "KI-Analyse: Auswirkung auf meine Watchlist"
+      |   [Zustände: idle / loading / streaming / done]
+      |
+      +-- Streaming-Textbereich (bg-zinc-900, Border)
+      |   [erscheint sobald erster Token ankommt]
+      |
+      +-- "Neu analysieren"-Link (erscheint nach done)
+```
+
+Kein separates Komponenten-File erforderlich — die Watchlist-Impact-Sektion ist ein in-file Block analog zur bestehenden KI-Briefing-Sektion.
+
+---
+
+### Button-Sichtbarkeits-Logik
+
+Rein client-seitig, keine zusätzlichen API-Calls. Alle benötigten Daten sind bereits als Props vorhanden:
+
+```
+Zeige Button wenn:
+  event.impact === 'high'
+  ODER
+  matchedSymbols.length > 0
+```
+
+`matchedSymbols` wird von `KalenderContent` übergeben und enthält bereits alle Assets der Watchlist des Traders, die zur Währung/Region des Events passen. Diese Logik existiert bereits — nichts Neues muss berechnet werden.
+
+---
+
+### Datenfluss
+
+```
+KalenderContent (bestehend)
+  → lädt watchlistSymbols (aus useWatchlist + useDailyWatchlist)
+  → berechnet matchedSymbols pro Event
+  → übergibt an EconomicEventDetail via Props
+
+EconomicEventDetail (erweitert)
+  → prüft Sichtbarkeitsbedingung (impact / matchedSymbols)
+  → Button-Klick → POST /api/ai/calendar-impact
+  → Request-Body: { eventName, country, impactLevel, actual, forecast, previous, watchlistSymbols }
+  → Streaming-Response → Echtzeit-Text-Aufbau im UI
+
+POST /api/ai/calendar-impact (NEU)
+  → Auth-Check (Supabase Session)
+  → Liest AI-Provider + API-Key via getAnthropicClient()
+  → Baut fokussierten 3-Punkte-Prompt
+  → Streamt Antwort als ReadableStream (Text/plain)
+```
+
+---
+
+### Datenhaltung
+
+| Was | Wo |
+|-----|----|
+| Event-Daten | Props — bereits aus Kalender-State |
+| Watchlist-Symbole | Props — bereits von KalenderContent übergeben |
+| Matched Symbols | Props — bereits berechnet |
+| KI-Antwort | Nur im React-State (kein Cache, kein DB-Speicher) |
+| AI-Provider / API-Key | Supabase `user_ai_settings` — bestehende Tabelle |
+
+**Kein neuer Supabase-Table.** Kein localStorage-Cache (Frische > Performance, bewusste Entscheidung).
+
+---
+
+### Neue API Route
+
+**Route:** `POST /api/ai/calendar-impact`
+
+Analog zu `POST /api/ai/calendar-event-analysis` — identische Infrastruktur:
+- Zod-Validierung des Request-Body
+- Supabase Auth-Check
+- `getAnthropicClient()` für Provider + API-Key
+- ReadableStream mit SSE-Streaming
+
+**Prompt-Fokus:** Exakt die drei Fragen aus der Spec:
+1. Bedeutung des Events (spezifisch auf Actual/Forecast-Werte bezogen)
+2. Watchlist-Relevanz (welche Assets betroffen und warum — mit konkreter Begründung)
+3. Was der Trader beachten sollte (Reaktionsmuster, konkrete Hinweise)
+
+**Unterschied zur bestehenden Route:**
+- Kein Trade-Statistik-Input (der ist für die neue Analyse nicht relevant)
+- Kein Caching-Write zurück an DB
+- Kürzeres, direkteres Antwortformat (≤ 400 Tokens)
+- Timeout: 30 Sekunden
+
+---
+
+### UI-Zustände der Watchlist-Impact-Sektion
+
+| Zustand | Anzeige |
+|---------|---------|
+| `idle` | Button "KI-Analyse: Auswirkung auf meine Watchlist" mit Sparkle-Icon |
+| `loading` | Button deaktiviert + Spinner + Label "Analysiere…" |
+| `streaming` | Button verschwindet, Streaming-Text erscheint im dunklen Bereich |
+| `done` | Vollständiger Text + kleiner "Neu analysieren"-Link rechts unten |
+| `error` | Fehlermeldung im Streaming-Bereich (kein leerer State) |
+
+---
+
+### Technische Entscheidungen
+
+| Entscheidung | Begründung |
+|-------------|------------|
+| Inline im EconomicEventDetail statt eigene Komponenten-Datei | Datei ist bereits das richtige Boundary für diese Logik; zweite Sektion ist analog zu bestehender KI-Briefing-Sektion |
+| Neue Route `/api/ai/calendar-impact` statt Erweiterung bestehender Route | Andere Prompt-Struktur, kein Cache-Write, anderer Response-Scope — saubere Trennung |
+| Kein Cache | Watchlist und Event-Daten können sich ändern; Frische ist für Trading-Entscheidungen wichtiger als Ladezeit |
+| Filterlogik client-seitig | Alle Daten (impact, matchedSymbols) sind bereits als Props vorhanden — kein extra API-Call nötig |
+| Max 400 Tokens | Fokussierte 3-Punkte-Analyse, kein allgemeines Briefing — kürzer = schneller bis zum ersten Token |
+
+---
+
+### Abhängigkeiten / Pakete
+
+Keine neuen Pakete notwendig. Alle Infrastruktur-Bausteine existieren bereits:
+- `getAnthropicClient` aus `ai-client.ts`
+- `createServerSupabaseClient` aus `supabase-server.ts`
+- Streaming-Muster aus `calendar-event-analysis/route.ts`
+- Sparkle/Brain-Icons aus `lucide-react` (bereits installiert)

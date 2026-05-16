@@ -5,7 +5,7 @@ import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil, ChevronLeft, Sparkles, GripVertical } from 'lucide-react'
+import { Trash2, Loader2, Check, Plus, ExternalLink, Brain, Bell, BellOff, Mail, Key, Bot, Archive, Info, Camera, X, Upload, FileText, CheckCircle, AlertTriangle, Type, Pencil, ChevronLeft, ChevronRight, Sparkles, GripVertical, User, Wallet, Target, BookOpen, ClipboardList } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AssetMultiPicker } from '@/components/watchlist/AssetMultiPicker'
@@ -439,7 +438,7 @@ function ProfilTab() {
         >
           <div
             className="w-full h-full rounded-full flex items-center justify-center text-2xl font-bold"
-            style={{ background: 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)', overflow: 'hidden' }}
+            style={{ background: 'rgba(255,130,16,0.18)', color: '#fff', overflow: 'hidden' }}
           >
             {displayImg ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -695,33 +694,37 @@ function FontSizeSection() {
     setSize(getStoredFontSize())
   }, [])
 
+  const change = (delta: number) => {
+    const next = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, size + delta))
+    setSize(next)
+    applyFontSize(next)
+  }
+
+  const label = size <= 13 ? 'Klein' : size <= 15 ? 'Normal' : size <= 17 ? 'Groß' : size <= 19 ? 'Sehr groß' : 'Maximum'
+
   return (
-    <Section title="Schriftgröße" subtitle="Zieht den Regler — Änderung gilt sofort für die gesamte App">
+    <Section title="Schriftgröße" subtitle="Änderung gilt sofort in der gesamten App">
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm" style={{ color: 'var(--fg-3)' }}>Aktuelle Größe</span>
-          <span className="font-mono text-sm font-semibold" style={{ color: 'var(--brand-blue)' }}>{size}px</span>
-        </div>
-
-        <input
-          type="range"
-          min={FONT_SIZE_MIN}
-          max={FONT_SIZE_MAX}
-          step={1}
-          value={size}
-          onChange={e => {
-            const val = parseInt(e.target.value)
-            setSize(val)
-            applyFontSize(val)
-          }}
-          className="w-full h-2 rounded-full appearance-none cursor-pointer"
-          style={{ accentColor: 'var(--brand-blue)' }}
-        />
-
-        <div className="flex justify-between text-[11px]" style={{ color: 'var(--fg-4)' }}>
-          <span>Klein ({FONT_SIZE_MIN}px)</span>
-          <span>Normal (16px)</span>
-          <span>Groß ({FONT_SIZE_MAX}px)</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => change(-1)}
+            disabled={size <= FONT_SIZE_MIN}
+            className="flex items-center justify-center rounded-lg transition-colors disabled:opacity-30"
+            style={{ width: 40, height: 40, background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-2)' }}
+            aria-label="Schrift kleiner"
+          >
+            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'Manrope, sans-serif' }}>A</span>
+          </button>
+          <span className="flex-1 text-center text-sm font-medium" style={{ color: 'var(--fg-3)' }}>{label}</span>
+          <button
+            onClick={() => change(1)}
+            disabled={size >= FONT_SIZE_MAX}
+            className="flex items-center justify-center rounded-lg transition-colors disabled:opacity-30"
+            style={{ width: 40, height: 40, background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-2)' }}
+            aria-label="Schrift größer"
+          >
+            <span style={{ fontSize: 19, fontWeight: 700, fontFamily: 'Manrope, sans-serif' }}>A</span>
+          </button>
         </div>
 
         {/* Live preview */}
@@ -745,7 +748,8 @@ type FullStrategy = Strategy & { id: string }
 function StrategieTab() {
   const { activeAccount } = useAccountContext()
   const [strategies, setStrategies] = useState<FullStrategy[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)   // KI-Hauptstrategie
+  const [expandedId, setExpandedId] = useState<string | null>(null) // welche ist aufgeklappt
   const [editFields, setEditFields] = useState<Strategy>(EMPTY)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -758,6 +762,9 @@ function StrategieTab() {
   const [deleteInfo, setDeleteInfo] = useState<{ name: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // Keep legacy selectedId alias so save/delete logic still works
+  const selectedId = expandedId
+
   useEffect(() => {
     if (!activeAccount?.id) return
     setLoading(true)
@@ -767,20 +774,29 @@ function StrategieTab() {
         const list: FullStrategy[] = data.strategies ?? []
         setStrategies(list)
         if (list.length > 0) {
-          setSelectedId(list[0].id)
-          setEditFields({ name: list[0].name || '', description: list[0].description || '', rules: list[0].rules || [], preferred_timeframes: list[0].preferred_timeframes || [], instruments: list[0].instruments || [] })
-        } else {
-          setSelectedId(null)
+          // Restore active strategy from localStorage, fallback to first
+          const stored = localStorage.getItem(`nous-active-strategy-${activeAccount.id}`)
+          const storedValid = stored && list.some(s => s.id === stored)
+          setActiveId(storedValid ? stored : list[0].id)
         }
       })
       .finally(() => setLoading(false))
   }, [activeAccount?.id])
 
-  const selectStrategy = (s: FullStrategy) => {
-    setSelectedId(s.id)
-    setEditFields({ name: s.name, description: s.description, rules: s.rules, preferred_timeframes: s.preferred_timeframes, instruments: s.instruments })
-    setSaved(false)
-    setAddingNew(false)
+  const expandStrategy = (s: FullStrategy) => {
+    const alreadyOpen = expandedId === s.id
+    setExpandedId(alreadyOpen ? null : s.id)
+    if (!alreadyOpen) {
+      setEditFields({ name: s.name, description: s.description, rules: s.rules, preferred_timeframes: s.preferred_timeframes, instruments: s.instruments })
+      setSaved(false)
+      setAddingNew(false)
+    }
+  }
+
+  const activateStrategy = (s: FullStrategy, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActiveId(s.id)
+    if (activeAccount?.id) localStorage.setItem(`nous-active-strategy-${activeAccount.id}`, s.id)
   }
 
   const save = useCallback(async () => {
@@ -813,7 +829,7 @@ function StrategieTab() {
       const data = await res.json()
       const newS: FullStrategy = { id: data.id, name, description: '', rules: [], preferred_timeframes: [], instruments: [] }
       setStrategies(prev => [...prev, newS])
-      setSelectedId(data.id)
+      setExpandedId(data.id)
       setEditFields({ name, description: '', rules: [], preferred_timeframes: [], instruments: [] })
       setAddingNew(false)
       setNewName('')
@@ -840,13 +856,11 @@ function StrategieTab() {
       const deletedId = confirmDeleteId
       setStrategies(prev => {
         const next = prev.filter(s => s.id !== deletedId)
-        if (selectedId === deletedId) {
-          if (next.length > 0) {
-            setSelectedId(next[0].id)
-            setEditFields({ name: next[0].name, description: next[0].description, rules: next[0].rules, preferred_timeframes: next[0].preferred_timeframes, instruments: next[0].instruments })
-          } else {
-            setSelectedId(null)
-          }
+        if (expandedId === deletedId) setExpandedId(null)
+        if (activeId === deletedId) {
+          const fallback = next[0]?.id ?? null
+          setActiveId(fallback)
+          if (activeAccount?.id && fallback) localStorage.setItem(`nous-active-strategy-${activeAccount.id}`, fallback)
         }
         return next
       })
@@ -880,232 +894,288 @@ function StrategieTab() {
   )
 
   return (
-    <div className="space-y-6">
-      {/* Strategy list */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold" style={{ color: 'var(--fg-2)' }}>
-            Strategien ({strategies.length})
-          </p>
-          {!addingNew && (
-            <Button
-              onClick={() => { setAddingNew(true); setNewName('') }}
-              className="h-7 px-3 text-[13px] font-semibold rounded gap-1"
-              style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Neue Strategie
-            </Button>
-          )}
-        </div>
-
-        {addingNew && (
-          <div className="flex gap-2">
-            <Input
-              autoFocus
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              placeholder="Name der neuen Strategie…"
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); createNew() }
-                if (e.key === 'Escape') { setAddingNew(false); setNewName('') }
-              }}
-            />
-            <Button
-              onClick={createNew}
-              disabled={creatingNew || !newName.trim()}
-              className="h-9 px-3 shrink-0 rounded"
-              style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
-            >
-              {creatingNew ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Anlegen'}
-            </Button>
-            <Button
-              onClick={() => { setAddingNew(false); setNewName('') }}
-              className="h-9 w-9 p-0 shrink-0 rounded"
-              style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold" style={{ color: 'var(--fg-2)' }}>
+          Strategien ({strategies.length})
+        </p>
+        {!addingNew && (
+          <Button
+            onClick={() => { setAddingNew(true); setNewName('') }}
+            className="h-7 px-3 text-[13px] font-semibold rounded gap-1"
+            style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Neue Strategie
+          </Button>
         )}
-
-        {strategies.length === 0 && !addingNew && (
-          <p className="text-sm py-4 text-center" style={{ color: 'var(--fg-4)' }}>
-            Noch keine Strategien angelegt.
-          </p>
-        )}
-
-        {strategies.map(s => (
-          <div key={s.id}>
-            {confirmDeleteId === s.id ? (
-              <div
-                className="flex items-center gap-3 rounded px-3 py-2.5"
-                style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
-              >
-                <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: '#ef4444' }} />
-                <span className="text-sm flex-1" style={{ color: 'var(--fg-2)' }}>
-                  „{deleteInfo?.name}" wirklich löschen? Alte Trades bleiben erhalten.
-                </span>
-                <Button
-                  onClick={doDelete}
-                  disabled={deleting}
-                  className="h-7 px-3 text-[12px] font-semibold rounded shrink-0"
-                  style={{ background: '#ef4444', color: '#fff', border: 'none' }}
-                >
-                  {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Löschen'}
-                </Button>
-                <Button
-                  onClick={() => { setConfirmDeleteId(null); setDeleteInfo(null) }}
-                  className="h-7 px-3 text-[12px] font-semibold rounded shrink-0"
-                  style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
-                >
-                  Abbrechen
-                </Button>
-              </div>
-            ) : (
-              <div
-                className="flex items-center gap-2 rounded transition-colors"
-                style={{
-                  background: selectedId === s.id ? 'var(--bg-3)' : 'transparent',
-                  border: `1px solid ${selectedId === s.id ? 'var(--brand-blue)' : 'var(--border-raw)'}`,
-                }}
-              >
-                <button
-                  type="button"
-                  className="flex-1 px-3 py-2.5 text-left text-sm font-medium"
-                  onClick={() => selectStrategy(s)}
-                  style={{ color: selectedId === s.id ? 'var(--fg-1)' : 'var(--fg-2)' }}
-                >
-                  {s.name}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => requestDelete(s)}
-                  className="p-1 mr-1.5 rounded hover:bg-red-500/10 transition-colors shrink-0"
-                  aria-label={`Strategie "${s.name}" löschen`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
       </div>
 
-      {/* Editor for selected strategy */}
-      {selectedId && (
-        <>
-          <div className="h-px" style={{ background: 'var(--border-raw)' }} />
-
-          <div className="flex items-center justify-between">
-            <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
-              Die KI nutzt dieses Profil für alle Analysen.
-            </p>
-            <div className="flex gap-2 shrink-0">
-              <Button
-                onClick={() => setEditFields(EXAMPLE_STRATEGY)}
-                className="h-8 px-3 text-[13px] font-semibold rounded"
-                style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
-              >
-                Beispiel laden
-              </Button>
-              <Button
-                onClick={save}
-                disabled={saving}
-                className="h-8 px-4 text-[13px] font-semibold rounded"
-                style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : saved ? <Check className="h-4 w-4 mr-2" /> : null}
-                {saved ? 'Gespeichert' : 'Speichern'}
-              </Button>
-            </div>
-          </div>
-
-          <Section title="Strategie-Name">
-            <Input
-              value={editFields.name}
-              onChange={e => setEditFields(s => ({ ...s, name: e.target.value }))}
-              placeholder="z.B. Trend-Following mit Breakout-Entries"
-            />
-          </Section>
-
-          <Section title="Beschreibung" subtitle="Kurze Zusammenfassung deines Ansatzes">
-            <Textarea
-              rows={4}
-              value={editFields.description}
-              onChange={e => setEditFields(s => ({ ...s, description: e.target.value }))}
-              placeholder="Beschreibe deinen Trading-Stil, Ansatz und Philosophie…"
-              className="resize-none"
-            />
-          </Section>
-
-          <Section title="Trading-Regeln" subtitle="Konkrete Regeln, die dein Setup definieren">
-            <div className="space-y-2">
-              {editFields.rules.map((rule, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-2 rounded px-3 py-2"
-                  style={{ background: 'var(--bg-3)' }}
-                >
-                  <span className="num text-xs shrink-0 mt-0.5" style={{ color: 'var(--fg-4)' }}>
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <span className="text-sm flex-1" style={{ color: 'var(--fg-1)' }}>{rule}</span>
-                  <button onClick={() => removeRule(i)}>
-                    <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
-                  </button>
-                </div>
-              ))}
-              <div className="flex gap-2">
-                <Input
-                  value={newRule}
-                  onChange={e => setNewRule(e.target.value)}
-                  placeholder="Neue Regel hinzufügen…"
-                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addRule())}
-                />
-                <Button
-                  type="button"
-                  onClick={addRule}
-                  className="h-8 px-3 shrink-0 rounded"
-                  style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Bevorzugte Timeframes">
-            <div className="flex flex-wrap gap-2">
-              {TIMEFRAME_OPTIONS.map(tf => {
-                const active = editFields.preferred_timeframes.includes(tf)
-                return (
-                  <button
-                    key={tf}
-                    onClick={() => toggleTF(tf)}
-                    className="num text-xs font-semibold px-3 py-1.5 rounded transition-colors"
-                    style={{
-                      background: active ? 'var(--brand-blue)' : 'var(--bg-3)',
-                      color: active ? '#fff' : 'var(--fg-2)',
-                      border: `1px solid ${active ? 'var(--brand-blue)' : 'var(--border-raw)'}`,
-                    }}
-                  >
-                    {tf}
-                  </button>
-                )
-              })}
-            </div>
-          </Section>
-
-          <Section title="Instrumente / Märkte" subtitle="Welche Assets tradest du? Aus deiner Watchlist wählen.">
-            <AssetMultiPicker
-              value={editFields.instruments}
-              onChange={instruments => setEditFields(s => ({ ...s, instruments }))}
-              placeholder="Asset aus Watchlist…"
-            />
-          </Section>
-        </>
+      {addingNew && (
+        <div className="flex gap-2">
+          <Input
+            autoFocus
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="Name der neuen Strategie…"
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); createNew() }
+              if (e.key === 'Escape') { setAddingNew(false); setNewName('') }
+            }}
+          />
+          <Button
+            onClick={createNew}
+            disabled={creatingNew || !newName.trim()}
+            className="h-9 px-3 shrink-0 rounded"
+            style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
+          >
+            {creatingNew ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Anlegen'}
+          </Button>
+          <Button
+            onClick={() => { setAddingNew(false); setNewName('') }}
+            className="h-9 w-9 p-0 shrink-0 rounded"
+            style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       )}
+
+      {strategies.length === 0 && !addingNew && (
+        <p className="text-sm py-4 text-center" style={{ color: 'var(--fg-4)' }}>
+          Noch keine Strategien angelegt.
+        </p>
+      )}
+
+      {/* Strategy list */}
+      <div className="space-y-1.5">
+        {strategies.map(s => {
+          const isOpen = expandedId === s.id
+          const isActive = activeId === s.id
+          return (
+            <div
+              key={s.id}
+              className="rounded-xl overflow-hidden"
+              style={{ border: `1px solid ${isOpen ? 'rgba(255,255,255,0.15)' : 'var(--border-raw)'}` }}
+            >
+              {confirmDeleteId === s.id ? (
+                <div
+                  className="flex items-center gap-3 px-3 py-2.5"
+                  style={{ background: 'rgba(239, 68, 68, 0.08)' }}
+                >
+                  <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: '#ef4444' }} />
+                  <span className="text-sm flex-1" style={{ color: 'var(--fg-2)' }}>
+                    „{deleteInfo?.name}" wirklich löschen?
+                  </span>
+                  <Button
+                    onClick={doDelete}
+                    disabled={deleting}
+                    className="h-7 px-3 text-[12px] font-semibold rounded shrink-0"
+                    style={{ background: '#ef4444', color: '#fff', border: 'none' }}
+                  >
+                    {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Löschen'}
+                  </Button>
+                  <Button
+                    onClick={() => { setConfirmDeleteId(null); setDeleteInfo(null) }}
+                    className="h-7 px-3 text-[12px] font-semibold rounded shrink-0"
+                    style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+                  >
+                    Abbrechen
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Header row: [radio] [name] [KI-badge] [delete] [chevron] */}
+                  <div
+                    className="flex items-center gap-3 px-3 py-3 select-none"
+                    style={{ background: isOpen ? 'var(--bg-3)' : 'var(--bg-2)' }}
+                  >
+                    {/* Radio button — click to set as KI-Aktiv */}
+                    <button
+                      type="button"
+                      onClick={e => activateStrategy(s, e)}
+                      className="shrink-0 flex items-center justify-center rounded-full transition-all"
+                      style={{
+                        width: 20, height: 20,
+                        border: `2px solid ${isActive ? 'var(--brand-blue)' : 'var(--fg-4)'}`,
+                        background: isActive ? 'var(--brand-blue)' : 'transparent',
+                      }}
+                      title="Als KI-Hauptstrategie setzen"
+                    >
+                      {isActive && (
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />
+                      )}
+                    </button>
+
+                    {/* Name — click to expand/collapse editor */}
+                    <button
+                      type="button"
+                      className="flex-1 text-left text-sm font-semibold"
+                      style={{ color: 'var(--fg-1)' }}
+                      onClick={() => expandStrategy(s)}
+                    >
+                      {s.name}
+                    </button>
+
+                    {isActive && (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{ background: 'rgba(41,98,255,0.15)', color: 'var(--brand-blue)' }}
+                      >
+                        KI-Aktiv
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); requestDelete(s) }}
+                      className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors shrink-0"
+                      aria-label={`Strategie "${s.name}" löschen`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
+                    </button>
+
+                    {/* Chevron — expand/collapse */}
+                    <button
+                      type="button"
+                      onClick={() => expandStrategy(s)}
+                      className="p-1.5 rounded-lg transition-colors shrink-0"
+                      style={{ color: 'var(--fg-4)' }}
+                      aria-label={isOpen ? 'Zuklappen' : 'Aufklappen'}
+                    >
+                      <ChevronRight
+                        className="h-4 w-4 transition-transform duration-200"
+                        style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Inline editor (accordion body) */}
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-3 space-y-4" style={{ borderTop: '1px solid var(--border-raw)' }}>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs" style={{ color: 'var(--fg-4)' }}>
+                          Die KI nutzt das Strategie-Profil für alle Analysen.
+                        </p>
+                        <div className="flex gap-2 shrink-0">
+                          <Button
+                            onClick={() => setEditFields(EXAMPLE_STRATEGY)}
+                            className="h-7 px-3 text-[12px] font-semibold rounded"
+                            style={{ background: 'var(--bg-3)', color: 'var(--fg-2)', border: '1px solid var(--border-raw)' }}
+                          >
+                            Beispiel
+                          </Button>
+                          <Button
+                            onClick={save}
+                            disabled={saving}
+                            className="h-7 px-3 text-[12px] font-semibold rounded gap-1"
+                            style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
+                          >
+                            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : null}
+                            {saved ? 'Gespeichert' : 'Speichern'}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: 'var(--fg-4)' }}>Name</p>
+                          <Input
+                            value={editFields.name}
+                            onChange={e => setEditFields(f => ({ ...f, name: e.target.value }))}
+                            placeholder="z.B. Trend-Following mit Breakout-Entries"
+                          />
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: 'var(--fg-4)' }}>Beschreibung</p>
+                          <Textarea
+                            rows={3}
+                            value={editFields.description}
+                            onChange={e => setEditFields(f => ({ ...f, description: e.target.value }))}
+                            placeholder="Beschreibe deinen Trading-Stil, Ansatz und Philosophie…"
+                            className="resize-none"
+                          />
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: 'var(--fg-4)' }}>Trading-Regeln</p>
+                          <div className="space-y-1.5">
+                            {editFields.rules.map((rule, i) => (
+                              <div
+                                key={i}
+                                className="flex items-start gap-2 rounded px-3 py-2"
+                                style={{ background: 'var(--bg-3)' }}
+                              >
+                                <span className="num text-xs shrink-0 mt-0.5" style={{ color: 'var(--fg-4)' }}>
+                                  {String(i + 1).padStart(2, '0')}
+                                </span>
+                                <span className="text-sm flex-1" style={{ color: 'var(--fg-1)' }}>{rule}</span>
+                                <button onClick={() => removeRule(i)}>
+                                  <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
+                                </button>
+                              </div>
+                            ))}
+                            <div className="flex gap-2">
+                              <Input
+                                value={newRule}
+                                onChange={e => setNewRule(e.target.value)}
+                                placeholder="Neue Regel hinzufügen…"
+                                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addRule())}
+                              />
+                              <Button
+                                type="button"
+                                onClick={addRule}
+                                className="h-9 px-3 shrink-0 rounded"
+                                style={{ background: 'var(--bg-3)', color: 'var(--fg-1)', border: '1px solid var(--border-raw)' }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: 'var(--fg-4)' }}>Timeframes</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {TIMEFRAME_OPTIONS.map(tf => {
+                              const active = editFields.preferred_timeframes.includes(tf)
+                              return (
+                                <button
+                                  key={tf}
+                                  onClick={() => toggleTF(tf)}
+                                  className="num text-xs font-semibold px-2.5 py-1 rounded transition-colors"
+                                  style={{
+                                    background: active ? 'var(--brand-blue)' : 'var(--bg-3)',
+                                    color: active ? '#fff' : 'var(--fg-2)',
+                                    border: `1px solid ${active ? 'var(--brand-blue)' : 'var(--border-raw)'}`,
+                                  }}
+                                >
+                                  {tf}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: 'var(--fg-4)' }}>Instrumente</p>
+                          <AssetMultiPicker
+                            value={editFields.instruments}
+                            onChange={instruments => setEditFields(f => ({ ...f, instruments }))}
+                            placeholder="Asset aus Watchlist…"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -1515,13 +1585,20 @@ function BenachrichtigungenTab() {
             <button
               onClick={() => setPropFirmReminderEnabled(v => !v)}
               disabled={!(subscribed || permission === 'granted')}
-              className="w-11 h-6 rounded-full transition-colors duration-200 shrink-0 relative disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: propFirmReminderEnabled ? 'var(--brand-blue)' : 'rgba(255,255,255,0.15)' }}
+              className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                width: 50, height: 28, borderRadius: 14, padding: 3,
+                background: propFirmReminderEnabled ? 'var(--brand-blue)' : 'rgba(255,255,255,0.15)',
+                transition: 'background 200ms',
+                display: 'flex', alignItems: 'center',
+              }}
             >
-              <span
-                className="absolute top-0.5 w-5 h-5 rounded-full shadow-sm transition-all duration-200"
-                style={{ background: '#fff', left: propFirmReminderEnabled ? '22px' : '2px' }}
-              />
+              <span style={{
+                display: 'block', width: 22, height: 22, borderRadius: '50%', background: '#fff',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.35)',
+                transform: `translateX(${propFirmReminderEnabled ? 22 : 0}px)`,
+                transition: 'transform 220ms cubic-bezier(0.4,0,0.2,1)',
+              }} />
             </button>
           </div>
           {propFirmReminderEnabled && !(subscribed || permission === 'granted') && (
@@ -1554,13 +1631,20 @@ function BenachrichtigungenTab() {
             <button
               onClick={() => setHighImpactAlertsEnabled(v => !v)}
               disabled={!(subscribed || permission === 'granted')}
-              className="w-11 h-6 rounded-full transition-colors duration-200 shrink-0 relative disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: highImpactAlertsEnabled ? 'var(--short)' : 'rgba(255,255,255,0.15)' }}
+              className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                width: 50, height: 28, borderRadius: 14, padding: 3,
+                background: highImpactAlertsEnabled ? 'var(--brand-blue)' : 'rgba(255,255,255,0.15)',
+                transition: 'background 200ms',
+                display: 'flex', alignItems: 'center',
+              }}
             >
-              <span
-                className="absolute top-0.5 w-5 h-5 rounded-full shadow-sm transition-all duration-200"
-                style={{ background: '#fff', left: highImpactAlertsEnabled ? '22px' : '2px' }}
-              />
+              <span style={{
+                display: 'block', width: 22, height: 22, borderRadius: '50%', background: '#fff',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.35)',
+                transform: `translateX(${highImpactAlertsEnabled ? 22 : 0}px)`,
+                transition: 'transform 220ms cubic-bezier(0.4,0,0.2,1)',
+              }} />
             </button>
           </div>
         </div>
@@ -1581,13 +1665,20 @@ function BenachrichtigungenTab() {
             </div>
             <button
               onClick={() => setNotifEmailEnabled(v => !v)}
-              className="w-11 h-6 rounded-full transition-colors duration-200 shrink-0 relative"
-              style={{ background: notifEmailEnabled ? 'var(--brand-blue)' : 'rgba(255,255,255,0.15)' }}
+              className="shrink-0"
+              style={{
+                width: 50, height: 28, borderRadius: 14, padding: 3,
+                background: notifEmailEnabled ? 'var(--brand-blue)' : 'rgba(255,255,255,0.15)',
+                transition: 'background 200ms',
+                display: 'flex', alignItems: 'center',
+              }}
             >
-              <span
-                className="absolute top-0.5 w-5 h-5 rounded-full shadow-sm transition-all duration-200"
-                style={{ background: '#fff', left: notifEmailEnabled ? '22px' : '2px' }}
-              />
+              <span style={{
+                display: 'block', width: 22, height: 22, borderRadius: '50%', background: '#fff',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.35)',
+                transform: `translateX(${notifEmailEnabled ? 22 : 0}px)`,
+                transition: 'transform 220ms cubic-bezier(0.4,0,0.2,1)',
+              }} />
             </button>
           </div>
           {notifEmailEnabled && (
@@ -1985,6 +2076,7 @@ function TradingPlanSectionPanel({
   onSaved: (section: TradingPlanSection) => void
 }) {
   const [rules, setRules] = useState<string[]>(data?.rules ?? [])
+  const [checked, setChecked] = useState<Set<number>>(new Set())
   const [notes, setNotes] = useState(data?.notes ?? '')
   const [newRule, setNewRule] = useState('')
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
@@ -1996,6 +2088,15 @@ function TradingPlanSectionPanel({
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiRules, setAiRules] = useState<string[]>([])
   const [aiNotes, setAiNotes] = useState('')
+
+  const toggleCheck = (idx: number) => setChecked(prev => {
+    const next = new Set(prev)
+    if (next.has(idx)) next.delete(idx)
+    else next.add(idx)
+    return next
+  })
+
+  const checkedCount = checked.size
 
   // Sync external data on first load
   useEffect(() => {
@@ -2083,41 +2184,63 @@ function TradingPlanSectionPanel({
     <div className="space-y-4">
       {/* Rule list */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>Regeln</p>
-        {rules.map((rule, idx) => (
-          <div
-            key={idx}
-            className="flex items-start gap-2 rounded px-3 py-2"
-            style={{ background: 'var(--bg-3)' }}
-          >
-            <GripVertical className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-30" style={{ color: 'var(--fg-4)' }} />
-            {editingIdx === idx ? (
-              <input
-                autoFocus
-                value={editingVal}
-                onChange={e => setEditingVal(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); commitEdit(idx) }
-                  if (e.key === 'Escape') setEditingIdx(null)
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>Regeln</p>
+          {rules.length > 0 && (
+            <span className="text-[11px]" style={{ color: checkedCount === rules.length ? '#4ade80' : 'var(--fg-4)' }}>
+              {checkedCount}/{rules.length} abgehakt
+            </span>
+          )}
+        </div>
+        {rules.map((rule, idx) => {
+          const isDone = checked.has(idx)
+          return (
+            <div
+              key={idx}
+              className="flex items-start gap-2 rounded px-3 py-2 transition-colors"
+              style={{ background: isDone ? 'rgba(74,222,128,0.05)' : 'var(--bg-3)', opacity: isDone ? 0.7 : 1 }}
+            >
+              <button
+                onClick={() => toggleCheck(idx)}
+                className="shrink-0 mt-0.5 rounded transition-colors"
+                style={{
+                  width: 16, height: 16,
+                  border: `1.5px solid ${isDone ? '#4ade80' : 'var(--fg-4)'}`,
+                  background: isDone ? 'rgba(74,222,128,0.15)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
-                onBlur={() => commitEdit(idx)}
-                className="flex-1 bg-transparent text-sm outline-none border-b"
-                style={{ color: 'var(--fg-1)', borderColor: 'var(--brand-blue)' }}
-              />
-            ) : (
-              <span
-                className="flex-1 text-sm cursor-text"
-                style={{ color: 'var(--fg-1)' }}
-                onClick={() => startEdit(idx)}
+                aria-label={isDone ? 'Abhaken rückgängig' : 'Abhaken'}
               >
-                {rule}
-              </span>
-            )}
-            <button onClick={() => deleteRule(idx)} className="shrink-0">
-              <X className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
-            </button>
-          </div>
-        ))}
+                {isDone && <Check className="h-2.5 w-2.5" style={{ color: '#4ade80' }} />}
+              </button>
+              {editingIdx === idx ? (
+                <input
+                  autoFocus
+                  value={editingVal}
+                  onChange={e => setEditingVal(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); commitEdit(idx) }
+                    if (e.key === 'Escape') setEditingIdx(null)
+                  }}
+                  onBlur={() => commitEdit(idx)}
+                  className="flex-1 bg-transparent text-sm outline-none border-b"
+                  style={{ color: 'var(--fg-1)', borderColor: 'var(--brand-blue)' }}
+                />
+              ) : (
+                <span
+                  className="flex-1 text-sm cursor-text"
+                  style={{ color: isDone ? 'var(--fg-4)' : 'var(--fg-1)', textDecoration: isDone ? 'line-through' : 'none' }}
+                  onClick={() => startEdit(idx)}
+                >
+                  {rule}
+                </span>
+              )}
+              <button onClick={() => deleteRule(idx)} className="shrink-0">
+                <X className="h-3.5 w-3.5" style={{ color: 'var(--fg-4)' }} />
+              </button>
+            </div>
+          )
+        })}
         <div className="flex gap-2">
           <Input
             value={newRule}
@@ -2376,16 +2499,16 @@ function TradingplanTab() {
 
 type TabId = 'profil' | 'strategie' | 'konten' | 'api-key' | 'knowledge-base' | 'benachrichtigungen' | 'tradingplan' | 'coach-memory'
 
-const TAB_LABELS: Record<TabId, string> = {
-  'profil':              'Profil',
-  'strategie':           'Strategie',
-  'konten':              'Konten',
-  'api-key':             'API Key',
-  'knowledge-base':      'Knowledge Base',
-  'benachrichtigungen':  'Benachrichtigungen',
-  'tradingplan':         'Tradingplan',
-  'coach-memory':        'Coach Memory',
-}
+const TAB_META: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: 'profil',             label: 'Profil',             icon: User },
+  { id: 'strategie',          label: 'Strategie',          icon: Target },
+  { id: 'konten',             label: 'Konten',             icon: Wallet },
+  { id: 'api-key',            label: 'API Key',            icon: Key },
+  { id: 'knowledge-base',     label: 'Knowledge Base',     icon: BookOpen },
+  { id: 'benachrichtigungen', label: 'Benachrichtigungen', icon: Bell },
+  { id: 'tradingplan',        label: 'Tradingplan',        icon: ClipboardList },
+  { id: 'coach-memory',       label: 'Coach Memory',       icon: Brain },
+]
 
 function EinstellungenInner() {
   const searchParams = useSearchParams()
@@ -2393,9 +2516,9 @@ function EinstellungenInner() {
   const tab = (searchParams.get('tab') ?? 'profil') as TabId
   const solo = searchParams.get('solo') === '1'
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = (id: TabId) => {
     const params = new URLSearchParams(searchParams.toString())
-    params.set('tab', value)
+    params.set('tab', id)
     router.replace(`/einstellungen?${params.toString()}`, { scroll: false })
   }
 
@@ -2410,9 +2533,11 @@ function EinstellungenInner() {
     'coach-memory':       <CoachInsightsSection />,
   }
 
+  const currentMeta = TAB_META.find(t => t.id === tab)!
+
   if (solo) {
     return (
-      <div className="space-y-6 max-w-4xl">
+      <div className="space-y-6 max-w-3xl">
         <div>
           <button
             onClick={() => router.back()}
@@ -2426,7 +2551,7 @@ function EinstellungenInner() {
             className="text-2xl font-bold tracking-tight"
             style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}
           >
-            {TAB_LABELS[tab]}
+            {currentMeta.label}
           </h1>
         </div>
         {tabContent[tab]}
@@ -2435,40 +2560,75 @@ function EinstellungenInner() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
+    <div>
+      {/* Mobile: horizontal scrollable tabs */}
+      <div className="md:hidden mb-6">
         <div className="eyebrow mb-1">Mein Konto</div>
-        <h1
-          className="text-2xl font-bold tracking-tight"
-          style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}
-        >
-          Mein Profil
+        <h1 className="text-2xl font-bold tracking-tight mb-4" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+          Einstellungen
         </h1>
+        <div className="overflow-x-auto">
+          <div className="flex gap-1 min-w-max">
+            {TAB_META.map(t => (
+              <button
+                key={t.id}
+                onClick={() => handleTabChange(t.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors whitespace-nowrap"
+                style={{
+                  background: tab === t.id ? 'rgba(255,130,16,0.12)' : 'var(--bg-3)',
+                  color: tab === t.id ? '#ff8210' : 'var(--fg-2)',
+                  border: `1px solid ${tab === t.id ? 'rgba(255,130,16,0.3)' : 'var(--border-raw)'}`,
+                }}
+              >
+                <t.icon className="h-3.5 w-3.5 shrink-0" />
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <Tabs value={tab} onValueChange={handleTabChange}>
-        <div className="overflow-x-auto mb-6">
-          <TabsList className="w-max min-w-full">
-            <TabsTrigger value="profil">Profil</TabsTrigger>
-            <TabsTrigger value="strategie">Strategie</TabsTrigger>
-            <TabsTrigger value="konten">Konten</TabsTrigger>
-            <TabsTrigger value="api-key">API Key</TabsTrigger>
-            <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
-            <TabsTrigger value="benachrichtigungen">Benachrichtigungen</TabsTrigger>
-            <TabsTrigger value="tradingplan">Tradingplan</TabsTrigger>
-            <TabsTrigger value="coach-memory">Coach Memory</TabsTrigger>
-          </TabsList>
-        </div>
+      {/* Desktop: two-column layout */}
+      <div className="hidden md:flex gap-8 items-start max-w-5xl">
+        {/* Left nav */}
+        <nav className="w-52 shrink-0 space-y-0.5 sticky top-4">
+          <div className="eyebrow mb-3">Mein Konto</div>
+          {TAB_META.map(t => {
+            const isActive = tab === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => handleTabChange(t.id)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors text-left"
+                style={{
+                  background: isActive ? 'rgba(255,130,16,0.1)' : 'transparent',
+                  color: isActive ? '#ff8210' : 'var(--fg-2)',
+                  fontWeight: isActive ? 600 : 400,
+                  borderLeft: `2px solid ${isActive ? '#ff8210' : 'transparent'}`,
+                  paddingLeft: isActive ? 10 : 12,
+                }}
+              >
+                <t.icon className="h-[15px] w-[15px] shrink-0" />
+                <span className="flex-1">{t.label}</span>
+                {isActive && <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-50" />}
+              </button>
+            )
+          })}
+        </nav>
 
-        <TabsContent value="profil"><ProfilTab /></TabsContent>
-        <TabsContent value="strategie"><StrategieTab /></TabsContent>
-        <TabsContent value="konten"><KontenTab /></TabsContent>
-        <TabsContent value="api-key"><ApiKeyTab /></TabsContent>
-        <TabsContent value="knowledge-base"><KnowledgeBaseTab /></TabsContent>
-        <TabsContent value="benachrichtigungen"><BenachrichtigungenTab /></TabsContent>
-        <TabsContent value="tradingplan"><TradingplanTab /></TabsContent>
-        <TabsContent value="coach-memory"><CoachInsightsSection /></TabsContent>
-      </Tabs>
+        {/* Right content */}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-bold tracking-tight mb-6" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+            {currentMeta.label}
+          </h1>
+          {tabContent[tab]}
+        </div>
+      </div>
+
+      {/* Mobile content */}
+      <div className="md:hidden">
+        {tabContent[tab]}
+      </div>
     </div>
   )
 }

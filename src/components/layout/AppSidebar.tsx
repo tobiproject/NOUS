@@ -8,14 +8,14 @@ import {
   LayoutDashboard, BookOpen, TrendingUp, Brain, ShieldCheck,
   CalendarDays, ClipboardList, GraduationCap,
   ListChecks, Star, Map as MapIcon, Telescope, Settings, RefreshCw, Sparkles, Workflow,
-  PanelLeftClose, BookMarked,
+  ChevronLeft, ChevronRight, BookMarked,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { useWorkflowProgress } from '@/hooks/useWorkflowProgress'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
-import { getAnleitungProgress, ANLEITUNG_STORAGE_KEY, fetchProgressFromServer, setProgressFromServer } from '@/lib/anleitung-progress'
+import { getAnleitungProgress, fetchProgressFromServer, setProgressFromServer } from '@/lib/anleitung-progress'
 import { getCurrentChangelog } from '@/lib/changelog'
 import { cn } from '@/lib/utils'
 
@@ -47,7 +47,7 @@ const NAV_ITEMS: Record<string, NavItemDef> = {
 }
 
 const NAV_GROUPS: { label: string; color: string; ids: string[] }[] = [
-  { label: 'HEUTE',        color: '#ff8210', ids: ['journal', 'tagesplan'] },
+  { label: 'HEUTE',        color: '#ff8210', ids: ['dashboard', 'journal', 'tagesplan'] },
   { label: 'ANALYSE',      color: '#3b82f6', ids: ['performance', 'analysen', 'risk'] },
   { label: 'VORBEREITUNG', color: '#22c55e', ids: ['wochenvorbereitung', 'kalender'] },
   { label: 'MEHR',         color: '#8E8E93', ids: ['lernmodus', 'watchlist', 'roadmap', 'anleitung'] },
@@ -147,23 +147,17 @@ export function AppSidebar() {
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
-  const [anleitungPercent, setAnleitungPercent] = useState(0)
   const [strategyName, setStrategyName] = useState<string | null>(null)
   const update = useVersionCheck()
   const { data: workflowData } = useWorkflowProgress(activeAccount?.id)
 
   useEffect(() => {
-    const refresh = () => setAnleitungPercent(getAnleitungProgress().percent)
-    refresh()
     fetchProgressFromServer().then(serverSections => {
       if (serverSections.length === 0) return
       const local = getAnleitungProgress().read
       const merged = Array.from(new Set([...local, ...serverSections]))
       if (merged.length !== local.length) setProgressFromServer(merged)
     }).catch(() => {})
-    window.addEventListener('anleitung-progress-changed', refresh)
-    window.addEventListener('storage', (e) => { if (e.key === ANLEITUNG_STORAGE_KEY) refresh() })
-    return () => window.removeEventListener('anleitung-progress-changed', refresh)
   }, [])
 
   useEffect(() => {
@@ -231,7 +225,7 @@ export function AppSidebar() {
     })
   }
 
-  const showSettingsDot = !!(update || anleitungPercent < 100 || hasWeeklyPrepReminder)
+  const showSettingsDot = !!(update || hasWeeklyPrepReminder)
   const initial = (displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()
   const settingsActive = pathname.startsWith('/einstellungen')
 
@@ -372,7 +366,7 @@ export function AppSidebar() {
               {activeAccount.name}
             </span>
             <Link
-              href="/einstellungen?tab=strategie"
+              href="/einstellungen?tab=strategie&solo=1"
               className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition-opacity hover:opacity-80 max-w-full"
               style={{
                 background: strategyName ? 'rgba(59,130,246,0.12)' : 'var(--bg-3)',
@@ -541,41 +535,34 @@ export function AppSidebar() {
           )}
         </div>
 
-        {/* Toggle tab — on the right border line */}
-        {!collapsed && (
-          <button
-            onClick={toggleCollapsed}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-4 h-8 transition-all duration-150"
-            style={{
-              background: 'var(--bg-3)',
-              color: 'var(--fg-4)',
-              borderRadius: '0 6px 6px 0',
-              borderTop: '1px solid var(--border-raw)',
-              borderRight: '1px solid var(--border-raw)',
-              borderBottom: '1px solid var(--border-raw)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.color = 'var(--fg-1)'
-              ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-4)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.color = 'var(--fg-4)'
-              ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-3)'
-            }}
-            title="Sidebar schließen"
-          >
-            <PanelLeftClose className="h-3 w-3" />
-          </button>
-        )}
-        {/* Thin expand handle — visible when collapsed */}
-        {collapsed && (
-          <div
-            className="absolute right-0 top-8 bottom-8 w-[3px] cursor-col-resize opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200"
-            style={{ background: 'linear-gradient(to bottom, transparent, var(--border-strong), transparent)' }}
-            onClick={toggleCollapsed}
-            title="Sidebar öffnen"
-          />
-        )}
+        {/* Toggle tab — TradingView style */}
+        <button
+          onClick={toggleCollapsed}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-150"
+          style={{
+            width: 16,
+            height: 32,
+            background: 'var(--bg-3)',
+            color: 'var(--fg-4)',
+            borderRadius: '0 6px 6px 0',
+            borderTop: '1px solid var(--border-raw)',
+            borderRight: '1px solid var(--border-raw)',
+            borderBottom: '1px solid var(--border-raw)',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--fg-1)'
+            ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-4)'
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--fg-4)'
+            ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-3)'
+          }}
+          title={collapsed ? 'Sidebar öffnen' : 'Sidebar schließen'}
+        >
+          {collapsed
+            ? <ChevronRight className="h-3 w-3" />
+            : <ChevronLeft className="h-3 w-3" />}
+        </button>
       </aside>
     </>
   )

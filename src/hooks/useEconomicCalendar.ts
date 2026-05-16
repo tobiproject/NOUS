@@ -54,13 +54,14 @@ export function useEconomicCalendar() {
       setEvents(data.events ?? [])
       setFetchedAt(data.fetched_at)
 
-      // Auto-refresh if current week has past events with missing actuals
+      // Auto-refresh if: no events for this week, any event missing time_utc, or past events missing actuals
       if (!refreshTriggeredRef.current) {
         const now = new Date()
-        const needsRefresh = (data.events ?? []).some(e => {
-          if (!e.time_utc) return false
-          return new Date(e.time_utc) < now && e.actual === null
-        })
+        const evts = data.events ?? []
+        const needsRefresh =
+          evts.length === 0 ||
+          evts.some(e => e.time_utc === null) ||
+          evts.some(e => e.time_utc && new Date(e.time_utc) < now && e.actual === null)
         if (needsRefresh) {
           refreshTriggeredRef.current = true
           fetch('/api/calendar/refresh').then(async r => {

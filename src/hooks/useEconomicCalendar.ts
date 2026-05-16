@@ -17,8 +17,7 @@ function getWeekBounds(offset: number): { weekStart: string; weekEnd: string } {
 }
 
 function getInitialWeekOffset(): number {
-  // On Sundays, default to next week since the trading week starts Monday
-  return new Date().getDay() === 0 ? 1 : 0
+  return 0
 }
 
 export function useEconomicCalendar() {

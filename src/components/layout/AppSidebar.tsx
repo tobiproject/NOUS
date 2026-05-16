@@ -3,12 +3,12 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   LayoutDashboard, BookOpen, TrendingUp, Brain, ShieldCheck,
   CalendarDays, ClipboardList, GraduationCap,
   ListChecks, Star, Map as MapIcon, Telescope, Settings, RefreshCw, Sparkles, Workflow,
-  ChevronLeft, ChevronRight, BookMarked,
+  ChevronLeft, ChevronRight, BookMarked, ChevronDown,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/hooks/useAuth'
@@ -42,15 +42,16 @@ const NAV_ITEMS: Record<string, NavItemDef> = {
   kalender:           { id: 'kalender',           href: '/kalender',           label: 'Kalender',           icon: CalendarDays,    tooltip: 'Wirtschaftskalender und High-Impact-Events in deiner Zeitzone' },
   lernmodus:          { id: 'lernmodus',          href: '/lernmodus',          label: 'Lernen',             icon: GraduationCap,   tooltip: 'Quiz, Chart-Replay und KI-Coach zum Verbessern deiner Entscheidungen' },
   watchlist:          { id: 'watchlist',          href: '/watchlist',          label: 'Watchlist',          icon: Star,            tooltip: 'Deine gehandelten Assets mit Kontraktwerten für die Risikoberechnung' },
-  roadmap:            { id: 'roadmap',            href: '/roadmap',            label: 'Roadmap',            icon: MapIcon,         tooltip: 'Deine Trader-Journey: Level, Stärken/Schwächen und nächste Schritte' },
+  roadmap:            { id: 'roadmap',            href: '/roadmap',            label: 'Trader Journey',     icon: MapIcon,         tooltip: 'Deine Trader-Journey: Level, Stärken/Schwächen und nächste Schritte' },
   anleitung:          { id: 'anleitung',          href: '/anleitung',          label: 'Anleitung',          icon: BookMarked,      tooltip: 'Schritt-für-Schritt Erklärung aller Nous-Features' },
 }
 
+// Trader workflow: Trading → Vorbereitung → Auswertung → Mehr
 const NAV_GROUPS: { label: string; color: string; ids: string[] }[] = [
-  { label: 'HEUTE',        color: '#ff8210', ids: ['dashboard', 'journal', 'tagesplan'] },
-  { label: 'ANALYSE',      color: '#3b82f6', ids: ['performance', 'analysen', 'risk'] },
-  { label: 'VORBEREITUNG', color: '#22c55e', ids: ['wochenvorbereitung', 'kalender'] },
-  { label: 'MEHR',         color: '#8E8E93', ids: ['lernmodus', 'watchlist', 'roadmap', 'anleitung'] },
+  { label: 'TRADING',      color: '#ff8210', ids: ['dashboard', 'journal'] },
+  { label: 'VORBEREITUNG', color: '#8E8E93', ids: ['tagesplan', 'watchlist', 'wochenvorbereitung', 'kalender'] },
+  { label: 'AUSWERTUNG',   color: '#8E8E93', ids: ['performance', 'analysen', 'risk'] },
+  { label: 'MEHR',         color: '#8E8E93', ids: ['roadmap', 'lernmodus', 'anleitung'] },
 ]
 
 function lerpColor(a: [number,number,number], b: [number,number,number], t: number): string {
@@ -61,7 +62,6 @@ function lerpColor(a: [number,number,number], b: [number,number,number], t: numb
 }
 
 function ringColor(pct: number): string {
-  // 0% = red, 50% = orange, 100% = green
   const red:    [number,number,number] = [242, 54,  69]
   const orange: [number,number,number] = [255, 130, 16]
   const green:  [number,number,number] = [74,  222, 128]
@@ -101,7 +101,7 @@ function WorkflowRing({ done, total }: { done: number; total: number }) {
 interface NavItemProps {
   item: NavItemDef
   isActive: boolean
-  dot?: { color: string; pulse?: boolean; glow?: string }
+  dot?: { color: string; pulse?: boolean }
   fillIcon?: boolean
 }
 
@@ -127,11 +127,11 @@ function NavItemRow({ item, isActive, dot, fillIcon }: NavItemProps) {
         className="h-[15px] w-[15px] shrink-0"
         style={fillIcon ? { color: '#F59E0B', fill: '#F59E0B' } : undefined}
       />
-      <span className="flex-1">{item.label}</span>
+      <span className="flex-1 truncate">{item.label}</span>
       {dot && (
         <span
-          className={cn('w-1.5 h-1.5 rounded-full shrink-0', dot.pulse && 'animate-pulse')}
-          style={{ background: dot.color, boxShadow: dot.glow ? `0 0 4px ${dot.glow}` : undefined }}
+          className={cn('w-[6px] h-[6px] rounded-full shrink-0 self-center', dot.pulse && 'animate-pulse')}
+          style={{ background: dot.color }}
         />
       )}
     </Link>
@@ -141,13 +141,16 @@ function NavItemRow({ item, isActive, dot, fillIcon }: NavItemProps) {
 export function AppSidebar() {
   const pathname = usePathname()
   const { user } = useAuth()
-  const { activeAccount } = useAccountContext()
+  const { accounts, activeAccount, setActiveAccount } = useAccountContext()
   const [hasTodayPlan, setHasTodayPlan] = useState(false)
   const [hasWeeklyPrepReminder, setHasWeeklyPrepReminder] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [hasWatchlistItems, setHasWatchlistItems] = useState(false)
-  const [strategyName, setStrategyName] = useState<string | null>(null)
+  const [strategies, setStrategies] = useState<{ id: string; name: string }[]>([])
+  const [activeStrategyId, setActiveStrategyId] = useState<string | null>(null)
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const accountMenuRef = useRef<HTMLDivElement>(null)
   const update = useVersionCheck()
   const { data: workflowData } = useWorkflowProgress(activeAccount?.id)
 
@@ -179,13 +182,30 @@ export function AppSidebar() {
       .catch(() => {})
   }, [])
 
+  // Load strategies and track active one via localStorage + custom event
   useEffect(() => {
     if (!activeAccount?.id) return
+    setActiveStrategyId(localStorage.getItem(`nous-active-strategy-${activeAccount.id}`))
     fetch(`/api/strategy?account_id=${activeAccount.id}`)
       .then(r => r.json())
-      .then(d => setStrategyName(d.strategies?.[0]?.name ?? null))
+      .then(d => setStrategies(d.strategies ?? []))
       .catch(() => {})
+    function onChanged(e: Event) {
+      setActiveStrategyId((e as CustomEvent<{ strategyId: string }>).detail.strategyId)
+    }
+    window.addEventListener('nous-strategy-changed', onChanged)
+    return () => window.removeEventListener('nous-strategy-changed', onChanged)
   }, [activeAccount?.id])
+
+  // Close account menu on outside click
+  useEffect(() => {
+    if (!accountMenuOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (!accountMenuRef.current?.contains(e.target as Node)) setAccountMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [accountMenuOpen])
 
   useEffect(() => {
     function check() {
@@ -225,11 +245,16 @@ export function AppSidebar() {
     })
   }
 
+  const strategyName = useMemo(() => {
+    if (!strategies.length) return null
+    const found = activeStrategyId ? strategies.find(s => s.id === activeStrategyId) : null
+    return (found ?? strategies[0])?.name ?? null
+  }, [strategies, activeStrategyId])
+
   const showSettingsDot = !!(update || hasWeeklyPrepReminder)
   const initial = (displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()
   const settingsActive = pathname.startsWith('/einstellungen')
 
-  // Map workflow step IDs to nav item IDs for green dots
   const workflowDoneIds = new Set(
     (workflowData?.steps ?? []).filter(s => s.done).map(s => {
       if (s.id === 'trade_logged' || s.id === 'trade_analyzed') return 'journal'
@@ -238,10 +263,11 @@ export function AppSidebar() {
     })
   )
 
+  // Orange = action needed, Blue = confirmed/done today
   function getDot(id: string): NavItemProps['dot'] | undefined {
-    if (workflowDoneIds.has(id)) return { color: '#4ade80' }
-    if (id === 'tagesplan' && hasTodayPlan) return { color: 'var(--long)' }
-    if (id === 'wochenvorbereitung' && hasWeeklyPrepReminder) return { color: 'var(--warn)', pulse: true, glow: 'var(--warn)' }
+    if (id === 'wochenvorbereitung' && hasWeeklyPrepReminder) return { color: '#ff8210', pulse: true }
+    if (workflowDoneIds.has(id)) return { color: '#2962FF' }
+    if (id === 'tagesplan' && hasTodayPlan) return { color: '#2962FF' }
     return undefined
   }
 
@@ -313,7 +339,7 @@ export function AppSidebar() {
                   {showSettingsDot && (
                     <span
                       className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse border border-[var(--bg-1)]"
-                      style={{ background: 'var(--brand-blue)', boxShadow: '0 0 4px var(--brand-blue)' }}
+                      style={{ background: '#2962FF' }}
                     />
                   )}
                 </Link>
@@ -329,14 +355,13 @@ export function AppSidebar() {
         className="relative shrink-0 hidden lg:flex flex-col h-screen sticky top-0 overflow-hidden group/sidebar"
         style={{
           background: 'var(--bg-1)',
-          borderRight: 'none',
           borderRadius: '0 20px 20px 0',
           width: collapsed ? 56 : 224,
           transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)',
           boxShadow: '1px 0 0 0 var(--border-raw)',
         }}
       >
-        {/* Header: logo + toggle */}
+        {/* Header: logo + avatar */}
         <div className="px-3 pt-4 pb-2 flex items-center justify-between gap-2 shrink-0">
           {collapsed ? (
             <div className="flex items-center justify-center w-full">
@@ -347,7 +372,7 @@ export function AppSidebar() {
               <Image src="/logo/nous-logo-slogan.svg" alt="NOUS" width={100} height={32} priority />
               <div
                 className="shrink-0 flex items-center justify-center overflow-hidden"
-                style={{ width: 24, height: 24, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.15)', color: 'var(--brand-blue)', fontSize: 10, fontWeight: 700 }}
+                style={{ width: 24, height: 24, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.15)', color: '#fff', fontSize: 10, fontWeight: 700 }}
               >
                 {avatarUrl
                   // eslint-disable-next-line @next/next/no-img-element
@@ -358,20 +383,69 @@ export function AppSidebar() {
           )}
         </div>
 
-
-        {/* Account + strategy */}
+        {/* Account switcher + strategy badge */}
         {!collapsed && activeAccount && (
-          <div className="px-4 pb-2 shrink-0 space-y-1">
-            <span className="text-[11px] truncate block" style={{ color: 'var(--fg-4)' }}>
-              {activeAccount.name}
-            </span>
+          <div className="px-3 pb-2 shrink-0 space-y-1.5">
+            {/* Account switcher */}
+            <div className="relative" ref={accountMenuRef}>
+              <button
+                onClick={() => accounts.length > 1 && setAccountMenuOpen(v => !v)}
+                className="flex items-center gap-1 w-full text-left rounded-md px-1.5 py-1 transition-colors"
+                style={{
+                  cursor: accounts.length > 1 ? 'pointer' : 'default',
+                  background: accountMenuOpen ? 'var(--bg-3)' : 'transparent',
+                }}
+                onMouseEnter={e => { if (accounts.length > 1) (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
+                onMouseLeave={e => { if (!accountMenuOpen) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                <span className="text-[11px] truncate flex-1 font-medium" style={{ color: 'var(--fg-4)' }}>
+                  {activeAccount.name}
+                </span>
+                {accounts.length > 1 && (
+                  <ChevronDown
+                    className="h-3 w-3 shrink-0 transition-transform duration-150"
+                    style={{ color: 'var(--fg-4)', transform: accountMenuOpen ? 'rotate(180deg)' : 'none' }}
+                  />
+                )}
+              </button>
+              {accountMenuOpen && (
+                <div
+                  className="absolute left-0 top-full z-50 mt-1 rounded-lg overflow-hidden"
+                  style={{
+                    minWidth: 180,
+                    background: 'var(--bg-2)',
+                    border: '1px solid var(--border-raw)',
+                    boxShadow: 'var(--elev-2)',
+                  }}
+                >
+                  {accounts.map(acc => (
+                    <button
+                      key={acc.id}
+                      onClick={() => { setActiveAccount(acc); setAccountMenuOpen(false) }}
+                      className="w-full flex items-center px-3 py-2 text-[12px] text-left transition-colors"
+                      style={{
+                        color: acc.id === activeAccount.id ? '#ff8210' : 'var(--fg-2)',
+                        fontWeight: acc.id === activeAccount.id ? 600 : 400,
+                        background: 'transparent',
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                    >
+                      {acc.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Active strategy badge */}
             <Link
               href="/einstellungen?tab=strategie&solo=1"
               className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition-opacity hover:opacity-80 max-w-full"
               style={{
-                background: strategyName ? 'rgba(59,130,246,0.12)' : 'var(--bg-3)',
+                background: strategyName ? 'rgba(41,98,255,0.1)' : 'var(--bg-3)',
                 color: strategyName ? '#60a5fa' : 'var(--fg-4)',
-                border: strategyName ? '1px solid rgba(59,130,246,0.2)' : '1px solid var(--border-raw)',
+                border: strategyName ? '1px solid rgba(41,98,255,0.2)' : '1px solid var(--border-raw)',
               }}
             >
               <span className="truncate">{strategyName ?? 'Strategie setzen'}</span>
@@ -395,11 +469,11 @@ export function AppSidebar() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-4)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <ListChecks className="h-3.5 w-3.5 shrink-0" style={{ color: '#ff8210' }} />
-                <span className="text-[13px] font-semibold" style={{ color: 'var(--fg-1)' }}>Tages-Workflow</span>
+                <span className="text-[13px] font-semibold whitespace-nowrap" style={{ color: 'var(--fg-1)' }}>Tages-Workflow</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {workflowData && workflowData.done_count < workflowData.total && (
                   <span className="text-[11px] tabular-nums" style={{ color: 'var(--fg-4)' }}>
                     {workflowData.done_count}/{workflowData.total}
@@ -411,10 +485,9 @@ export function AppSidebar() {
           )}
         </div>
 
-        {/* Navigation — grouped */}
+        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-2 flex flex-col gap-4 py-1">
           {collapsed ? (
-            /* Collapsed: icons only */
             <TooltipProvider>
               <div className="flex flex-col items-center gap-0.5">
                 {NAV_GROUPS.map((group, gi) => (
@@ -451,7 +524,6 @@ export function AppSidebar() {
               </div>
             </TooltipProvider>
           ) : (
-            /* Expanded: full labels */
             NAV_GROUPS.map(group => (
               <div key={group.label}>
                 <p
@@ -481,20 +553,20 @@ export function AppSidebar() {
           )}
         </nav>
 
-        {/* Update banner */}
-        {update && (
-          <div className="mx-3 mb-2 rounded-lg px-3 py-2.5" style={{ background: 'rgba(255,130,16,0.07)', border: '1px solid rgba(255,130,16,0.25)' }}>
+        {/* Update banner — blue for new version info */}
+        {update && !collapsed && (
+          <div className="mx-3 mb-2 rounded-lg px-3 py-2.5" style={{ background: 'rgba(41,98,255,0.07)', border: '1px solid rgba(41,98,255,0.2)' }}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                <Sparkles className="h-3 w-3 shrink-0" style={{ color: 'var(--brand-blue)' }} />
-                <span className="text-[11px] font-bold" style={{ color: 'var(--brand-blue)' }}>
+                <Sparkles className="h-3 w-3 shrink-0" style={{ color: '#2962FF' }} />
+                <span className="text-[11px] font-bold" style={{ color: '#2962FF' }}>
                   v{update.releaseVersion} verfügbar
                 </span>
               </div>
               <button
                 onClick={() => window.location.reload()}
                 className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold shrink-0"
-                style={{ background: 'var(--brand-blue)', color: '#fff' }}
+                style={{ background: '#2962FF', color: '#fff' }}
               >
                 <RefreshCw className="h-2.5 w-2.5" />
                 Laden
@@ -515,7 +587,7 @@ export function AppSidebar() {
                     style={{ color: settingsActive ? 'var(--fg-1)' : 'var(--fg-3)', background: settingsActive ? 'var(--bg-3)' : 'transparent' }}
                   >
                     <Settings className="h-[17px] w-[17px]" />
-                    {showSettingsDot && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--brand-blue)' }} />}
+                    {showSettingsDot && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#2962FF' }} />}
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="text-xs">Einstellungen</TooltipContent>
@@ -526,7 +598,7 @@ export function AppSidebar() {
               <NavItemRow
                 item={{ id: 'einstellungen', href: '/einstellungen', label: 'Einstellungen', icon: Settings, tooltip: '' }}
                 isActive={settingsActive}
-                dot={showSettingsDot ? { color: 'var(--brand-blue)', pulse: true, glow: 'var(--brand-blue)' } : undefined}
+                dot={showSettingsDot ? { color: '#2962FF', pulse: true } : undefined}
               />
               <p className="px-3 pt-1 text-[10px]" style={{ color: 'var(--fg-4)' }}>
                 v{RELEASE_VERSION}
@@ -540,8 +612,8 @@ export function AppSidebar() {
           onClick={toggleCollapsed}
           className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-150"
           style={{
-            width: 16,
-            height: 32,
+            width: 14,
+            height: 28,
             background: 'var(--bg-3)',
             color: 'var(--fg-4)',
             borderRadius: '0 6px 6px 0',
@@ -560,8 +632,8 @@ export function AppSidebar() {
           title={collapsed ? 'Sidebar öffnen' : 'Sidebar schließen'}
         >
           {collapsed
-            ? <ChevronRight className="h-3 w-3" />
-            : <ChevronLeft className="h-3 w-3" />}
+            ? <ChevronRight className="h-2.5 w-2.5" />
+            : <ChevronLeft className="h-2.5 w-2.5" />}
         </button>
       </aside>
     </>

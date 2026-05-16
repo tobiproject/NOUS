@@ -73,7 +73,7 @@ async function getCroppedBlob(imageSrc: string, pixelCrop: Area): Promise<Blob> 
   return new Promise(resolve => canvas.toBlob(b => resolve(b!), 'image/jpeg', 0.92))
 }
 
-const DRUM_H = 44
+const DRUM_H = 36
 const HOURS_ARR = Array.from({ length: 24 }, (_, i) => i)
 const MINUTES_ARR = Array.from({ length: 60 }, (_, i) => i)
 
@@ -796,7 +796,10 @@ function StrategieTab() {
   const activateStrategy = (s: FullStrategy, e: React.MouseEvent) => {
     e.stopPropagation()
     setActiveId(s.id)
-    if (activeAccount?.id) localStorage.setItem(`nous-active-strategy-${activeAccount.id}`, s.id)
+    if (activeAccount?.id) {
+      localStorage.setItem(`nous-active-strategy-${activeAccount.id}`, s.id)
+      window.dispatchEvent(new CustomEvent('nous-strategy-changed', { detail: { strategyId: s.id } }))
+    }
   }
 
   const save = useCallback(async () => {
@@ -1618,7 +1621,7 @@ function BenachrichtigungenTab() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Bell className="h-4 w-4" style={{ color: highImpactAlertsEnabled ? 'var(--short)' : 'var(--fg-4)' }} />
+              <Bell className="h-4 w-4" style={{ color: highImpactAlertsEnabled ? 'var(--brand-blue)' : 'var(--fg-4)' }} />
               <div>
                 <p className="text-sm font-medium" style={{ color: 'var(--fg-1)' }}>High-Impact Event Alerts</p>
                 <p className="text-xs" style={{ color: 'var(--fg-4)' }}>

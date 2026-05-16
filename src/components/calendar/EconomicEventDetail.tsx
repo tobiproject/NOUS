@@ -11,36 +11,178 @@ import { de } from 'date-fns/locale'
 import { ActualValue } from './ActualValue'
 
 const EVENT_DESCRIPTIONS: Record<string, string> = {
-  'Non-Farm Payrolls': 'Misst die Anzahl neuer Stellen außerhalb der Landwirtschaft in den USA. Einer der wichtigsten Indikatoren für die Gesundheit des US-Arbeitsmarkts.',
-  'CPI m/m': 'Consumer Price Index (monatlich) — misst die Veränderung des Preisniveaus eines Warenkorbs. Kernindikator für Inflation.',
-  'Core CPI m/m': 'CPI ohne volatile Energie- und Lebensmittelpreise. Maßgeblich für Fed-Zinsentscheidungen.',
-  'CPI y/y': 'Consumer Price Index im Jahresvergleich — zeigt die annualisierte Inflationsrate.',
-  'Core CPI y/y': 'Kernrate der Jahresinflation ohne Energie und Lebensmittel.',
-  'PPI m/m': 'Producer Price Index — misst Preisveränderungen auf Produzenten-Ebene, oft ein Vorläufer der CPI.',
-  'FOMC Statement': 'Statement der US-Notenbank nach der Zinssitzung. Enthält Zinsentscheidung und wirtschaftlichen Ausblick.',
-  'Federal Funds Rate': 'US-Leitzins der Federal Reserve. Bestimmt maßgeblich globale Kapitalflüsse und Währungsbewegungen.',
-  'ISM Manufacturing PMI': 'Index für das verarbeitende Gewerbe der USA. Über 50 = Expansion, unter 50 = Kontraktion.',
-  'ISM Services PMI': 'Index für den Dienstleistungssektor der USA. Misst Aktivität im größten Sektor der US-Wirtschaft.',
-  'GDP q/q': 'Bruttoinlandsprodukt (Quartalsveränderung) — misst das Wirtschaftswachstum der USA.',
-  'Retail Sales m/m': 'Monatliche Veränderung der Einzelhandelsumsätze — Indikator für Konsumentenausgaben.',
-  'Core Retail Sales m/m': 'Einzelhandelsumsätze ohne Autos — weniger volatil, besserer Trendindikator.',
-  'Unemployment Claims': 'Wöchentliche Erstanträge auf Arbeitslosenhilfe. Zeitnaher Indikator für den Arbeitsmarkt.',
-  'ADP Non-Farm Employment Change': 'Private-Sektor-Beschäftigungsänderung — Vorläufer des offiziellen NFP-Berichts.',
-  'Trade Balance': 'Differenz zwischen Exporten und Importen. Beeinflusst die Nachfrage nach der Währung.',
-  'Building Permits': 'Bewilligte Baugenehmigungen — Frühindikator für den Immobilienmarkt.',
-  'Housing Starts': 'Begonnene Neubauprojekte — Indikator für Investitionen im Immobiliensektor.',
-  'CB Consumer Confidence': 'Conference Board Verbrauchervertrauen — misst Konsumentenstimmung in den USA.',
-  'Crude Oil Inventories': 'Wöchentliche US-Rohölvorräte (EIA). Direkte Auswirkung auf den Ölpreis.',
-  'BOE Official Bank Rate': 'Leitzins der Bank of England — beeinflusst GBP und UK-Märkte direkt.',
-  'ECB Main Refinancing Rate': 'Leitzins der Europäischen Zentralbank — bestimmt EUR-Liquiditätsbedingungen.',
+  // ── USA: Arbeitsmarkt ─────────────────────────────────────────────────────
+  'Non-Farm Payrolls': 'Misst die Veränderung der Beschäftigung außerhalb der Landwirtschaft im Vormonat. Der NFP gilt als wichtigster monatlicher Indikator für den US-Arbeitsmarkt und hat regelmäßig starke Auswirkungen auf USD, Aktien und Anleihen.',
+  'Non-Farm Employment Change': 'Misst die Veränderung der Beschäftigung außerhalb der Landwirtschaft im Vormonat. Der NFP gilt als wichtigster monatlicher Indikator für den US-Arbeitsmarkt.',
+  'ADP Non-Farm Employment Change': 'Misst die Veränderung der Beschäftigung im privaten Sektor, veröffentlicht zwei Tage vor dem offiziellen NFP-Bericht. Gilt als Vorindikator für den Regierungsbericht.',
+  'Unemployment Rate': 'Anteil der arbeitslosen Erwerbspersonen an der Gesamtzahl der Erwerbspersonen. Veröffentlicht zusammen mit dem NFP-Bericht vom Bureau of Labor Statistics.',
+  'Average Hourly Earnings m/m': 'Monatliche Veränderung der durchschnittlichen Stundenlöhne. Wichtiger Lohninflationsindikator — beeinflusst direkt die Fed-Zinsentscheidungen.',
+  'Average Hourly Earnings y/y': 'Jährliche Veränderung der durchschnittlichen Stundenlöhne gegenüber dem Vorjahr. Lohnwachstum über 3,5% gilt als inflationär.',
+  'JOLTS Job Openings': 'Job Openings and Labor Turnover Survey — misst die Anzahl offener Stellen. Hohe Werte zeigen einen angespannten Arbeitsmarkt und stützen USD.',
+  'Unemployment Claims': 'Erstanträge auf Arbeitslosenhilfe der vergangenen Woche. Als wöchentlicher Datenpunkt einer der zeitnahsten Indikatoren für den Arbeitsmarkt.',
+  'Continuing Claims': 'Anzahl der Personen, die fortlaufend Arbeitslosenhilfe beziehen. Steigt dieser Wert, deutet dies auf eine Verlängerung der Arbeitslosigkeit hin.',
+  'Challenger Job Cuts': 'Monatliche Anzahl angekündigter Entlassungen von Challenger, Gray & Christmas. Frühindikator für Schwächen im Arbeitsmarkt.',
+
+  // ── USA: Inflation ───────────────────────────────────────────────────────
+  'CPI m/m': 'Consumer Price Index (monatlich) — misst die durchschnittliche Preisveränderung eines repräsentativen Warenkorbs. Hauptindikator für Verbraucherinflation, vom Bureau of Labor Statistics veröffentlicht.',
+  'CPI y/y': 'Consumer Price Index im Jahresvergleich. Zeigt die Inflationsrate gegenüber dem Vorjahr und ist maßgeblich für Fed-Zinsentscheidungen.',
+  'Core CPI m/m': 'Kernrate des CPI — ohne volatile Lebensmittel- und Energiepreise. Bevorzugter Inflationsindikator der US-Notenbank für die Geldpolitik.',
+  'Core CPI y/y': 'Kernrate der Jahresinflation ohne Energie und Lebensmittel. Fed-Ziel liegt bei ~2%; Abweichungen lösen Zinsdiskussionen aus.',
+  'PPI m/m': 'Producer Price Index (monatlich) — misst Preisveränderungen auf Produzentenstufe. Gilt als Vorläufer des CPI, da Produktionskosten oft mit Verzögerung an Verbraucher weitergegeben werden.',
+  'PPI y/y': 'Producer Price Index im Jahresvergleich. Zeigt, wie stark die Produktionskosten gegenüber dem Vorjahr gestiegen sind.',
+  'Core PPI m/m': 'Kernrate des PPI ohne Nahrungsmittel und Energie. Gibt ein klareres Bild der zugrundeliegenden Preistrends auf Produzentenstufe.',
+  'Core PPI y/y': 'Jährlicher Kern-PPI ohne volatile Komponenten. Wichtiger Vorläufer für zukünftige Verbraucherpreisentwicklungen.',
+  'PCE Price Index m/m': 'Personal Consumption Expenditures Price Index — der von der Fed bevorzugte Inflationsindikator. Breiter gefasst als der CPI.',
+  'Core PCE Price Index m/m': 'Kern-PCE ohne Nahrungsmittel und Energie — das primäre Inflationsziel der Federal Reserve (Ziel: 2%).',
+  'Core PCE Price Index y/y': 'Jahresrate des Kern-PCE. Direkt im Fokus der Fed; Werte deutlich über 2% erhöhen Zinssenkungshürden.',
+  'Import Prices m/m': 'Preisveränderung importierter Güter. Indikator für importierte Inflation, besonders relevant bei starken USD-Schwankungen.',
+
+  // ── USA: Notenbank / Fed ──────────────────────────────────────────────────
+  'FOMC Statement': 'Statement der Federal Reserve nach jeder FOMC-Sitzung. Enthält die Zinsentscheidung, wirtschaftliche Einschätzung und Hinweise auf zukünftige Maßnahmen (Forward Guidance). Marktbewegender Event.',
+  'Federal Funds Rate': 'US-Leitzins der Federal Reserve. Bestimmt maßgeblich globale Kapitalflüsse, Kreditkosten und Währungsbewegungen weltweit.',
+  'FOMC Meeting Minutes': 'Detailliertes Protokoll der FOMC-Sitzung, veröffentlicht drei Wochen nach der Entscheidung. Gibt Einblick in interne Diskussionen und Zukunftsaussichten.',
+  'Fed Chair Press Conference': 'Pressekonferenz des Fed-Vorsitzenden nach FOMC-Sitzungen. Bietet Kontext zur Zinsentscheidung und wird auf Hinweise zur zukünftigen Politik analysiert.',
+  'Fed Chair Powell Speaks': 'Rede des Fed-Vorsitzenden Jerome Powell. Jede Aussage zur Geldpolitik kann zu sofortigen Marktreaktionen führen.',
+  'FOMC Member Speaks': 'Rede eines stimmberechtigten FOMC-Mitglieds. Kann Hinweise auf die zukünftige Geldpolitik liefern.',
+  'Beige Book': 'Fed-Wirtschaftsbericht aus allen 12 Bezirken, veröffentlicht acht Mal jährlich. Qualitative Übersicht der wirtschaftlichen Bedingungen in den USA.',
+
+  // ── USA: Wachstum / BIP ───────────────────────────────────────────────────
+  'GDP q/q': 'Bruttoinlandsprodukt (Quartalsveränderung) — misst den Marktwert aller produzierten Güter und Dienstleistungen der USA. Zwei aufeinanderfolgende negative Quartale gelten als Rezession.',
+  'Prelim GDP q/q': 'Vorläufige BIP-Schätzung für das Quartal — erste Revision der Vorabschätzung. Kann vom Vorabwert abweichen und zu starken Marktreaktionen führen.',
+  'Final GDP q/q': 'Endgültige BIP-Revision für das Quartal. Enthält vollständige Daten und ist die definitive Messung des Wirtschaftswachstums.',
+  'GDP Price Index q/q': 'BIP-Deflator — misst Inflation innerhalb der Gesamtwirtschaft. Wichtiger Indikator für die Kaufkraftentwicklung.',
+
+  // ── USA: Konsum & Handel ──────────────────────────────────────────────────
+  'Retail Sales m/m': 'Monatliche Veränderung der Einzelhandelsumsätze. Da Konsumausgaben ~70% des US-BIP ausmachen, ist dies ein zentraler Indikator für die Wirtschaftsstärke.',
+  'Core Retail Sales m/m': 'Einzelhandelsumsätze ohne Autos — weniger volatil und besserer Indikator für den zugrunde liegenden Konsumtrend.',
+  'CB Consumer Confidence': 'Conference Board Verbrauchervertrauen — monatliche Umfrage zur Einschätzung der Wirtschaftslage. Höhere Werte deuten auf stärkere Konsumausgaben hin.',
+  'UoM Consumer Sentiment': 'University of Michigan Consumer Sentiment — monatliche Umfrage zur Verbraucherstimmung. Früh im Monat veröffentlicht, daher als Frühindikator genutzt.',
+  'Trade Balance': 'Differenz zwischen US-Exporten und -Importen. Ein Defizit bedeutet mehr Importe als Exporte und erhöht die Nachfrage nach Fremdwährungen.',
+  'Current Account': 'Breitester Maßstab des Außenhandels — umfasst Waren, Dienstleistungen, Transfers und Kapitaleinkommen.',
+
+  // ── USA: Immobilien ───────────────────────────────────────────────────────
+  'Building Permits': 'Anzahl neuer Baugenehmigungen. Frühindikator für Bauaktivität und den Immobilienmarkt; gibt Einblick in zukünftige Wohnungsnachfrage.',
+  'Housing Starts': 'Anzahl neu begonnener Wohnbauprojekte. Direkte Messung der Bauaktivität im Wohnungssektor.',
+  'Existing Home Sales': 'Anzahl der Verkäufe bestehender Häuser. ~90% aller US-Hausverkäufe sind Bestandsimmobilien — wichtiger Indikator für Immobilienmarkt und Konjunktur.',
+  'New Home Sales': 'Anzahl der Verkäufe neuer Einfamilienhäuser. Direkte Messung der Nachfrage nach Neubauten — volatiler als Existing Home Sales.',
+  'Pending Home Sales m/m': 'Veränderung der unterzeichneten Kaufverträge für Bestandsimmobilien. Führender Indikator für zukünftige Hausverkäufe.',
+  'Case-Shiller Home Price Index m/m': 'S&P/Case-Shiller Hauspreisindex für 20 US-Großstädte. Wichtigstes Barometer für die Entwicklung der US-Immobilienpreise.',
+
+  // ── USA: Industrie & Produktion ───────────────────────────────────────────
+  'ISM Manufacturing PMI': 'Institute for Supply Management Einkaufsmanagerindex für das verarbeitende Gewerbe. Über 50 = Expansion, unter 50 = Kontraktion. Einer der ältesten und zuverlässigsten US-Konjunkturindikatoren.',
+  'ISM Services PMI': 'ISM Einkaufsmanagerindex für den Dienstleistungssektor. Da ~80% der US-Wirtschaft aus Dienstleistungen bestehen, ist dieser Wert besonders bedeutsam.',
+  'ISM Non-Manufacturing PMI': 'ISM Einkaufsmanagerindex für Nicht-Fertigungssektoren. Über 50 = Expansion, unter 50 = Kontraktion im Dienstleistungssektor.',
+  'Industrial Production m/m': 'Veränderung der Produktionsleistung in Industrie, Bergbau und Versorgungsunternehmen. Direkte Messung der realen Wirtschaftsleistung.',
+  'Capacity Utilization Rate': 'Anteil der genutzten Produktionskapazitäten in der Industrie. Hohe Auslastung (~80%+) kann auf inflationären Druck hinweisen.',
+  'Empire State Manufacturing Index': 'Monatliche Umfrage zur Fertigungsaktivität im New Yorker Bezirk. Frühindikator für den breiteren ISM Manufacturing PMI.',
+  'Philly Fed Manufacturing Index': 'Philadelphia Fed Herstellungsumfrage — regionaler Indikator für die Fertigungsaktivität im Third Federal Reserve District.',
+  'Chicago PMI': 'Einkaufsmanagerindex für die Chicagoer Region. Gilt als Vorläufer des nationalen ISM Manufacturing PMI.',
+  'Flash Manufacturing PMI': 'Vorabschätzung des S&P Global Einkaufsmanagerindex für das verarbeitende Gewerbe. Erste Einschätzung der monatlichen Produktionsaktivität.',
+  'Flash Services PMI': 'Vorabschätzung des S&P Global Einkaufsmanagerindex für den Dienstleistungssektor.',
+
+  // ── USA: Energie ──────────────────────────────────────────────────────────
+  'Crude Oil Inventories': 'Wöchentliche Veränderung der US-Rohölvorräte, veröffentlicht von der EIA. Direkte Auswirkung auf den WTI-Ölpreis und Energiewährungen (CAD, NOK).',
+  'Natural Gas Storage': 'Wöchentliche Veränderung der US-Erdgasvorräte. Beeinflusst Energiepreise, besonders relevant im Winter.',
+
+  // ── USA: Sonstige ─────────────────────────────────────────────────────────
+  'Durable Goods Orders m/m': 'Monatliche Veränderung der Aufträge für langlebige Güter. Indikator für unternehmerische Investitionsnachfrage.',
+  'Core Durable Goods Orders m/m': 'Durable Goods ohne volatile Transportgüter. Besserer Indikator für das zugrunde liegende Investitionsverhalten.',
+  'Factory Orders m/m': 'Monatliche Veränderung der Aufträge des verarbeitenden Gewerbes. Kombination aus langlebigen und kurzlebigen Güteraufträgen.',
+  'Business Inventories m/m': 'Monatliche Veränderung der unternehmerischen Lagerbestände. Hilft bei der Einschätzung zukünftiger Produktionsänderungen.',
+
+  // ── UK: Bank of England ────────────────────────────────────────────────────
+  'BOE Official Bank Rate': 'Leitzins der Bank of England. Änderungen beeinflussen direkt GBP, UK-Anleihen und britische Aktienmärkte.',
+  'BOE Rate Decision': 'Zinsentscheidung der Bank of England. Bestimmt die Kreditkosten im Vereinigten Königreich und hat direkte Auswirkung auf GBP.',
+  'MPC Official Bank Rate Votes': 'Abstimmungsprotokoll des Monetary Policy Committee der Bank of England (9 Mitglieder). Das Stimmenverhältnis gibt Hinweise auf zukünftige Zinsentscheidungen.',
+  'BOE Monetary Policy Summary': 'Zusammenfassung der geldpolitischen Entscheidung der Bank of England. Enthält wirtschaftliche Einschätzung und Forward Guidance.',
+  'BOE Quarterly Bulletin': 'Vierteljährlicher Bericht der Bank of England über wirtschaftliche und finanzielle Entwicklungen im Vereinigten Königreich.',
+  'UK CPI y/y': 'Consumer Price Index UK im Jahresvergleich — wichtigster Inflationsindikator Großbritanniens. BoE-Ziel: 2%.',
+  'UK GDP m/m': 'Monatliche BIP-Veränderung Großbritanniens. Schnelleres Maß für die Wirtschaftsleistung als die Quartalsdaten.',
+  'UK Retail Sales m/m': 'Monatliche Veränderung der britischen Einzelhandelsumsätze — Indikator für Konsumentennachfrage.',
+  'Claimant Count Change': 'Monatliche Veränderung der Anzahl von Arbeitslosen in Großbritannien. Direkte Messung der britischen Arbeitslosigkeit.',
+  'Average Earnings Index 3m/y': 'Britischer Lohnwachstumsindikator — Durchschnittseinkommen über 3 Monate im Jahresvergleich. Maßgeblich für BoE-Inflation-Einschätzung.',
+
+  // ── Eurozone: EZB ──────────────────────────────────────────────────────────
+  'ECB Main Refinancing Rate': 'Hauptrefinanzierungszinssatz der Europäischen Zentralbank. Der wichtigste Leitzins der EZB — bestimmt Kreditkosten für Banken und beeinflußt EUR stark.',
+  'ECB Rate Decision': 'Zinsentscheidung der EZB. Bekanntgabe des Haupt-Refinanzierungssatzes und der Einlagenfazilität. Marktbewegender Event für EUR.',
+  'ECB Press Conference': 'Pressekonferenz der EZB-Präsidentin nach Zinsentscheidungen. Lagarde-Kommentare zur Inflation und Wirtschaft beeinflussen EUR stark.',
+  'ECB Monetary Policy Statement': 'Geldpolitisches Statement der EZB. Enthält wirtschaftliche Beurteilung und Forward Guidance zu zukünftigen Zinsentscheidungen.',
+  'German Ifo Business Climate': 'IFO Institut Geschäftsklimaindex — monatliche Umfrage unter 9.000 deutschen Unternehmen. Wichtigster Frühindikator für die deutsche und europäische Wirtschaft.',
+  'German CPI m/m': 'Verbraucherpreisindex Deutschland (monatlich). Als größte Volkswirtschaft der Eurozone starker Indikator für EZB-Inflation.',
+  'German Prelim CPI m/m': 'Vorläufiger CPI Deutschland — erster Hinweis auf die monatliche Inflationsentwicklung in Deutschland.',
+  'German GDP q/q': 'Quartals-BIP Deutschland. Als größte Volkswirtschaft der Eurozone maßgeblich für Eurozone-Wachstumseinschätzung.',
+  'German Factory Orders m/m': 'Monatliche Veränderung der deutschen Fabrikaufträge. Frühindikator für die industrielle Produktionsleistung.',
+  'German Industrial Production m/m': 'Monatliche Veränderung der deutschen Industrieproduktion. Zeigt die Stärke des verarbeitenden Gewerbes in der Eurozone.',
+  'German ZEW Economic Sentiment': 'ZEW Konjunkturerwartungen — monatliche Umfrage unter ca. 300 deutschen Finanzexperten über die Wirtschaftsaussichten der nächsten 6 Monate.',
+  'Flash GDP q/q': 'Vorabschätzung des BIP für die Eurozone. Erste Einschätzung des vierteljährlichen Wirtschaftswachstums.',
+  'Eurozone CPI y/y': 'Harmonisierter Verbraucherpreisindex (HICP) der Eurozone. EZB-Ziel: nahe 2%. Hauptindikator für EZB-Zinsentscheidungen.',
+  'Core CPI Flash Estimate y/y': 'Vorab-Kernrate der Eurozone-Inflation. Erste Einschätzung des monatlichen Inflationsdrucks ohne volatile Komponenten.',
+  'ZEW Economic Sentiment': 'ZEW Konjunkturerwartungen Eurozone — monatliche Umfrage unter Finanzexperten. Frühindikator für die wirtschaftliche Entwicklung.',
+  'Current Account': 'Leistungsbilanzsaldo der Eurozone. Zeigt das Verhältnis zwischen Exporten und Importen sowie Kapitaltransfers.',
+
+  // ── Japan ─────────────────────────────────────────────────────────────────
+  'BOJ Policy Rate': 'Leitzins der Bank of Japan. Nach Jahrzehnten der Nullzinspolitik ist jede Änderung besonders marktbewegend für JPY.',
+  'BOJ Rate Decision': 'Zinsentscheidung der Bank of Japan. Nach jahrelanger Negativzinspolitik sind Änderungen stark marktbewegend für JPY und globale Carry-Trades.',
+  'Bank Holiday': 'Feiertag — kein Handel für diese Währung, typischerweise reduzierte Liquidität.',
+  'Tokyo Core CPI y/y': 'Kern-Verbraucherpreisindex Tokios im Jahresvergleich. Gilt als Frühindikator für den nationalen japanischen CPI.',
+  'Tankan Large Manufacturers Index': 'Vierteljährliche BoJ-Umfrage unter Großunternehmen im verarbeitenden Gewerbe. Wichtigster Konjunkturindikator Japans.',
+
+  // ── Kanada ────────────────────────────────────────────────────────────────
+  'BOC Rate Decision': 'Zinsentscheidung der Bank of Canada. Direkte Auswirkung auf CAD. Die BoC folgt oft der Fed-Politik mit leichter Verzögerung.',
+  'BOC Monetary Policy Statement': 'Geldpolitisches Statement der Bank of Canada mit wirtschaftlicher Einschätzung und Ausblick.',
+  'Employment Change': 'Monatliche Veränderung der Beschäftigung in Kanada. Äquivalent zum US-NFP — wichtigster monatlicher Arbeitsmarktindikator.',
+  'Canada CPI m/m': 'Kanadischer Verbraucherpreisindex (monatlich). Hauptindikator für kanadische Inflation; beeinflusst BoC-Zinsentscheidungen.',
+  'Canada GDP m/m': 'Monatliche BIP-Veränderung Kanadas. Detaillierteres Bild der Wirtschaftsleistung als Quartalsdaten.',
+
+  // ── Australien / Neuseeland ────────────────────────────────────────────────
+  'RBA Rate Decision': 'Zinsentscheidung der Reserve Bank of Australia. Direkte Auswirkung auf AUD; beeinflusst auch NZD durch enge Wirtschaftsbeziehungen.',
+  'RBA Rate Statement': 'Geldpolitisches Statement der Reserve Bank of Australia nach jeder Zinssitzung.',
+  'RBNZ Rate Decision': 'Zinsentscheidung der Reserve Bank of New Zealand. Direkte Auswirkung auf NZD.',
+  'CPI q/q': 'Vierteljährlicher Verbraucherpreisindex (Australien/Neuseeland). Hauptinflationsindikator für RBA/RBNZ-Entscheidungen.',
+  'NAB Business Confidence': 'National Australia Bank Business Confidence Index — monatliche Umfrage unter australischen Unternehmen.',
+  'Westpac Consumer Sentiment': 'Westpac Consumer Sentiment Index für Australien — monatliche Umfrage zur Verbraucherstimmung.',
+
+  // ── Schweiz ────────────────────────────────────────────────────────────────
+  'SNB Policy Rate': 'Leitzins der Schweizerischen Nationalbank. Änderungen sind selten aber stark marktbewegend für CHF.',
+  'SNB Quarterly Bulletin': 'Vierteljährlicher Wirtschaftsbericht der Schweizerischen Nationalbank mit geldpolitischer Einschätzung.',
 }
 
+// Also check for partial title matches (e.g. "Unemployment Claims" matches "Initial Unemployment Claims")
+const EVENT_DESCRIPTIONS_PARTIAL: [string, string][] = [
+  ['Non-Farm', 'Misst die Beschäftigungsveränderung außerhalb der Landwirtschaft. Einer der marktbewegendsten US-Wirtschaftsindikatoren.'],
+  ['Unemployment Claims', 'Wöchentliche oder monatliche Erstanträge auf Arbeitslosenhilfe — zeitnaher Indikator für den Arbeitsmarkt.'],
+  ['CPI', 'Consumer Price Index — misst die Inflationsrate anhand eines repräsentativen Warenkorbs.'],
+  ['PPI', 'Producer Price Index — misst Preisveränderungen auf Produzenten-Ebene. Vorläufer des CPI.'],
+  ['PMI', 'Purchasing Managers Index — Umfrage unter Einkaufsmanagern. Über 50 = Expansion, unter 50 = Kontraktion.'],
+  ['GDP', 'Bruttoinlandsprodukt — Gesamtwert aller produzierten Güter und Dienstleistungen in einem Land.'],
+  ['PCE', 'Personal Consumption Expenditures — vom der Fed bevorzugter Inflationsindikator.'],
+  ['Retail Sales', 'Monatliche Veränderung der Einzelhandelsumsätze — direkter Indikator für Konsumentenausgaben.'],
+  ['Interest Rate', 'Zinsentscheidung der Zentralbank. Bestimmt Kreditkosten und beeinflusst Kapitalflüsse in die Währung.'],
+  ['Rate Decision', 'Zinsentscheidung der Zentralbank. Jede Änderung hat direkte Auswirkungen auf die betreffende Währung.'],
+  ['Employment', 'Beschäftigungsdaten — misst die Veränderung der Erwerbstätigkeit. Kerindikator für Wirtschaftsstärke.'],
+  ['Housing', 'Immobilienmarkt-Indikator — misst Aktivität im Wohnungsbausektor.'],
+  ['Manufacturing', 'Industrieproduktion oder Herstelleraufträge — Indikator für die Stärke des verarbeitenden Gewerbes.'],
+  ['Consumer Confidence', 'Verbrauchervertrauen — misst die Konsumentenstimmung zur aktuellen und zukünftigen Wirtschaftslage.'],
+  ['Trade Balance', 'Handelsbilanz — Differenz zwischen Exporten und Importen. Beeinflusst Währungsnachfrage.'],
+  ['Inflation', 'Inflationsindikator — misst den Anstieg des allgemeinen Preisniveaus.'],
+  ['Oil Inventories', 'Rohölvorräte — wöchentliche Bestandsveränderung. Direkte Auswirkung auf den Ölpreis.'],
+]
+
 function getEventDescription(title: string): string | null {
+  // Exact match first
   if (EVENT_DESCRIPTIONS[title]) return EVENT_DESCRIPTIONS[title]
+  // Case-insensitive exact match
+  const lower = title.toLowerCase()
   for (const [key, desc] of Object.entries(EVENT_DESCRIPTIONS)) {
-    if (title.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(title.toLowerCase())) {
-      return desc
-    }
+    if (key.toLowerCase() === lower) return desc
+  }
+  // Substring match (key contained in title)
+  for (const [key, desc] of Object.entries(EVENT_DESCRIPTIONS)) {
+    if (lower.includes(key.toLowerCase())) return desc
+  }
+  // Partial keyword fallback
+  for (const [keyword, desc] of EVENT_DESCRIPTIONS_PARTIAL) {
+    if (lower.includes(keyword.toLowerCase())) return desc
   }
   return null
 }

@@ -23,19 +23,32 @@ function parseImpact(raw: string): 'High' | 'Medium' | 'Low' {
 }
 
 // Forex Factory times are US/Eastern — convert to UTC with proper DST handling.
-// Runs in Node.js/Vercel (UTC server timezone), uses Intl to auto-detect EDT vs EST.
+// FF XML dates come in MM-DD-YYYY format; times like "8:30am".
 function easternToUtc(dateStr: string, timeStr: string): string | null {
   const lowerTime = (timeStr ?? '').toLowerCase().trim()
   if (!lowerTime || lowerTime === 'all day' || lowerTime === 'tentative') return null
 
   try {
-    // Parse the naive datetime — in Vercel production the server is UTC so this
-    // gives us a UTC timestamp whose wall-clock value matches the FF datetime string.
-    const naive = new Date(`${dateStr} ${timeStr}`)
+    // Normalize date: FF provides MM-DD-YYYY → convert to YYYY-MM-DD for ISO parsing
+    let isoDate = dateStr
+    const mdyMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+    if (mdyMatch) isoDate = `${mdyMatch[3]}-${mdyMatch[1].padStart(2, '0')}-${mdyMatch[2].padStart(2, '0')}`
+
+    // Parse "8:30am", "10:00pm", "12:00am" etc.
+    const timeMatch = lowerTime.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/)
+    if (!timeMatch) return null
+
+    let hours = parseInt(timeMatch[1], 10)
+    const minutes = parseInt(timeMatch[2], 10)
+    const meridiem = timeMatch[3]
+    if (meridiem === 'am' && hours === 12) hours = 0
+    if (meridiem === 'pm' && hours !== 12) hours += 12
+
+    // Build a "naive UTC" timestamp using the Eastern wall-clock time as if it were UTC
+    const naive = new Date(`${isoDate}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00Z`)
     if (isNaN(naive.getTime())) return null
 
-    // Use Intl to find what America/New_York shows for our naive UTC timestamp.
-    // This correctly handles EDT (UTC-4, Apr-Nov) vs EST (UTC-5, Nov-Mar).
+    // Find what America/New_York shows for this UTC moment — auto-handles EDT/EST
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/New_York',
       year: 'numeric', month: '2-digit', day: '2-digit',
@@ -46,13 +59,11 @@ function easternToUtc(dateStr: string, timeStr: string): string | null {
     const p: Record<string, string> = {}
     for (const part of parts) if (part.type !== 'literal') p[part.type] = part.value
 
-    // Reconstruct what Eastern displays as a UTC-anchored timestamp
     const hr = p.hour === '24' ? '00' : p.hour
     const easternAsUtc = new Date(`${p.year}-${p.month}-${p.day}T${hr}:${p.minute}:${p.second}Z`)
 
-    // offsetMs = how many ms Eastern is behind UTC at this date (e.g. 4h or 5h)
+    // offsetMs = how far behind UTC Eastern is at this date (4h EDT, 5h EST)
     const offsetMs = naive.getTime() - easternAsUtc.getTime()
-
     return new Date(naive.getTime() + offsetMs).toISOString()
   } catch {
     return null

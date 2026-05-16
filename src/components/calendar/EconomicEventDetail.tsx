@@ -58,7 +58,7 @@ const EVENT_DESCRIPTIONS: Record<string, string> = {
   'CB Consumer Confidence': 'Conference Board Verbrauchervertrauen — monatliche Umfrage zur Einschätzung der Wirtschaftslage. Höhere Werte deuten auf stärkere Konsumausgaben hin.',
   'UoM Consumer Sentiment': 'University of Michigan Consumer Sentiment — monatliche Umfrage zur Verbraucherstimmung. Früh im Monat veröffentlicht, daher als Frühindikator genutzt.',
   'Trade Balance': 'Differenz zwischen US-Exporten und -Importen. Ein Defizit bedeutet mehr Importe als Exporte und erhöht die Nachfrage nach Fremdwährungen.',
-  'Current Account': 'Breitester Maßstab des Außenhandels — umfasst Waren, Dienstleistungen, Transfers und Kapitaleinkommen.',
+  'Current Account': 'Breitester Maßstab des Außenhandels — umfasst Waren, Dienstleistungen, Transfers und Kapitaleinkommen von Gebietsfremden. Beeinflusst die langfristige Währungsnachfrage.',
 
   // ── USA: Immobilien ───────────────────────────────────────────────────────
   'Building Permits': 'Anzahl neuer Baugenehmigungen. Frühindikator für Bauaktivität und den Immobilienmarkt; gibt Einblick in zukünftige Wohnungsnachfrage.',
@@ -118,7 +118,7 @@ const EVENT_DESCRIPTIONS: Record<string, string> = {
   'Eurozone CPI y/y': 'Harmonisierter Verbraucherpreisindex (HICP) der Eurozone. EZB-Ziel: nahe 2%. Hauptindikator für EZB-Zinsentscheidungen.',
   'Core CPI Flash Estimate y/y': 'Vorab-Kernrate der Eurozone-Inflation. Erste Einschätzung des monatlichen Inflationsdrucks ohne volatile Komponenten.',
   'ZEW Economic Sentiment': 'ZEW Konjunkturerwartungen Eurozone — monatliche Umfrage unter Finanzexperten. Frühindikator für die wirtschaftliche Entwicklung.',
-  'Current Account': 'Leistungsbilanzsaldo der Eurozone. Zeigt das Verhältnis zwischen Exporten und Importen sowie Kapitaltransfers.',
+  'Eurozone Current Account': 'Leistungsbilanzsaldo der Eurozone. Zeigt das Verhältnis zwischen Exporten und Importen sowie Kapitaltransfers.',
 
   // ── Japan ─────────────────────────────────────────────────────────────────
   'BOJ Policy Rate': 'Leitzins der Bank of Japan. Nach Jahrzehnten der Nullzinspolitik ist jede Änderung besonders marktbewegend für JPY.',

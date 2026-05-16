@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
+import { RefreshCw } from 'lucide-react'
 import { useEconomicCalendar } from '@/hooks/useEconomicCalendar'
 import { useWatchlist } from '@/hooks/useWatchlist'
 import { useDailyWatchlist } from '@/hooks/useDailyWatchlist'
@@ -18,8 +19,8 @@ export function KalenderContent() {
   const { activeAccount } = useAccountContext()
   const {
     events, filters, weekOffset, weekStart, weekEnd,
-    fetchedAt, isLoading, filtersLoading,
-    updateFilters, goToPrevWeek, goToNextWeek, goToThisWeek,
+    fetchedAt, isLoading, isRefreshing, filtersLoading,
+    updateFilters, goToPrevWeek, goToNextWeek, goToThisWeek, manualRefresh,
   } = useEconomicCalendar()
 
   const { items: watchlistItems } = useWatchlist(activeAccount?.id)
@@ -58,11 +59,25 @@ export function KalenderContent() {
           weekStart={weekStart} weekEnd={weekEnd} weekOffset={weekOffset}
           onPrev={goToPrevWeek} onNext={goToNextWeek} onToday={goToThisWeek}
         />
-        {fetchedAtLabel && (
-          <span className="text-xs hidden sm:block" style={{ color: 'var(--fg-4)' }}>
-            {fetchedAtLabel}
-          </span>
-        )}
+        <div className="hidden sm:flex items-center gap-2">
+          {fetchedAtLabel && (
+            <span className="text-xs" style={{ color: 'var(--fg-4)' }}>
+              {fetchedAtLabel}
+            </span>
+          )}
+          <button
+            onClick={manualRefresh}
+            disabled={isRefreshing}
+            title="Daten aktualisieren"
+            className="p-1 rounded transition-colors"
+            style={{ color: 'var(--fg-4)' }}
+          >
+            <RefreshCw
+              className={isRefreshing ? 'animate-spin' : ''}
+              style={{ width: 13, height: 13 }}
+            />
+          </button>
+        </div>
       </div>
 
       {!filtersLoading && (

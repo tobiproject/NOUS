@@ -28,6 +28,7 @@ export function useEconomicCalendar() {
   const [fetchedAt, setFetchedAt] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [filtersLoading, setFiltersLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const refreshTriggeredRef = useRef(false)
 
   const { weekStart, weekEnd } = getWeekBounds(weekOffset)
@@ -103,6 +104,19 @@ export function useEconomicCalendar() {
   const goToNextWeek = useCallback(() => setWeekOffset(o => o + 1), [])
   const goToThisWeek = useCallback(() => setWeekOffset(0), [])
 
+  const manualRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    try {
+      const r = await fetch('/api/calendar/refresh')
+      if (r.ok) {
+        refreshTriggeredRef.current = false
+        await loadEvents(weekStart, weekEnd)
+      }
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [loadEvents, weekStart, weekEnd])
+
   // Apply filters client-side
   const filteredEvents = events.filter(e => {
     const impactMatch = filters.impact.includes(e.impact)
@@ -119,11 +133,13 @@ export function useEconomicCalendar() {
     weekEnd,
     fetchedAt,
     isLoading,
+    isRefreshing,
     filtersLoading,
     updateFilters,
     goToPrevWeek,
     goToNextWeek,
     goToThisWeek,
+    manualRefresh,
     reload: () => loadEvents(weekStart, weekEnd),
   }
 }

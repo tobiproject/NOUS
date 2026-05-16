@@ -22,19 +22,18 @@ function parseImpact(raw: string): 'High' | 'Medium' | 'Low' {
   return 'Low'
 }
 
-// Forex Factory times are US/Eastern — convert to UTC with proper DST handling.
-// FF XML dates come in MM-DD-YYYY format; times like "8:30am".
-function easternToUtc(dateStr: string, timeStr: string): string | null {
+// FF XML dates come in MM-DD-YYYY format; times like "12:30pm" are already in UTC.
+function parseEventTimeUtc(dateStr: string, timeStr: string): string | null {
   const lowerTime = (timeStr ?? '').toLowerCase().trim()
   if (!lowerTime || lowerTime === 'all day' || lowerTime === 'tentative') return null
 
   try {
-    // Normalize date: FF provides MM-DD-YYYY → convert to YYYY-MM-DD for ISO parsing
+    // Normalize date: FF provides MM-DD-YYYY → convert to YYYY-MM-DD
     let isoDate = dateStr
     const mdyMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
     if (mdyMatch) isoDate = `${mdyMatch[3]}-${mdyMatch[1].padStart(2, '0')}-${mdyMatch[2].padStart(2, '0')}`
 
-    // Parse "8:30am", "10:00pm", "12:00am" etc.
+    // Parse "8:30am", "12:30pm", "1:30am" etc. — FF times are already UTC
     const timeMatch = lowerTime.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/)
     if (!timeMatch) return null
 
@@ -44,27 +43,9 @@ function easternToUtc(dateStr: string, timeStr: string): string | null {
     if (meridiem === 'am' && hours === 12) hours = 0
     if (meridiem === 'pm' && hours !== 12) hours += 12
 
-    // Build a "naive UTC" timestamp using the Eastern wall-clock time as if it were UTC
-    const naive = new Date(`${isoDate}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00Z`)
-    if (isNaN(naive.getTime())) return null
-
-    // Find what America/New_York shows for this UTC moment — auto-handles EDT/EST
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false,
-    }).formatToParts(naive)
-
-    const p: Record<string, string> = {}
-    for (const part of parts) if (part.type !== 'literal') p[part.type] = part.value
-
-    const hr = p.hour === '24' ? '00' : p.hour
-    const easternAsUtc = new Date(`${p.year}-${p.month}-${p.day}T${hr}:${p.minute}:${p.second}Z`)
-
-    // offsetMs = how far behind UTC Eastern is at this date (4h EDT, 5h EST)
-    const offsetMs = naive.getTime() - easternAsUtc.getTime()
-    return new Date(naive.getTime() + offsetMs).toISOString()
+    const dt = new Date(`${isoDate}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00Z`)
+    if (isNaN(dt.getTime())) return null
+    return dt.toISOString()
   } catch {
     return null
   }
@@ -138,10 +119,16 @@ export async function fetchAndStoreEconomicEvents(): Promise<void> {
       const countryCode = CURRENCY_TO_COUNTRY[currency] ?? currency.slice(0, 2)
       const ffEventId = `${e.date}_${currency}_${e.title.replace(/\s+/g, '_').toLowerCase()}`
 
+      // Normalize date from MM-DD-YYYY to YYYY-MM-DD for explicit ISO storage
+      const mdyMatch = e.date.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+      const isoDate = mdyMatch
+        ? `${mdyMatch[3]}-${mdyMatch[1].padStart(2, '0')}-${mdyMatch[2].padStart(2, '0')}`
+        : e.date
+
       return {
         ff_event_id: ffEventId,
-        date: e.date,
-        time_utc: easternToUtc(e.date, e.time),
+        date: isoDate,
+        time_utc: parseEventTimeUtc(e.date, e.time),
         currency,
         country_code: countryCode,
         impact: parseImpact(e.impact),

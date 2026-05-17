@@ -19,6 +19,7 @@ import { DrawdownChart } from './DrawdownChart'
 import { DrawdownPhaseTable } from './DrawdownPhaseTable'
 import { NewsAnalyseTab } from './NewsAnalyseTab'
 import { StandaloneRRSimulator } from './StandaloneRRSimulator'
+import { RrrAnalyseTab } from './RrrAnalyseTab'
 import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
 
 // ─── URL serialisation ────────────────────────────────────────────────────────
@@ -146,6 +147,7 @@ export function PerformanceContent() {
           <TabsTrigger value="winrate">Winrate</TabsTrigger>
           <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
           <TabsTrigger value="drawdown">Drawdown</TabsTrigger>
+          <TabsTrigger value="rrr">RRR-Analyse</TabsTrigger>
           <TabsTrigger value="news">News-Analyse</TabsTrigger>
           <TabsTrigger value="simulator">RR-Simulator</TabsTrigger>
         </TabsList>
@@ -177,6 +179,10 @@ export function PerformanceContent() {
                 currentDrawdown={stats.currentDrawdownPct}
               />
               <DrawdownPhaseTable phases={stats.drawdownPhases} />
+            </TabsContent>
+
+            <TabsContent value="rrr" className="mt-0">
+              <RrrAnalyseTab trades={stats.trades} />
             </TabsContent>
 
             <TabsContent value="news" className="mt-0">

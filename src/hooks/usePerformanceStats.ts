@@ -75,6 +75,7 @@ export interface PerformanceStats {
   availableAssets: string[]
   availableStrategies: string[]
   availableSetupTypes: string[]
+  trades: Trade[]
 }
 
 // ─── Pure calculation helpers ─────────────────────────────────────────────────
@@ -360,6 +361,7 @@ export function usePerformanceStats() {
       drawdownPhases: phases,
       currentDrawdownPct: current,
       availableAssets, availableStrategies, availableSetupTypes,
+      trades,
     }
   }, [activeAccount, supabase])
 

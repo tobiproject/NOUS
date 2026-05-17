@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { Edit2, Trash2, TrendingUp, TrendingDown, X } from 'lucide-react'
@@ -57,6 +57,16 @@ interface Props {
 export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }: Props) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('detail')
+  const [localScreenshots, setLocalScreenshots] = useState<string[]>(trade?.screenshot_urls ?? [])
+
+  useEffect(() => {
+    setLocalScreenshots(trade?.screenshot_urls ?? [])
+  }, [trade?.id])
+
+  const handleScreenshotAdded = (url: string) => {
+    setLocalScreenshots(prev => [...prev, url])
+    setActiveTab('detail')
+  }
 
   if (!trade) return null
 
@@ -204,7 +214,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
               )}
 
               {/* Screenshots & Chart Link */}
-              {(trade.screenshot_urls?.length > 0 || trade.chart_url) && (
+              {(localScreenshots.length > 0 || trade.chart_url) && (
                 <>
                   <Separator />
                   <div className="space-y-3">
@@ -225,9 +235,9 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
                         <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>↗</span>
                       </a>
                     )}
-                    {trade.screenshot_urls?.length > 0 && (
+                    {localScreenshots.length > 0 && (
                       <div className="grid grid-cols-2 gap-2">
-                        {trade.screenshot_urls.map((url, i) => (
+                        {localScreenshots.map((url, i) => (
                           <button
                             key={url}
                             onClick={() => setLightboxUrl(url)}
@@ -249,6 +259,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
                 tradeId={trade.id}
                 chartUrl={trade.chart_url}
                 isActive={activeTab === 'chart'}
+                onScreenshotAdded={handleScreenshotAdded}
               />
             </TabsContent>
 

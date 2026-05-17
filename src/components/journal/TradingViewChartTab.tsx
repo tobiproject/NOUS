@@ -51,7 +51,7 @@ interface Props {
   tradeId: string
   chartUrl?: string | null
   isActive: boolean
-  onScreenshotAdded?: () => void
+  onScreenshotAdded?: (url: string) => void
 }
 
 export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdded }: Props) {
@@ -150,7 +150,7 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     toast.success('Screenshot gespeichert ✓', { id: 'chart-upload' })
     setUploadedPreview(URL.createObjectURL(file))
     setUploading(false)
-    onScreenshotAdded?.()
+    onScreenshotAdded?.(publicUrl)
   }, [tradeId, onScreenshotAdded])
 
   const handlePasteImage = useCallback(async () => {

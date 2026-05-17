@@ -35,6 +35,127 @@ function confidenceLabel(n: number): { label: string; color: string } {
   return              { label: 'Hohe Konfidenz',      color: 'var(--long)' }
 }
 
+interface TradeRow {
+  id: string
+  label: string
+  date: string
+  asset: string
+  display_rr: number
+  is_true_rr: boolean
+  outcome: string | null
+  rr_ratio: number | null
+  true_rr: number | null
+  direction: 'long' | 'short'
+}
+
+function TradeTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: TradeRow }> }) {
+  if (!active || !payload?.[0]) return null
+  const row = payload[0].payload
+  const isWin = row.outcome === 'win'
+  const isLoss = row.outcome === 'loss'
+  const outcomeColor = isWin ? '#22c55e' : isLoss ? '#ef4444' : '#6b7280'
+  const outcomeLabel = isWin ? 'WIN' : isLoss ? 'LOSS' : row.outcome?.toUpperCase() ?? '–'
+  const dirLabel = row.direction === 'long' ? '▲ Long' : '▼ Short'
+  const dirColor = row.direction === 'long' ? '#22c55e' : '#ef4444'
+  const bonusR = row.is_true_rr && row.rr_ratio && row.true_rr !== null && isWin
+    ? row.true_rr - row.rr_ratio
+    : null
+
+  return (
+    <div style={{
+      background: 'var(--bg-1)',
+      border: `1px solid ${isWin ? 'rgba(34,197,94,0.3)' : isLoss ? 'rgba(239,68,68,0.3)' : 'var(--border-1)'}`,
+      borderRadius: 8,
+      padding: '10px 14px',
+      minWidth: 190,
+      boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+      fontFamily: 'inherit',
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 12 }}>
+        <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--fg-1)', letterSpacing: '-0.01em' }}>
+          {row.asset}
+        </span>
+        <span style={{
+          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+          background: `${outcomeColor}22`,
+          color: outcomeColor,
+          letterSpacing: '0.06em',
+        }}>
+          {outcomeLabel}
+        </span>
+      </div>
+
+      {/* Rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <TooltipRow label="Datum"     value={row.date} />
+        <TooltipRow label="Richtung"  value={dirLabel} valueColor={dirColor} />
+        <TooltipRow label="Geplant"   value={row.rr_ratio !== null ? `${row.rr_ratio}R` : '–'} />
+        {row.is_true_rr && row.true_rr !== null && (
+          <TooltipRow
+            label="Tatsächlich"
+            value={`${row.true_rr}R`}
+            valueColor={outcomeColor}
+            bold
+          />
+        )}
+        {bonusR !== null && bonusR > 0.05 && (
+          <div style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: 10, color: '#f59e0b' }}>
+            +{bonusR.toFixed(2)}R über Ziel gelaufen
+          </div>
+        )}
+        {bonusR !== null && bonusR < -0.05 && (
+          <div style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
+            {Math.abs(bonusR).toFixed(2)}R vor Ziel geclosed
+          </div>
+        )}
+        {!row.is_true_rr && (
+          <div style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
+            Geplanter RR — kein Max-Kurs eingetragen
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function TooltipRow({ label, value, valueColor, bold }: { label: string; value: string; valueColor?: string; bold?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 11 }}>
+      <span style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
+      <span style={{ color: valueColor ?? 'var(--fg-2)', fontWeight: bold ? 700 : 500, fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeCustomTick(chartRows: TradeRow[]) {
+  return function CustomYTick({ x, y, payload }: { x: number; y: number; payload: { value: string } }) {
+    const row = chartRows.find(r => r.label === payload.value)
+    const dirIcon = row?.direction === 'long' ? '▲' : '▼'
+    const dirColor = row?.direction === 'long' ? '#22c55e' : '#ef4444'
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        {/* Direction indicator */}
+        <text x={-90} y={5} textAnchor="start" fill={dirColor} fontSize={8} fontFamily="inherit" opacity={0.7}>
+          {dirIcon}
+        </text>
+        {/* Date — dim, small */}
+        <text x={-8} y={-5} textAnchor="end" fill="rgba(255,255,255,0.3)" fontSize={9} fontFamily="inherit">
+          {row?.date ?? ''}
+        </text>
+        {/* Asset — bold, prominent */}
+        <text x={-8} y={7} textAnchor="end" fill="var(--fg-2)" fontSize={11} fontWeight={600} fontFamily="inherit">
+          {row?.asset ?? payload.value}
+        </text>
+      </g>
+    )
+  }
+}
+
 export function RrrAnalyseTab({ trades }: Props) {
   const { winRate, closed, total, avgTrueRR, trueRRCount, tradeRows, maxRR, scenarios, optimalRR } = useMemo(() => {
     const wins   = trades.filter(t => t.outcome === 'win').length
@@ -42,19 +163,22 @@ export function RrrAnalyseTab({ trades }: Props) {
     const closed = wins + losses
     const winRate = closed >= 5 ? wins / closed : null
 
-    // Show all trades that have at least rr_ratio; use true_rr if available, else rr_ratio
-    const tradeRows = trades
+    const tradeRows: TradeRow[] = trades
       .filter(t => t.rr_ratio !== null || t.true_rr !== null)
       .sort((a, b) => b.traded_at.localeCompare(a.traded_at))
       .map(t => {
         const displayRR = (t.true_rr ?? t.rr_ratio) as number
+        const date = `${t.traded_at.slice(8, 10)}.${t.traded_at.slice(5, 7)}.`
         return {
           id: t.id,
-          label: `${t.traded_at.slice(8, 10)}.${t.traded_at.slice(5, 7)}. ${t.asset}`,
+          label: `${date} ${t.asset}`,
+          date,
+          asset: t.asset,
           display_rr: displayRR,
           is_true_rr: t.true_rr !== null,
           outcome: t.outcome,
           rr_ratio: t.rr_ratio,
+          true_rr: t.true_rr,
           direction: t.direction,
         }
       })
@@ -84,7 +208,8 @@ export function RrrAnalyseTab({ trades }: Props) {
 
   const conf = confidenceLabel(closed)
   const chartRows = tradeRows.slice(0, 50)
-  const chartHeight = Math.max(200, chartRows.length * 28 + 32)
+  const chartHeight = Math.max(200, chartRows.length * 34 + 32)
+  const CustomYTick = useMemo(() => makeCustomTick(chartRows), [chartRows])
 
   return (
     <div className="space-y-6">
@@ -117,20 +242,36 @@ export function RrrAnalyseTab({ trades }: Props) {
         )}
       </div>
 
-      {/* True RR Balkendiagramm — wie weit liefen die Trades */}
+      {/* RR Balkendiagramm */}
       <div className="rounded-lg p-4" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)' }}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>
             RR pro Trade
             {tradeRows.length > 50 && (
-              <span className="ml-2 font-normal normal-case" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                (letzte 50 von {tradeRows.length})
+              <span className="ml-2 font-normal normal-case tracking-normal" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                letzte 50 von {tradeRows.length}
               </span>
             )}
           </p>
           <p className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
-            Grün = Gewinn · Rot = Verlust · gestrichelt = 1R
+            Grün = Gewinn · Rot = Verlust
           </p>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ background: 'rgba(34,197,94,0.85)' }} />
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>True RR</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ background: 'rgba(34,197,94,0.35)' }} />
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Geplant</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-px h-3" style={{ background: 'rgba(255,255,255,0.4)' }} />
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>1R Referenz</span>
+          </div>
         </div>
 
         {tradeRows.length === 0 ? (
@@ -143,9 +284,9 @@ export function RrrAnalyseTab({ trades }: Props) {
             <BarChart
               data={chartRows}
               layout="vertical"
-              margin={{ top: 4, right: 52, left: 4, bottom: 0 }}
+              margin={{ top: 4, right: 56, left: 8, bottom: 0 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
               <XAxis
                 type="number"
                 domain={[0, Math.ceil(maxRR)]}
@@ -158,36 +299,38 @@ export function RrrAnalyseTab({ trades }: Props) {
               <YAxis
                 type="category"
                 dataKey="label"
-                tick={{ fontSize: 11, fill: 'var(--fg-4)' }}
+                tick={CustomYTick as React.ComponentType<unknown>}
                 tickLine={false}
                 axisLine={false}
-                width={88}
-                tickFormatter={v => v.length > 14 ? v.slice(0, 14) + '…' : v}
+                width={96}
               />
               <Tooltip
-                contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: 6, fontSize: 12 }}
-                formatter={(v, _name, props) => {
-                  const row = props?.payload
-                  const label = row?.is_true_rr ? 'True RR (Max-Kurs)' : 'Geplant RR'
-                  return [`${String(v ?? 0)}R`, label]
-                }}
+                content={<TradeTooltip />}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                allowEscapeViewBox={{ x: false, y: false }}
               />
-              <ReferenceLine x={1} stroke="rgba(255,255,255,0.25)" strokeDasharray="3 3" strokeWidth={1.5} />
-              <Bar dataKey="display_rr" radius={[0, 3, 3, 0]} barSize={16}>
+              {/* 1R reference — break-even target */}
+              <ReferenceLine x={1} stroke="rgba(255,255,255,0.3)" strokeDasharray="4 3" strokeWidth={1.5} />
+              {/* 2R reference — soft goal */}
+              <ReferenceLine x={2} stroke="rgba(255,255,255,0.1)" strokeDasharray="2 4" strokeWidth={1} />
+              <Bar dataKey="display_rr" radius={[0, 4, 4, 0]} barSize={14}>
                 {chartRows.map((row, i) => (
-                  <Cell key={i} fill={rrColor(row.outcome)} fillOpacity={row.is_true_rr ? 0.85 : 0.45} />
+                  <Cell key={i} fill={rrColor(row.outcome)} fillOpacity={row.is_true_rr ? 0.85 : 0.4} />
                 ))}
                 <LabelList
                   dataKey="display_rr"
                   position="right"
                   formatter={(v: unknown) => `${String(v ?? 0)}R`}
-                  style={{ fontSize: 11, fill: 'var(--fg-3)', fontVariantNumeric: 'tabular-nums' }}
+                  style={{ fontSize: 10, fill: 'rgba(255,255,255,0.5)', fontVariantNumeric: 'tabular-nums' }}
                 />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
+
+        <p className="text-[10px] mt-3" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          ▲ Long · ▼ Short · Gestrichelter Strich = 1R · Schwacher Strich = 2R · Tippe auf einen Balken für Details
+        </p>
       </div>
 
       {/* Breakeven Szenarien */}

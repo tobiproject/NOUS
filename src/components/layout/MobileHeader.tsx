@@ -36,9 +36,10 @@ export function MobileHeader() {
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo/nous-mark-white.svg" alt="" width={22} height={22} style={{ display: 'block', flexShrink: 0 }} />
           <span style={{ fontSize: 22, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.03em', lineHeight: 1 }}>NOUS</span>
-          <span style={{ fontSize: 8, fontWeight: 600, color: '#ff8210', letterSpacing: '0.18em', textTransform: 'uppercase', lineHeight: 1 }}>Turn Data into Decisions</span>
         </div>
 
         {/* Profile Avatar */}

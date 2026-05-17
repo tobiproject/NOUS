@@ -376,7 +376,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, 
             </TabsContent>
 
             <TabsContent value="simulation" className="flex-1 overflow-y-auto px-6 py-4 mt-0">
-              <TradeSimulationTab trade={trade} />
+              <TradeSimulationTab trade={trade} screenshots={localScreenshots} />
             </TabsContent>
 
             <TabsContent value="simulator" className="flex-1 overflow-y-auto px-6 py-4 mt-0">

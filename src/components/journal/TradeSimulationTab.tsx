@@ -1,22 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Upload, Sparkles } from 'lucide-react'
+import { Loader2, Upload, Sparkles, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { Trade } from '@/hooks/useTrades'
 
 interface Props {
   trade: Trade
+  screenshots?: string[]
 }
 
-export function TradeSimulationTab({ trade }: Props) {
+export function TradeSimulationTab({ trade, screenshots = [] }: Props) {
   const [maxRunPrice, setMaxRunPrice] = useState('')
   const [trueRR, setTrueRR] = useState<number | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<string | null>(null)
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(null)
+  const [fetchingUrl, setFetchingUrl] = useState<string | null>(null)
 
   const sl = trade.sl_price
   const entry = trade.entry_price
@@ -44,7 +47,24 @@ export function TradeSimulationTab({ trade }: Props) {
     if (!file) return
     setScreenshotFile(file)
     setScreenshotPreview(URL.createObjectURL(file))
+    setSelectedUrl(null)
     setAiResult(null)
+  }
+
+  const selectSavedScreenshot = async (url: string) => {
+    if (selectedUrl === url) return
+    setFetchingUrl(url)
+    setAiResult(null)
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const file = new File([blob], 'screenshot.png', { type: blob.type || 'image/png' })
+      setScreenshotFile(file)
+      setScreenshotPreview(url)
+      setSelectedUrl(url)
+    } finally {
+      setFetchingUrl(null)
+    }
   }
 
   const analyzeWithAI = async () => {
@@ -155,6 +175,44 @@ export function TradeSimulationTab({ trade }: Props) {
           KI-Analyse aus Screenshot
         </p>
 
+        {/* Saved screenshots — click to select */}
+        {screenshots.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[11px]" style={{ color: 'var(--fg-4)' }}>Gespeicherte Screenshots</p>
+            <div className="flex gap-2 flex-wrap">
+              {screenshots.map((url, i) => (
+                <button
+                  key={url}
+                  onClick={() => selectSavedScreenshot(url)}
+                  disabled={fetchingUrl === url}
+                  className="relative rounded overflow-hidden shrink-0 transition-opacity disabled:opacity-60"
+                  style={{
+                    width: 96, height: 54,
+                    border: selectedUrl === url
+                      ? '2px solid var(--brand-blue)'
+                      : '2px solid var(--border-raw)',
+                  }}
+                  title={`Screenshot ${i + 1} verwenden`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  {fetchingUrl === url && (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                    </div>
+                  )}
+                  {selectedUrl === url && fetchingUrl !== url && (
+                    <div className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: 'var(--brand-blue)' }}>
+                      <Check className="h-2.5 w-2.5 text-white" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Upload — fallback if no screenshots or want a different one */}
         <label
           className="flex items-center gap-2 cursor-pointer rounded px-4 py-3 text-sm transition-colors"
           style={{
@@ -164,7 +222,7 @@ export function TradeSimulationTab({ trade }: Props) {
           }}
         >
           <Upload className="h-4 w-4 shrink-0" />
-          <span>{screenshotFile ? screenshotFile.name : 'Chart-Screenshot hochladen…'}</span>
+          <span>{screenshotFile && !selectedUrl ? screenshotFile.name : 'Anderen Screenshot hochladen…'}</span>
           <input type="file" accept="image/*" className="hidden" onChange={handleScreenshot} />
         </label>
 

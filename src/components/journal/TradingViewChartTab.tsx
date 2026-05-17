@@ -96,7 +96,14 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     })
     container.appendChild(script)
 
-    return () => { container.innerHTML = '' }
+    // Grant clipboard-write + downloads to the TV iframe once it's created
+    const permTimer = setTimeout(() => {
+      container.querySelectorAll('iframe').forEach(f => {
+        f.setAttribute('allow', 'clipboard-read; clipboard-write; downloads')
+      })
+    }, 2000)
+
+    return () => { clearTimeout(permTimer); container.innerHTML = '' }
   }, [isActive, symbol, uid])
 
   const uploadFile = useCallback(async (file: File) => {

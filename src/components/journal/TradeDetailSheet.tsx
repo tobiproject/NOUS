@@ -132,7 +132,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
     } finally {
       setIsProcessing(false)
     }
-  }, [cropRect, lightboxUrl, localScreenshots, trade.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cropRect, lightboxUrl, localScreenshots, trade]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!trade) return null
 

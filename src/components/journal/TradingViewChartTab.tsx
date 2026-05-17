@@ -109,25 +109,6 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     }
   }, [isActive, symbol])
 
-  // Listen for Cmd+V paste when tab is active — works in Safari too
-  useEffect(() => {
-    if (!isActive) return
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items
-      if (!items) return
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          e.preventDefault()
-          const file = item.getAsFile()
-          if (file) uploadFile(file)
-          return
-        }
-      }
-    }
-    window.addEventListener('paste', handlePaste)
-    return () => window.removeEventListener('paste', handlePaste)
-  }, [isActive, uploadFile])
-
   const uploadFile = useCallback(async (file: File) => {
     setUploading(true)
     toast.loading('Wird hochgeladen…', { id: 'chart-upload' })
@@ -171,6 +152,25 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     setUploading(false)
     onScreenshotAdded?.(publicUrl)
   }, [tradeId, onScreenshotAdded])
+
+  // Listen for Cmd+V paste when tab is active — works in Safari too
+  useEffect(() => {
+    if (!isActive) return
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault()
+          const file = item.getAsFile()
+          if (file) uploadFile(file)
+          return
+        }
+      }
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [isActive, uploadFile])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()

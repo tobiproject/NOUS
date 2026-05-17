@@ -92,7 +92,7 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
       theme: 'dark',
       style: '1',
       locale: 'de_DE',
-      backgroundColor: 'rgba(19,23,34,1)',
+      backgroundColor: '#131722',
       gridColor: 'rgba(255,255,255,0.06)',
       withdateranges: true,
       range: '1D',
@@ -100,6 +100,12 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
       allow_symbol_change: false,
       save_image: true,
       support_host: 'https://www.tradingview.com',
+      overrides: {
+        'paneProperties.background': '#131722',
+        'paneProperties.backgroundType': 'solid',
+        'paneProperties.backgroundGradientStartColor': '#131722',
+        'paneProperties.backgroundGradientEndColor': '#131722',
+      },
     })
 
     container.appendChild(script)
@@ -243,8 +249,13 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
           type="text"
           value={linkInput}
           onChange={e => setLinkInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleSaveLink() }}
+          onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') handleSaveLink() }}
+          onKeyDownCapture={e => e.stopPropagation()}
           onPaste={e => e.stopPropagation()}
+          onPasteCapture={e => e.stopPropagation()}
+          onCut={e => e.stopPropagation()}
+          onCutCapture={e => e.stopPropagation()}
+          onCopy={e => e.stopPropagation()}
           placeholder="TradingView Chart-Link einfügen…"
           className="flex-1 bg-transparent text-xs outline-none min-w-0"
           style={{ color: 'var(--fg-1)' }}

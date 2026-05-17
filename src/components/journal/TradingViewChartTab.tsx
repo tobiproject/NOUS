@@ -96,14 +96,17 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     })
     container.appendChild(script)
 
-    // Grant clipboard-write + downloads to the TV iframe once it's created
-    const permTimer = setTimeout(() => {
+    // Set permissions on TV iframe as soon as it's added to the DOM (before it loads)
+    const observer = new MutationObserver(() => {
       container.querySelectorAll('iframe').forEach(f => {
-        f.setAttribute('allow', 'clipboard-read; clipboard-write; downloads')
+        if (!f.getAttribute('allow')?.includes('clipboard-write')) {
+          f.setAttribute('allow', 'clipboard-read; clipboard-write; downloads; fullscreen')
+        }
       })
-    }, 2000)
+    })
+    observer.observe(container, { childList: true, subtree: true })
 
-    return () => { clearTimeout(permTimer); container.innerHTML = '' }
+    return () => { observer.disconnect(); container.innerHTML = '' }
   }, [isActive, symbol, uid])
 
   const uploadFile = useCallback(async (file: File) => {

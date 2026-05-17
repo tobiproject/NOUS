@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Image from 'next/image'
+
 import { UserCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { ProfileSidebar } from './ProfileSidebar'
@@ -36,12 +36,13 @@ export function MobileHeader() {
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}
       >
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/logo/nous-logo-slogan.svg"
           alt="NOUS — Turn data into decisions"
           width={164}
           height={52}
-          priority
+          style={{ display: 'block' }}
         />
 
         {/* Profile Avatar */}

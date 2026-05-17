@@ -15,68 +15,82 @@ export function UpdateBanner() {
   const changes = [...(update.features ?? []), ...(update.fixes ?? [])]
 
   return (
-    <div
-      className="fixed bottom-0 left-0 right-0 z-[100] px-4 pt-4 pb-4 hidden md:block"
-      style={{
-        background: 'var(--bg-2)',
-        borderTop: '1px solid rgba(255,130,16,0.35)',
-        boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
-      }}
-    >
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: 'rgba(255,130,16,0.15)' }}
-            >
-              <Sparkles className="h-3.5 w-3.5" style={{ color: 'var(--brand-blue)' }} />
-            </div>
-            <div>
-              <span className="text-[13px] font-bold" style={{ color: '#fff' }}>
-                NOUS {update.releaseVersion} ist verfügbar
-              </span>
-              {CLIENT_RELEASE && (
-                <span className="text-[12px] ml-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                  Du nutzt noch {CLIENT_RELEASE}
-                </span>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={() => setDismissed(true)}
-            className="flex items-center justify-center w-6 h-6 rounded shrink-0 transition-opacity active:opacity-60"
-            style={{ color: 'rgba(255,255,255,0.35)' }}
-            aria-label="Schließen"
+    // Centered modal overlay — desktop only
+    <div className="fixed inset-0 z-[100] hidden md:flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'rgba(0,0,0,0.6)' }}
+        onClick={() => setDismissed(true)}
+      />
+
+      {/* Modal card */}
+      <div
+        className="relative w-full max-w-md mx-4 rounded-2xl p-6"
+        style={{
+          background: 'var(--bg-2)',
+          border: '1px solid rgba(255,130,16,0.4)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,130,16,0.15)',
+        }}
+      >
+        {/* Close button */}
+        <button
+          onClick={() => setDismissed(true)}
+          className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg transition-opacity hover:opacity-70"
+          style={{ color: 'rgba(255,255,255,0.4)', background: 'var(--bg-3)' }}
+          aria-label="Schließen"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'rgba(255,130,16,0.15)' }}
           >
-            <X className="h-3.5 w-3.5" />
-          </button>
+            <Sparkles className="h-5 w-5" style={{ color: 'var(--brand-blue)' }} />
+          </div>
+          <div>
+            <p className="text-base font-bold" style={{ color: '#fff' }}>
+              NOUS {update.releaseVersion} verfügbar
+            </p>
+            {CLIENT_RELEASE && (
+              <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Du nutzt noch Version {CLIENT_RELEASE}
+              </p>
+            )}
+          </div>
         </div>
 
+        {/* Change list */}
         {changes.length > 0 && (
-          <ul className="mt-3 space-y-1.5 pl-9">
-            {changes.slice(0, 4).map((c, i) => (
-              <li key={i} className="flex items-start gap-2 text-[12px]" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                <span className="mt-1.5 w-1 h-1 rounded-full shrink-0" style={{ background: 'var(--brand-blue)' }} />
+          <ul className="space-y-2 mb-5">
+            {changes.slice(0, 5).map((c, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-[13px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--brand-blue)' }} />
                 {c}
               </li>
             ))}
           </ul>
         )}
 
-        <div className="mt-4 pl-9">
-          <button
-            onClick={() => {
-              localStorage.setItem('nous-skip-logout-ts', String(Date.now()))
-              window.location.reload()
-            }}
-            className="flex items-center gap-2 px-4 py-2 rounded text-[13px] font-semibold transition-opacity active:opacity-70"
-            style={{ background: 'var(--brand-blue)', color: '#fff' }}
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Jetzt aktualisieren
-          </button>
-        </div>
+        {/* CTA */}
+        <button
+          onClick={() => {
+            localStorage.setItem('nous-skip-logout-ts', String(Date.now()))
+            window.location.reload()
+          }}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[14px] font-bold transition-opacity hover:opacity-90"
+          style={{ background: 'var(--brand-blue)', color: '#fff' }}
+        >
+          <RefreshCw className="h-4 w-4" />
+          Jetzt aktualisieren
+        </button>
+
+        <p className="text-center text-[11px] mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          Oder klicke außerhalb, um es später zu tun
+        </p>
       </div>
     </div>
   )

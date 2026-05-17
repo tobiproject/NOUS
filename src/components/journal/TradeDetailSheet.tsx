@@ -54,9 +54,10 @@ interface Props {
   onOpenChange: (open: boolean) => void
   onEdit: (trade: Trade) => void
   onDelete: (trade: Trade) => void
+  onScreenshotsChanged?: (tradeId: string, urls: string[]) => void
 }
 
-export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }: Props) {
+export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, onScreenshotsChanged }: Props) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('detail')
   const [localScreenshots, setLocalScreenshots] = useState<string[]>(trade?.screenshot_urls ?? [])
@@ -71,7 +72,11 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
   }, [trade?.id])
 
   const handleScreenshotAdded = (url: string) => {
-    setLocalScreenshots(prev => [...prev, url])
+    setLocalScreenshots(prev => {
+      const newUrls = [...prev, url]
+      if (trade) onScreenshotsChanged?.(trade.id, newUrls)
+      return newUrls
+    })
     setActiveTab('detail')
   }
 
@@ -91,6 +96,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
     const newUrls = localScreenshots.filter(u => u !== url)
     await supabase.from('trades').update({ screenshot_urls: newUrls }).eq('id', trade.id)
     setLocalScreenshots(newUrls)
+    onScreenshotsChanged?.(trade.id, newUrls)
     closeLightbox()
     setIsProcessing(false)
     toast.success('Screenshot gelöscht')
@@ -125,6 +131,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
       const newUrls = [...localScreenshots.filter(u => u !== lightboxUrl), publicUrl]
       await supabase.from('trades').update({ screenshot_urls: newUrls }).eq('id', trade.id)
       setLocalScreenshots(newUrls)
+      onScreenshotsChanged?.(trade.id, newUrls)
       closeLightbox()
       toast.success('Screenshot zugeschnitten ✓')
     } catch {
@@ -165,10 +172,6 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
             <div className="flex items-center gap-0.5">
               <Button variant="ghost" size="icon" onClick={() => onEdit(trade)} className="h-8 w-8">
                 <Edit2 className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => onDelete(trade)}
-                className="h-8 w-8 text-destructive hover:text-destructive">
-                <Trash2 className="h-3.5 w-3.5" />
               </Button>
               <div className="w-px h-4 bg-border/60 mx-1" />
               <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="h-8 w-8">
@@ -308,14 +311,27 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
                             <button onClick={() => setLightboxUrl(url)} className="w-full h-full">
                               <img src={url} alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover" />
                             </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); deleteScreenshot(url) }}
-                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                              style={{ background: 'rgba(0,0,0,0.7)' }}
-                              title="Löschen"
+                            <div
+                              className="absolute bottom-0 left-0 right-0 flex items-center justify-end gap-1 px-1.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)' }}
                             >
-                              <X className="h-3 w-3 text-white" />
-                            </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); setLightboxUrl(url); setCropMode(true) }}
+                                className="flex items-center justify-center w-6 h-6 rounded"
+                                style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)' }}
+                                title="Zuschneiden"
+                              >
+                                <Crop className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); deleteScreenshot(url) }}
+                                className="flex items-center justify-center w-6 h-6 rounded"
+                                style={{ background: 'rgba(239,68,68,0.3)', color: '#f87171' }}
+                                title="Löschen"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -323,6 +339,18 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
                   </div>
                 </>
               )}
+
+              {/* Delete trade — danger zone */}
+              <div className="pt-1">
+                <Separator className="mb-4" />
+                <button
+                  onClick={() => onDelete(trade)}
+                  className="w-full text-sm py-2 rounded-lg text-center transition-colors"
+                  style={{ color: '#f87171', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}
+                >
+                  Trade löschen
+                </button>
+              </div>
             </TabsContent>
 
             <TabsContent value="chart" className="flex-1 px-6 py-4 mt-0 flex flex-col overflow-hidden">

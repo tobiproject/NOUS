@@ -147,6 +147,14 @@ export function JournalContent() {
     setDeletingTrade(trade)
   }
 
+  const handleScreenshotsChanged = useCallback((tradeId: string, urls: string[]) => {
+    setTradesPage(prev => prev ? {
+      ...prev,
+      trades: prev.trades.map(t => t.id === tradeId ? { ...t, screenshot_urls: urls } : t),
+    } : prev)
+    setDetailTrade(prev => prev?.id === tradeId ? { ...prev, screenshot_urls: urls } : prev)
+  }, [])
+
   const handleDeleteConfirm = async () => {
     if (!deletingTrade) return
     const { error } = await deleteTrade(deletingTrade.id)
@@ -271,6 +279,7 @@ export function JournalContent() {
         onOpenChange={open => { if (!open) setDetailTrade(null) }}
         onEdit={handleEditTrade}
         onDelete={handleDeleteClick}
+        onScreenshotsChanged={handleScreenshotsChanged}
       />
 
       {/* Import Wizard */}

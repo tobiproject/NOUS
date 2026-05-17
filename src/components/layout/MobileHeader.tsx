@@ -36,14 +36,10 @@ export function MobileHeader() {
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo/nous-logo-slogan.svg"
-          alt="NOUS — Turn data into decisions"
-          width={164}
-          height={52}
-          style={{ display: 'block' }}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontSize: 22, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.03em', lineHeight: 1 }}>NOUS</span>
+          <span style={{ fontSize: 8, fontWeight: 600, color: '#ff8210', letterSpacing: '0.18em', textTransform: 'uppercase', lineHeight: 1 }}>Turn Data into Decisions</span>
+        </div>
 
         {/* Profile Avatar */}
         <button

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { ExternalLink, Upload, Link } from 'lucide-react'
+import { ExternalLink, Upload, Clipboard, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -65,6 +65,8 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [linkInput, setLinkInput] = useState(chartUrl ?? '')
   const [savingLink, setSavingLink] = useState(false)
+  const [linkSaved, setLinkSaved] = useState(false)
+  const [clipboardError, setClipboardError] = useState(false)
   const symbol = toTvSymbol(asset)
   const tvUrl = toTvUrl(asset)
 
@@ -176,11 +178,25 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
     if (error) {
       toast.error('Link konnte nicht gespeichert werden')
     } else {
-      toast.success('Chart-Link gespeichert ✓')
+      setLinkSaved(true)
+      setTimeout(() => setLinkSaved(false), 2000)
       onChartUrlSaved?.(linkInput.trim())
     }
     setSavingLink(false)
   }, [linkInput, tradeId, onChartUrlSaved])
+
+  const handlePasteFromClipboard = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text.trim()) {
+        setLinkInput(text.trim())
+        setClipboardError(false)
+      }
+    } catch {
+      setClipboardError(true)
+      setTimeout(() => setClipboardError(false), 3000)
+    }
+  }, [])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -239,47 +255,47 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
         onDragOver={e => e.preventDefault()}
       />
 
-      {/* Link input */}
-      <div
-        className="shrink-0 flex items-center gap-2 rounded-lg px-3 py-2"
-        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
-      >
-        <Link size={12} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />
-        <input
-          type="text"
-          value={linkInput}
-          onChange={e => setLinkInput(e.target.value)}
-          onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') handleSaveLink() }}
-          onKeyDownCapture={e => e.stopPropagation()}
-          onPaste={e => e.stopPropagation()}
-          onPasteCapture={e => e.stopPropagation()}
-          onCut={e => e.stopPropagation()}
-          onCutCapture={e => e.stopPropagation()}
-          onCopy={e => e.stopPropagation()}
-          placeholder="TradingView Chart-Link einfügen…"
-          className="flex-1 bg-transparent text-xs outline-none min-w-0"
-          style={{ color: 'var(--fg-1)' }}
-        />
-        {linkInput.trim() && linkInput !== (chartUrl ?? '') && (
+      {/* Link / Snapshot */}
+      <div className="shrink-0 space-y-2">
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleSaveLink}
-            disabled={savingLink}
-            className="text-xs px-2.5 py-1 rounded font-medium shrink-0 disabled:opacity-50"
-            style={{ background: 'var(--brand-blue)', color: '#fff' }}
+            onClick={handlePasteFromClipboard}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg flex-1 justify-center transition-colors"
+            style={{
+              background: clipboardError ? 'rgba(239,68,68,0.1)' : 'var(--bg-2)',
+              border: `1px solid ${clipboardError ? 'rgba(239,68,68,0.3)' : 'var(--border-1)'}`,
+              color: clipboardError ? '#ef4444' : 'var(--fg-2)',
+            }}
           >
-            {savingLink ? '…' : 'Speichern'}
+            <Clipboard size={11} />
+            {clipboardError ? 'Kein Zugriff auf Zwischenablage' : 'Chart-Link aus Zwischenablage'}
           </button>
-        )}
+
+          {linkInput.trim() && (
+            <>
+              <button
+                onClick={handleSaveLink}
+                disabled={savingLink || linkSaved}
+                className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg shrink-0 font-medium disabled:opacity-70 transition-colors"
+                style={{ background: linkSaved ? 'rgba(34,197,94,0.15)' : 'var(--brand-blue)', color: linkSaved ? '#22c55e' : '#fff' }}
+              >
+                {linkSaved ? <><Check size={11} /> Gespeichert</> : savingLink ? '…' : 'Speichern'}
+              </button>
+              <a
+                href={linkInput}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 p-1.5"
+                style={{ color: 'var(--fg-4)' }}
+              >
+                <ExternalLink size={11} />
+              </a>
+            </>
+          )}
+        </div>
+
         {linkInput.trim() && (
-          <a
-            href={linkInput}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0"
-            style={{ color: 'var(--fg-4)' }}
-          >
-            <ExternalLink size={11} />
-          </a>
+          <p className="text-[10px] truncate px-1" style={{ color: 'var(--fg-4)' }}>{linkInput}</p>
         )}
       </div>
 

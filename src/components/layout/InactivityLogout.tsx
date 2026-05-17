@@ -17,21 +17,6 @@ function getTimeoutMs(): number {
   return DEFAULT_TIMEOUT_MS
 }
 
-function clearSupabaseSession() {
-  try {
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith('sb-')) localStorage.removeItem(k)
-    })
-    document.cookie.split(';').forEach(c => {
-      const name = c.split('=')[0].trim()
-      if (name.startsWith('sb-')) {
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${location.hostname}`
-      }
-    })
-  } catch { /* ignore */ }
-}
-
 export function InactivityLogout() {
   const pathname = usePathname()
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -45,14 +30,10 @@ export function InactivityLogout() {
     const reset = () => {
       clearTimeout(timerRef.current)
       timerRef.current = setTimeout(() => {
-        // Skip logout if a page reload was triggered (update button)
-        if (sessionStorage.getItem('nous-skip-inactivity-logout')) {
-          sessionStorage.removeItem('nous-skip-inactivity-logout')
-          return
-        }
-        clearSupabaseSession()
-        try { sessionStorage.removeItem('nous-session') } catch { /* ignore */ }
-        window.location.href = '/login'
+        // Redirect to login — the login page handles the actual signOut.
+        // Session is NOT cleared here so that a concurrent page reload
+        // (e.g. from the update banner) keeps the user logged in.
+        window.location.href = '/login?inactive=1'
       }, timeoutMs)
     }
 

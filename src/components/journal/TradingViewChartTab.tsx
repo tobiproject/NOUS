@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { ExternalLink, Upload, Clipboard, Check } from 'lucide-react'
+import { ExternalLink, Upload, ClipboardPaste, Check, ImageIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -46,29 +46,21 @@ function toTvSymbol(asset: string): string {
   return `FX:${s}`
 }
 
-function toTvUrl(asset: string): string {
-  const sym = toTvSymbol(asset).replace(':', '%3A')
-  return `https://www.tradingview.com/chart/?symbol=${sym}`
-}
-
 interface Props {
   asset: string
   tradeId: string
   chartUrl?: string | null
   isActive: boolean
   onScreenshotAdded?: () => void
-  onChartUrlSaved?: (url: string) => void
 }
 
-export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScreenshotAdded, onChartUrlSaved }: Props) {
+export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdded }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [linkInput, setLinkInput] = useState(chartUrl ?? '')
-  const [savingLink, setSavingLink] = useState(false)
-  const [linkSaved, setLinkSaved] = useState(false)
-  const [clipboardError, setClipboardError] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadedPreview, setUploadedPreview] = useState<string | null>(null)
   const symbol = toTvSymbol(asset)
-  const tvUrl = toTvUrl(asset)
+  const tvUrl = `https://www.tradingview.com/chart/?symbol=${symbol.replace(':', '%3A')}`
 
   useEffect(() => {
     if (!isActive) return
@@ -117,20 +109,16 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
     }
   }, [isActive, symbol])
 
-  const handleFileUpload = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error('Nur Bilddateien erlaubt')
-      return
-    }
+  const uploadFile = useCallback(async (file: File) => {
+    setUploading(true)
+    toast.loading('Wird hochgeladen…', { id: 'chart-upload' })
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { toast.error('Nicht eingeloggt', { id: 'chart-upload' }); setUploading(false); return }
 
     const ext = file.name.split('.').pop() ?? 'png'
     const path = `${user.id}/${tradeId}/${Date.now()}.${ext}`
-
-    toast.loading('Wird hochgeladen…', { id: 'chart-upload' })
 
     const { error: uploadError } = await supabase.storage
       .from('screenshots')
@@ -138,18 +126,14 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
 
     if (uploadError) {
       toast.error(`Upload fehlgeschlagen: ${uploadError.message}`, { id: 'chart-upload' })
+      setUploading(false)
       return
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('screenshots')
-      .getPublicUrl(path)
+    const { data: { publicUrl } } = supabase.storage.from('screenshots').getPublicUrl(path)
 
     const { data: existing } = await supabase
-      .from('trades')
-      .select('screenshot_urls')
-      .eq('id', tradeId)
-      .single()
+      .from('trades').select('screenshot_urls').eq('id', tradeId).single()
 
     const current: string[] = existing?.screenshot_urls ?? []
     const { error: updateError } = await supabase
@@ -159,56 +143,43 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
 
     if (updateError) {
       toast.error('Speichern fehlgeschlagen', { id: 'chart-upload' })
+      setUploading(false)
       return
     }
 
-    toast.success('Chart-Screenshot gespeichert ✓', { id: 'chart-upload' })
+    toast.success('Screenshot gespeichert ✓', { id: 'chart-upload' })
+    setUploadedPreview(URL.createObjectURL(file))
+    setUploading(false)
     onScreenshotAdded?.()
   }, [tradeId, onScreenshotAdded])
 
-  const handleSaveLink = useCallback(async () => {
-    if (!linkInput.trim()) return
-    setSavingLink(true)
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('trades')
-      .update({ chart_url: linkInput.trim() })
-      .eq('id', tradeId)
-
-    if (error) {
-      toast.error('Link konnte nicht gespeichert werden')
-    } else {
-      setLinkSaved(true)
-      setTimeout(() => setLinkSaved(false), 2000)
-      onChartUrlSaved?.(linkInput.trim())
+  const handlePasteImage = useCallback(async () => {
+    if (!navigator.clipboard?.read) {
+      toast.error('Clipboard-Zugriff nicht verfügbar — bitte manuell hochladen')
+      return
     }
-    setSavingLink(false)
-  }, [linkInput, tradeId, onChartUrlSaved])
-
-  const handlePasteFromClipboard = useCallback(async () => {
     try {
-      const text = await navigator.clipboard.readText()
-      if (text.trim()) {
-        setLinkInput(text.trim())
-        setClipboardError(false)
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith('image/'))
+        if (imageType) {
+          const blob = await item.getType(imageType)
+          const file = new File([blob], `chart-${Date.now()}.png`, { type: imageType })
+          await uploadFile(file)
+          return
+        }
       }
+      toast.error('Kein Bild in der Zwischenablage — erst "Copy image" in TradingView klicken')
     } catch {
-      setClipboardError(true)
-      setTimeout(() => setClipboardError(false), 3000)
+      toast.error('Clipboard-Zugriff verweigert — bitte manuell hochladen')
     }
-  }, [])
+  }, [uploadFile])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     const file = e.dataTransfer.files[0]
-    if (file) handleFileUpload(file)
-  }, [handleFileUpload])
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) handleFileUpload(file)
-    e.target.value = ''
-  }, [handleFileUpload])
+    if (file?.type.startsWith('image/')) uploadFile(file)
+  }, [uploadFile])
 
   return (
     <div className="flex flex-col gap-3" style={{ height: 'calc(90vh - 200px)' }}>
@@ -217,34 +188,20 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
         <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>
           {asset} · {symbol}
         </span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors"
-            style={{
-              background: 'var(--bg-2)',
-              border: '1px solid var(--border-1)',
-              color: 'var(--fg-2)',
-            }}
-          >
-            <Upload size={11} />
-            Screenshot hochladen
-          </button>
-          <a
-            href={tvUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors"
-            style={{
-              background: 'rgba(41,98,255,0.10)',
-              border: '1px solid rgba(41,98,255,0.25)',
-              color: 'var(--brand-blue)',
-            }}
-          >
-            <ExternalLink size={11} />
-            In TradingView öffnen
-          </a>
-        </div>
+        <a
+          href={tvUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
+          style={{
+            background: 'rgba(41,98,255,0.10)',
+            border: '1px solid rgba(41,98,255,0.25)',
+            color: 'var(--brand-blue)',
+          }}
+        >
+          <ExternalLink size={11} />
+          In TradingView öffnen
+        </a>
       </div>
 
       {/* Chart */}
@@ -255,57 +212,75 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
         onDragOver={e => e.preventDefault()}
       />
 
-      {/* Link / Snapshot */}
-      <div className="shrink-0 space-y-2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePasteFromClipboard}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg flex-1 justify-center transition-colors"
-            style={{
-              background: clipboardError ? 'rgba(239,68,68,0.1)' : 'var(--bg-2)',
-              border: `1px solid ${clipboardError ? 'rgba(239,68,68,0.3)' : 'var(--border-1)'}`,
-              color: clipboardError ? '#ef4444' : 'var(--fg-2)',
-            }}
-          >
-            <Clipboard size={11} />
-            {clipboardError ? 'Kein Zugriff auf Zwischenablage' : 'Chart-Link aus Zwischenablage'}
-          </button>
+      {/* Screenshot actions */}
+      <div className="shrink-0 rounded-lg p-3 space-y-2.5" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}>
+        <p className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>
+          Screenshot speichern
+        </p>
 
-          {linkInput.trim() && (
-            <>
-              <button
-                onClick={handleSaveLink}
-                disabled={savingLink || linkSaved}
-                className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg shrink-0 font-medium disabled:opacity-70 transition-colors"
-                style={{ background: linkSaved ? 'rgba(34,197,94,0.15)' : 'var(--brand-blue)', color: linkSaved ? '#22c55e' : '#fff' }}
-              >
-                {linkSaved ? <><Check size={11} /> Gespeichert</> : savingLink ? '…' : 'Speichern'}
-              </button>
-              <a
-                href={linkInput}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 p-1.5"
-                style={{ color: 'var(--fg-4)' }}
-              >
-                <ExternalLink size={11} />
-              </a>
-            </>
-          )}
+        {/* Step instructions */}
+        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--fg-4)' }}>
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-3)', color: 'var(--fg-3)' }}>1</span>
+          Kamera-Icon im Chart klicken
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-3)', color: 'var(--fg-3)' }}>2</span>
+          <span style={{ color: 'var(--fg-2)' }}>"Copy image"</span> wählen
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-3)', color: 'var(--fg-3)' }}>3</span>
+          Hier einfügen ↓
         </div>
 
-        {linkInput.trim() && (
-          <p className="text-[10px] truncate px-1" style={{ color: 'var(--fg-4)' }}>{linkInput}</p>
+        <div className="flex items-center gap-2">
+          {/* Primary: paste image from clipboard */}
+          <button
+            onClick={handlePasteImage}
+            disabled={uploading}
+            className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg font-medium flex-1 justify-center transition-colors disabled:opacity-60"
+            style={{
+              background: 'rgba(41,98,255,0.12)',
+              border: '1px solid rgba(41,98,255,0.3)',
+              color: 'var(--brand-blue)',
+            }}
+          >
+            {uploading ? (
+              <span className="animate-pulse">Hochladen…</span>
+            ) : uploadedPreview ? (
+              <><Check size={12} /> Gespeichert</>
+            ) : (
+              <><ClipboardPaste size={12} /> Bild einfügen (Zwischenablage)</>
+            )}
+          </button>
+
+          {/* Fallback: file upload */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg transition-colors disabled:opacity-60"
+            style={{
+              background: 'var(--bg-3)',
+              border: '1px solid var(--border-1)',
+              color: 'var(--fg-3)',
+            }}
+            title="Datei hochladen"
+          >
+            <Upload size={11} />
+            Datei
+          </button>
+        </div>
+
+        {uploadedPreview && (
+          <div className="flex items-center gap-2 mt-1">
+            <ImageIcon size={11} style={{ color: 'var(--fg-4)' }} />
+            <img src={uploadedPreview} alt="Vorschau" className="h-8 rounded object-cover" style={{ border: '1px solid var(--border-1)' }} />
+            <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>Im Details-Tab sichtbar</span>
+          </div>
         )}
       </div>
 
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={handleInputChange}
+        onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = '' }}
       />
     </div>
   )

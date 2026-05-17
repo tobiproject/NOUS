@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { Edit2, Trash2, TrendingUp, TrendingDown, X, Crop, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -61,6 +62,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, 
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('detail')
   const [localScreenshots, setLocalScreenshots] = useState<string[]>(trade?.screenshot_urls ?? [])
+  const [deleteConfirmUrl, setDeleteConfirmUrl] = useState<string | null>(null)
   const [cropMode, setCropMode] = useState(false)
   const [cropStart, setCropStart] = useState<{ x: number; y: number } | null>(null)
   const [cropRect, setCropRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
@@ -324,7 +326,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, 
                                 <Crop className="h-3 w-3" />
                               </button>
                               <button
-                                onClick={e => { e.stopPropagation(); deleteScreenshot(url) }}
+                                onClick={e => { e.stopPropagation(); setDeleteConfirmUrl(url) }}
                                 className="flex items-center justify-center w-6 h-6 rounded"
                                 style={{ background: 'rgba(239,68,68,0.3)', color: '#f87171' }}
                                 title="Löschen"
@@ -478,7 +480,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, 
                   <Crop size={13} /> Zuschneiden
                 </button>
                 <button
-                  onClick={() => lightboxUrl && deleteScreenshot(lightboxUrl)}
+                  onClick={() => lightboxUrl && setDeleteConfirmUrl(lightboxUrl)}
                   disabled={isProcessing}
                   className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg disabled:opacity-50"
                   style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}
@@ -492,6 +494,26 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, 
 
         </DialogContent>
       </Dialog>
+      {/* Screenshot delete confirmation */}
+      <AlertDialog open={!!deleteConfirmUrl} onOpenChange={open => { if (!open) setDeleteConfirmUrl(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Screenshot löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dieser Screenshot wird unwiderruflich gelöscht und kann nicht wiederhergestellt werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (deleteConfirmUrl) deleteScreenshot(deleteConfirmUrl) }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

@@ -1,6 +1,10 @@
 'use client'
 
 import { useMemo } from 'react'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  Cell, LabelList, ReferenceLine, CartesianGrid,
+} from 'recharts'
 import type { Trade } from '@/hooks/useTrades'
 
 interface Props {
@@ -17,6 +21,12 @@ const RR_SCENARIOS = [
   { rr: 3.0,  label: '1:3' },
 ]
 
+function rrColor(outcome: string | null) {
+  if (outcome === 'win') return '#22c55e'
+  if (outcome === 'loss') return '#ef4444'
+  return '#6b7280'
+}
+
 function confidenceLabel(n: number): { label: string; color: string } {
   if (n < 20)  return { label: 'Zu wenig Daten',    color: 'var(--short)' }
   if (n < 50)  return { label: 'Erste Tendenz',      color: '#f59e0b' }
@@ -26,25 +36,25 @@ function confidenceLabel(n: number): { label: string; color: string } {
 }
 
 export function RrrAnalyseTab({ trades }: Props) {
-  const { winRate, closed, total, avgTrueRR, tradeRows, scenarios, optimalRR } = useMemo(() => {
+  const { winRate, closed, total, avgTrueRR, tradeRows, maxRR, scenarios, optimalRR } = useMemo(() => {
     const wins   = trades.filter(t => t.outcome === 'win').length
     const losses = trades.filter(t => t.outcome === 'loss').length
     const closed = wins + losses
     const winRate = closed >= 5 ? wins / closed : null
 
-    // Per-trade rows (only those with true_rr)
     const tradeRows = trades
       .filter(t => typeof t.true_rr === 'number' && t.true_rr !== null)
       .sort((a, b) => b.traded_at.localeCompare(a.traded_at))
       .map(t => ({
         id: t.id,
-        date: t.traded_at.slice(0, 10),
-        asset: t.asset,
-        direction: t.direction,
+        label: `${t.traded_at.slice(8, 10)}.${t.traded_at.slice(5, 7)}. ${t.asset}`,
         true_rr: t.true_rr as number,
         outcome: t.outcome,
         rr_ratio: t.rr_ratio,
+        direction: t.direction,
       }))
+
+    const maxRR = Math.max(3, ...tradeRows.map(r => r.true_rr))
 
     const avgTrueRR = tradeRows.length > 0
       ? Math.round((tradeRows.reduce((s, r) => s + r.true_rr, 0) / tradeRows.length) * 100) / 100
@@ -63,13 +73,11 @@ export function RrrAnalyseTab({ trades }: Props) {
       ? profitable.reduce((best, s) => (s.ev! > best.ev! ? s : best))
       : null
 
-    return { winRate, closed, total: trades.length, avgTrueRR, tradeRows, scenarios, optimalRR }
+    return { winRate, closed, total: trades.length, avgTrueRR, tradeRows, maxRR, scenarios, optimalRR }
   }, [trades])
 
   const conf = confidenceLabel(closed)
-
-  // Bar scale: max of (all true_rr values, 3) — capped so bars don't go crazy
-  const maxRR = Math.max(3, ...tradeRows.map(r => r.true_rr))
+  const chartHeight = Math.max(200, tradeRows.length * 28 + 32)
 
   return (
     <div className="space-y-6">
@@ -84,126 +92,85 @@ export function RrrAnalyseTab({ trades }: Props) {
         <Kpi label="Trades gesamt" value={String(total)} />
         <Kpi
           label="Ø True RR"
-          value={avgTrueRR !== null ? `1:${avgTrueRR}` : '–'}
-          sub={`${tradeRows.length} mit Daten`}
+          value={avgTrueRR !== null ? `${avgTrueRR}R` : '–'}
+          sub={`${tradeRows.length} mit Max-Kurs`}
         />
       </div>
 
-      {/* Datenbasis badge */}
+      {/* Datenbasis */}
       <div className="flex items-center gap-2">
-        <span
-          className="text-[11px] px-2.5 py-1 rounded-full font-semibold"
-          style={{ background: 'rgba(255,255,255,0.07)', color: conf.color }}
-        >
+        <span className="text-[11px] px-2.5 py-1 rounded-full font-semibold"
+          style={{ background: 'rgba(255,255,255,0.07)', color: conf.color }}>
           {conf.label} · {closed} abgeschl. Trades
         </span>
         {closed < 100 && (
-          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
             Empfehlung bis 100 Trades: 1:1 RRR
           </span>
         )}
       </div>
 
-      {/* Trade-für-Trade Lauf-Analyse */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--fg-4)' }}>
-          Wie weit liefen deine Trades?
+      {/* True RR Balkendiagramm — wie weit liefen die Trades */}
+      <div className="rounded-lg p-4" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)' }}>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--fg-4)' }}>
+          Wie weit lief jeder Trade?
         </p>
 
         {tradeRows.length === 0 ? (
-          <div
-            className="rounded-lg flex items-center justify-center h-24 text-sm"
-            style={{ background: 'var(--bg-3)', border: '1px dashed var(--border-1)', color: 'var(--fg-4)' }}
-          >
-            Noch keine Max-Kurs-Daten — im Journal → Simulation eintragen
+          <div className="flex items-center justify-center h-24 text-sm rounded-lg"
+            style={{ background: 'var(--bg-2)', border: '1px dashed var(--border-1)', color: 'var(--fg-4)' }}>
+            Max-Kurs im Journal → Simulation eintragen
           </div>
         ) : (
-          <div className="space-y-1.5">
-            {/* Scale markers */}
-            <div className="relative h-4 ml-[96px] mr-[48px] mb-1">
-              {[1, 2, 3].filter(v => v <= maxRR).map(v => (
-                <div
-                  key={v}
-                  className="absolute top-0 flex flex-col items-center"
-                  style={{ left: `${(v / maxRR) * 100}%`, transform: 'translateX(-50%)' }}
-                >
-                  <span className="text-[9px] num" style={{ color: 'rgba(255,255,255,0.25)' }}>{v}R</span>
-                </div>
-              ))}
-            </div>
-
-            {tradeRows.map(row => {
-              const barPct = Math.min((row.true_rr / maxRR) * 100, 100)
-              const plannedPct = row.rr_ratio !== null ? Math.min((row.rr_ratio / maxRR) * 100, 100) : null
-              const isWin = row.outcome === 'win'
-              const isLoss = row.outcome === 'loss'
-              const barBg = isWin ? 'rgba(34,197,94,0.45)' : isLoss ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.15)'
-
-              return (
-                <div key={row.id} className="flex items-center gap-2">
-                  {/* Left label */}
-                  <div className="shrink-0 w-[92px] flex items-center gap-1.5">
-                    <span
-                      className="text-[9px] font-bold uppercase shrink-0"
-                      style={{ color: row.direction === 'long' ? 'var(--long)' : 'var(--short)', minWidth: 20 }}
-                    >
-                      {row.direction === 'long' ? '▲' : '▼'}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-semibold truncate" style={{ color: 'var(--fg-2)' }}>{row.asset}</p>
-                      <p className="text-[9px] num" style={{ color: 'var(--fg-4)' }}>
-                        {row.date.slice(8, 10)}.{row.date.slice(5, 7)}.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Bar */}
-                  <div className="flex-1 relative h-6 rounded-sm" style={{ background: 'var(--bg-2)' }}>
-                    {/* Reference lines */}
-                    {[1, 2, 3].filter(v => v <= maxRR).map(v => (
-                      <div
-                        key={v}
-                        className="absolute inset-y-0 w-px"
-                        style={{ left: `${(v / maxRR) * 100}%`, background: 'rgba(255,255,255,0.1)' }}
-                      />
-                    ))}
-                    {/* Planned RR marker */}
-                    {plannedPct !== null && (
-                      <div
-                        className="absolute inset-y-0 w-0.5 z-10"
-                        style={{ left: `${plannedPct}%`, background: 'rgba(59,130,246,0.5)' }}
-                      />
-                    )}
-                    {/* True RR fill */}
-                    <div
-                      className="absolute inset-y-0 left-0 rounded-sm"
-                      style={{ width: `${barPct}%`, background: barBg }}
-                    />
-                    {/* RR value label */}
-                    <div className="absolute inset-0 flex items-center px-2">
-                      <span className="text-[11px] font-bold num" style={{ color: isWin ? '#86efac' : isLoss ? '#fca5a5' : 'var(--fg-3)' }}>
-                        {row.true_rr.toFixed(2)}R
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right: planned vs true */}
-                  {row.rr_ratio !== null && (
-                    <div className="shrink-0 w-[44px] text-right">
-                      <span className="text-[9px] num" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                        Ziel {row.rr_ratio}R
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-
+          <>
+            <ResponsiveContainer width="100%" height={chartHeight}>
+              <BarChart
+                data={tradeRows}
+                layout="vertical"
+                margin={{ top: 4, right: 52, left: 4, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" horizontal={false} />
+                <XAxis
+                  type="number"
+                  domain={[0, Math.ceil(maxRR)]}
+                  tickCount={Math.ceil(maxRR) + 1}
+                  tick={{ fontSize: 10, fill: 'var(--fg-4)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={v => `${v}R`}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: 'var(--fg-4)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={88}
+                  tickFormatter={v => v.length > 14 ? v.slice(0, 14) + '…' : v}
+                />
+                <Tooltip
+                  contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: 6, fontSize: 12 }}
+                  formatter={(v) => [`${String(v ?? 0)}R`, 'True RR']}
+                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                />
+                <ReferenceLine x={1} stroke="rgba(255,255,255,0.25)" strokeDasharray="3 3" strokeWidth={1.5} />
+                <Bar dataKey="true_rr" radius={[0, 3, 3, 0]} barSize={16}>
+                  {tradeRows.map((row, i) => (
+                    <Cell key={i} fill={rrColor(row.outcome)} fillOpacity={0.8} />
+                  ))}
+                  <LabelList
+                    dataKey="true_rr"
+                    position="right"
+                    formatter={(v: unknown) => `${String(v ?? 0)}R`}
+                    style={{ fontSize: 11, fill: 'var(--fg-3)', fontVariantNumeric: 'tabular-nums' }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
             <p className="text-[10px] mt-2" style={{ color: 'var(--fg-4)' }}>
-              Balken = wie weit der Trade wirklich lief. Blauer Strich = dein geplantes TP.
-              {' '}Grün = Gewinn, Rot = Verlust.
+              Gestrichelte Linie = 1R. Grün = Gewinn, Rot = Verlust.
             </p>
-          </div>
+          </>
         )}
       </div>
 

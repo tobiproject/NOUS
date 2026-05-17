@@ -13,6 +13,7 @@ import { RRSimulator } from '@/components/risk/RRSimulator'
 import { TradeAnalysisTab } from '@/components/ai/TradeAnalysisTab'
 import { TradeSimulationTab } from './TradeSimulationTab'
 import { TradeReviewTab } from './TradeReviewTab'
+import { TradingViewChartTab } from './TradingViewChartTab'
 import type { Trade } from '@/hooks/useTrades'
 
 const EMOTION_LABELS: Record<string, string> = {
@@ -104,6 +105,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <TabsList className="mx-6 mt-4 mb-0 w-auto self-start shrink-0">
               <TabsTrigger value="detail">Details</TabsTrigger>
+              <TabsTrigger value="chart">Chart</TabsTrigger>
               <TabsTrigger value="review">Nachbereitung</TabsTrigger>
               <TabsTrigger value="ki">KI-Analyse</TabsTrigger>
               <TabsTrigger value="simulation">Simulation</TabsTrigger>
@@ -239,6 +241,10 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
                   </div>
                 </>
               )}
+            </TabsContent>
+
+            <TabsContent value="chart" className="flex-1 px-6 py-4 mt-0 flex flex-col">
+              <TradingViewChartTab asset={trade.asset} isActive={activeTab === 'chart'} />
             </TabsContent>
 
             <TabsContent value="review" className="flex-1 overflow-y-auto px-6 py-4 mt-0">

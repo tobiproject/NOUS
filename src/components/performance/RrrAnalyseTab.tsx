@@ -83,7 +83,8 @@ export function RrrAnalyseTab({ trades }: Props) {
   }, [trades])
 
   const conf = confidenceLabel(closed)
-  const chartHeight = Math.max(200, tradeRows.length * 28 + 32)
+  const chartRows = tradeRows.slice(0, 50)
+  const chartHeight = Math.max(200, chartRows.length * 28 + 32)
 
   return (
     <div className="space-y-6">
@@ -121,6 +122,11 @@ export function RrrAnalyseTab({ trades }: Props) {
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>
             RR pro Trade
+            {tradeRows.length > 50 && (
+              <span className="ml-2 font-normal normal-case" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                (letzte 50 von {tradeRows.length})
+              </span>
+            )}
           </p>
           <p className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
             Grün = Gewinn · Rot = Verlust · gestrichelt = 1R
@@ -135,7 +141,7 @@ export function RrrAnalyseTab({ trades }: Props) {
         ) : (
           <ResponsiveContainer width="100%" height={chartHeight}>
             <BarChart
-              data={tradeRows}
+              data={chartRows}
               layout="vertical"
               margin={{ top: 4, right: 52, left: 4, bottom: 0 }}
             >
@@ -169,7 +175,7 @@ export function RrrAnalyseTab({ trades }: Props) {
               />
               <ReferenceLine x={1} stroke="rgba(255,255,255,0.25)" strokeDasharray="3 3" strokeWidth={1.5} />
               <Bar dataKey="display_rr" radius={[0, 3, 3, 0]} barSize={16}>
-                {tradeRows.map((row, i) => (
+                {chartRows.map((row, i) => (
                   <Cell key={i} fill={rrColor(row.outcome)} fillOpacity={row.is_true_rr ? 0.85 : 0.45} />
                 ))}
                 <LabelList

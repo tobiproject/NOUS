@@ -55,59 +55,13 @@ interface Props {
 }
 
 export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdded }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null)
   const symbol = toTvSymbol(asset)
   const tvUrl = `https://www.tradingview.com/chart/?symbol=${symbol.replace(':', '%3A')}`
 
-  useEffect(() => {
-    if (!isActive) return
-    const container = containerRef.current
-    if (!container) return
-
-    container.innerHTML = ''
-
-    const widgetDiv = document.createElement('div')
-    widgetDiv.className = 'tradingview-widget-container__widget'
-    widgetDiv.style.height = '100%'
-    widgetDiv.style.width = '100%'
-    container.appendChild(widgetDiv)
-
-    const script = document.createElement('script')
-    script.type = 'text/javascript'
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
-    script.async = true
-    script.innerHTML = JSON.stringify({
-      autosize: true,
-      symbol,
-      timezone: 'Etc/UTC',
-      theme: 'dark',
-      style: '1',
-      locale: 'de_DE',
-      backgroundColor: '#131722',
-      gridColor: 'rgba(255,255,255,0.06)',
-      withdateranges: true,
-      range: '1D',
-      hide_side_toolbar: false,
-      allow_symbol_change: false,
-      save_image: true,
-      support_host: 'https://www.tradingview.com',
-      overrides: {
-        'paneProperties.background': '#131722',
-        'paneProperties.backgroundType': 'solid',
-        'paneProperties.backgroundGradientStartColor': '#131722',
-        'paneProperties.backgroundGradientEndColor': '#131722',
-      },
-    })
-
-    container.appendChild(script)
-
-    return () => {
-      if (container) container.innerHTML = ''
-    }
-  }, [isActive, symbol])
+  const iframeSrc = `https://s.tradingview.com/widgetembed/?frameElementId=tv_chart&symbol=${encodeURIComponent(symbol)}&interval=D&hidesidetoolbar=0&hidetoptoolbar=0&symboledit=0&saveimage=1&toolbarbg=131722&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&locale=de_DE&utm_source=getnous.de`
 
   const uploadFile = useCallback(async (file: File) => {
     setUploading(true)
@@ -208,11 +162,20 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
 
       {/* Chart */}
       <div
-        ref={containerRef}
-        className="tradingview-widget-container flex-1 rounded-xl overflow-hidden"
+        className="flex-1 rounded-xl overflow-hidden"
         onDrop={handleDrop}
         onDragOver={e => e.preventDefault()}
-      />
+        style={{ minHeight: 0 }}
+      >
+        {isActive && (
+          <iframe
+            src={iframeSrc}
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            allow="clipboard-write"
+            allowFullScreen
+          />
+        )}
+      </div>
 
       {/* Screenshot actions */}
       <div className="shrink-0 rounded-lg p-3 space-y-2" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}>

@@ -240,12 +240,13 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
       >
         <Link size={12} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />
         <input
-          type="url"
+          type="text"
           value={linkInput}
           onChange={e => setLinkInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSaveLink()}
+          onKeyDown={e => { if (e.key === 'Enter') handleSaveLink() }}
+          onPaste={e => e.stopPropagation()}
           placeholder="TradingView Chart-Link einfügen…"
-          className="flex-1 bg-transparent text-xs outline-none"
+          className="flex-1 bg-transparent text-xs outline-none min-w-0"
           style={{ color: 'var(--fg-1)' }}
         />
         {linkInput.trim() && linkInput !== (chartUrl ?? '') && (

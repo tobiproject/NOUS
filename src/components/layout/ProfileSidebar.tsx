@@ -428,7 +428,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
                   </span>
                 </div>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => { sessionStorage.setItem('nous-skip-inactivity-logout', '1'); window.location.reload() }}
                   className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-opacity active:opacity-70 shrink-0"
                   style={{ background: 'var(--brand-blue)', color: '#fff' }}
                 >

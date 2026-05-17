@@ -74,7 +74,7 @@ export function MobileUpdateModal() {
         {/* CTA */}
         <div className="px-4 pb-5">
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => { sessionStorage.setItem('nous-skip-inactivity-logout', '1'); window.location.reload() }}
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-[15px] active:opacity-80 transition-opacity"
             style={{ background: 'var(--brand-blue)', color: '#fff' }}
           >

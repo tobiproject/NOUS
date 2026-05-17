@@ -545,6 +545,9 @@ function ProfilTab() {
 
       {/* Password */}
       <PasswordSection />
+
+      {/* Auto-Logout */}
+      <InactivityTimeoutSection />
     </div>
   )
 }
@@ -682,6 +685,51 @@ function PasswordSection() {
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : success ? <Check className="h-4 w-4" /> : 'Passwort ändern'}
         </Button>
+      </div>
+    </Section>
+  )
+}
+
+function InactivityTimeoutSection() {
+  const OPTIONS = [
+    { label: 'Nie (immer eingeloggt)', value: 'never' },
+    { label: '20 Minuten', value: String(20 * 60 * 1000) },
+    { label: '30 Minuten', value: String(30 * 60 * 1000) },
+    { label: '1 Stunde', value: String(60 * 60 * 1000) },
+    { label: '4 Stunden', value: String(4 * 60 * 60 * 1000) },
+  ]
+  const [current, setCurrent] = useState(() => {
+    try { return localStorage.getItem('nous-inactivity-timeout-ms') ?? String(30 * 60 * 1000) } catch { return String(30 * 60 * 1000) }
+  })
+
+  const handleChange = (value: string) => {
+    setCurrent(value)
+    try { localStorage.setItem('nous-inactivity-timeout-ms', value) } catch { /* ignore */ }
+    toast.success('Auto-Logout-Einstellung gespeichert')
+  }
+
+  return (
+    <Section title="Auto-Logout" subtitle="Nach dieser Inaktivitätsdauer wirst du automatisch ausgeloggt.">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => handleChange(opt.value)}
+            className="flex items-center gap-2.5 rounded-lg px-4 py-3 text-left text-sm transition-colors"
+            style={{
+              background: current === opt.value ? 'rgba(41,98,255,0.12)' : 'var(--bg-3)',
+              border: `1px solid ${current === opt.value ? 'rgba(41,98,255,0.4)' : 'var(--border-raw)'}`,
+              color: current === opt.value ? 'var(--brand-blue)' : 'var(--fg-2)',
+              fontWeight: current === opt.value ? 600 : 400,
+            }}
+          >
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ background: current === opt.value ? 'var(--brand-blue)' : 'var(--fg-4)' }}
+            />
+            {opt.label}
+          </button>
+        ))}
       </div>
     </Section>
   )

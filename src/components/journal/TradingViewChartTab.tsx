@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useState, useId } from 'react'
 import { ExternalLink, Upload, Check, ImageIcon, Command } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -55,13 +55,48 @@ interface Props {
 }
 
 export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdded }: Props) {
+  const uid = useId().replace(/:/g, '')
+  const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null)
   const symbol = toTvSymbol(asset)
   const tvUrl = `https://www.tradingview.com/chart/?symbol=${symbol.replace(':', '%3A')}`
 
-  const iframeSrc = `https://s.tradingview.com/widgetembed/?frameElementId=tv_chart&symbol=${encodeURIComponent(symbol)}&interval=D&hidesidetoolbar=0&hidetoptoolbar=0&symboledit=0&saveimage=1&toolbarbg=131722&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&locale=de_DE&utm_source=getnous.de`
+  useEffect(() => {
+    if (!isActive) return
+    const container = containerRef.current
+    if (!container) return
+
+    container.innerHTML = ''
+
+    const widgetDiv = document.createElement('div')
+    widgetDiv.className = 'tradingview-widget-container__widget'
+    widgetDiv.style.cssText = 'height:calc(100% - 32px);width:100%'
+    container.appendChild(widgetDiv)
+
+    const script = document.createElement('script')
+    script.type = 'text/javascript'
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
+    script.async = true
+    script.text = JSON.stringify({
+      autosize: true,
+      symbol,
+      timezone: 'Etc/UTC',
+      theme: 'dark',
+      style: '1',
+      locale: 'de_DE',
+      withdateranges: true,
+      range: '1D',
+      hide_side_toolbar: false,
+      allow_symbol_change: false,
+      save_image: true,
+      support_host: 'https://www.tradingview.com',
+    })
+    container.appendChild(script)
+
+    return () => { container.innerHTML = '' }
+  }, [isActive, symbol, uid])
 
   const uploadFile = useCallback(async (file: File) => {
     setUploading(true)
@@ -138,7 +173,7 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
   }, [uploadFile])
 
   return (
-    <div className="flex flex-col gap-3" style={{ height: 'calc(90vh - 200px)' }}>
+    <div className="flex flex-col gap-3" style={{ height: 'calc(90vh - 200px)', minHeight: 0 }}>
       {/* Toolbar */}
       <div className="flex items-center justify-between shrink-0 flex-wrap gap-2">
         <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>
@@ -160,22 +195,14 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
         </a>
       </div>
 
-      {/* Chart */}
+      {/* Chart — needs explicit pixel height so TV widget resolves 100% correctly */}
       <div
-        className="flex-1 rounded-xl overflow-hidden"
+        ref={containerRef}
+        className="tradingview-widget-container rounded-xl overflow-hidden"
         onDrop={handleDrop}
         onDragOver={e => e.preventDefault()}
-        style={{ minHeight: 0 }}
-      >
-        {isActive && (
-          <iframe
-            src={iframeSrc}
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-            allow="clipboard-write"
-            allowFullScreen
-          />
-        )}
-      </div>
+        style={{ flex: '1 1 0', minHeight: 0, height: 0, width: '100%' }}
+      />
 
       {/* Screenshot actions */}
       <div className="shrink-0 rounded-lg p-3 space-y-2" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}>

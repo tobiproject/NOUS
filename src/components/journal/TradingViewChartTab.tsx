@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { ExternalLink, Upload, ClipboardPaste, Check, ImageIcon } from 'lucide-react'
+import { ExternalLink, Upload, Check, ImageIcon, Command } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -109,6 +109,25 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     }
   }, [isActive, symbol])
 
+  // Listen for Cmd+V paste when tab is active — works in Safari too
+  useEffect(() => {
+    if (!isActive) return
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault()
+          const file = item.getAsFile()
+          if (file) uploadFile(file)
+          return
+        }
+      }
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [isActive, uploadFile])
+
   const uploadFile = useCallback(async (file: File) => {
     setUploading(true)
     toast.loading('Wird hochgeladen…', { id: 'chart-upload' })
@@ -153,28 +172,6 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     onScreenshotAdded?.(publicUrl)
   }, [tradeId, onScreenshotAdded])
 
-  const handlePasteImage = useCallback(async () => {
-    if (!navigator.clipboard?.read) {
-      toast.error('Clipboard-Zugriff nicht verfügbar — bitte manuell hochladen')
-      return
-    }
-    try {
-      const items = await navigator.clipboard.read()
-      for (const item of items) {
-        const imageType = item.types.find(t => t.startsWith('image/'))
-        if (imageType) {
-          const blob = await item.getType(imageType)
-          const file = new File([blob], `chart-${Date.now()}.png`, { type: imageType })
-          await uploadFile(file)
-          return
-        }
-      }
-      toast.error('Kein Bild in der Zwischenablage — erst "Copy image" in TradingView klicken')
-    } catch {
-      toast.error('Clipboard-Zugriff verweigert — bitte manuell hochladen')
-    }
-  }, [uploadFile])
-
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     const file = e.dataTransfer.files[0]
@@ -213,53 +210,56 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
       />
 
       {/* Screenshot actions */}
-      <div className="shrink-0 rounded-lg p-3 space-y-2.5" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}>
-        <p className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>
-          Screenshot speichern
-        </p>
-
-        {/* Step instructions */}
-        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--fg-4)' }}>
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-3)', color: 'var(--fg-3)' }}>1</span>
-          Kamera-Icon im Chart klicken
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-3)', color: 'var(--fg-3)' }}>2</span>
-          <span style={{ color: 'var(--fg-2)' }}>"Copy image"</span> wählen
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-3)', color: 'var(--fg-3)' }}>3</span>
-          Hier einfügen ↓
+      <div className="shrink-0 rounded-lg p-3 space-y-2" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}>
+        {/* Steps */}
+        <div className="flex items-center gap-1.5 text-[11px] flex-wrap" style={{ color: 'var(--fg-4)' }}>
+          <span>📷 Kamera-Icon</span>
+          <span style={{ color: 'var(--fg-5)' }}>→</span>
+          <span style={{ color: 'var(--fg-2)' }}>"Copy image"</span>
+          <span style={{ color: 'var(--fg-5)' }}>→</span>
+          <span>zurück hier</span>
+          <span style={{ color: 'var(--fg-5)' }}>→</span>
+          <kbd
+            className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold"
+            style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--fg-2)' }}
+          >
+            ⌘V
+          </kbd>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Primary: paste image from clipboard */}
-          <button
-            onClick={handlePasteImage}
-            disabled={uploading}
-            className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg font-medium flex-1 justify-center transition-colors disabled:opacity-60"
+          {/* Primary: Cmd+V paste zone */}
+          <div
+            className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg flex-1 justify-center"
             style={{
-              background: 'rgba(41,98,255,0.12)',
-              border: '1px solid rgba(41,98,255,0.3)',
-              color: 'var(--brand-blue)',
+              background: uploading ? 'rgba(41,98,255,0.08)' : uploadedPreview ? 'rgba(34,197,94,0.08)' : 'rgba(41,98,255,0.08)',
+              border: `1px dashed ${uploading ? 'rgba(41,98,255,0.4)' : uploadedPreview ? 'rgba(34,197,94,0.4)' : 'rgba(41,98,255,0.3)'}`,
+              color: uploadedPreview ? '#22c55e' : 'var(--brand-blue)',
             }}
           >
             {uploading ? (
-              <span className="animate-pulse">Hochladen…</span>
+              <span className="animate-pulse text-xs">Hochladen…</span>
             ) : uploadedPreview ? (
-              <><Check size={12} /> Gespeichert</>
+              <><Check size={12} /> <span>Gespeichert — Details-Tab geöffnet</span></>
             ) : (
-              <><ClipboardPaste size={12} /> Bild einfügen (Zwischenablage)</>
+              <>
+                <Command size={11} />
+                <span>⌘V — Bild aus Zwischenablage einfügen</span>
+              </>
             )}
-          </button>
+          </div>
 
           {/* Fallback: file upload */}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg transition-colors disabled:opacity-60"
+            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg transition-colors disabled:opacity-60 shrink-0"
             style={{
               background: 'var(--bg-3)',
               border: '1px solid var(--border-1)',
               color: 'var(--fg-3)',
             }}
-            title="Datei hochladen"
+            title="Bilddatei hochladen"
           >
             <Upload size={11} />
             Datei
@@ -267,10 +267,9 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
         </div>
 
         {uploadedPreview && (
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2">
             <ImageIcon size={11} style={{ color: 'var(--fg-4)' }} />
             <img src={uploadedPreview} alt="Vorschau" className="h-8 rounded object-cover" style={{ border: '1px solid var(--border-1)' }} />
-            <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>Im Details-Tab sichtbar</span>
           </div>
         )}
       </div>

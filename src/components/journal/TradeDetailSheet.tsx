@@ -18,6 +18,7 @@ import { TradingViewChartTab } from './TradingViewChartTab'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
 import type { Trade } from '@/hooks/useTrades'
+import { useRiskConfig } from '@/hooks/useRiskConfig'
 
 const EMOTION_LABELS: Record<string, string> = {
   calm: 'Ruhig', focused: 'Fokussiert', nervous: 'Nervös',
@@ -67,11 +68,17 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, 
   const [cropStart, setCropStart] = useState<{ x: number; y: number } | null>(null)
   const [cropRect, setCropRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [targetRR, setTargetRR] = useState<number | null>(null)
   const lightboxImgRef = useRef<HTMLImageElement>(null)
+  const { fetchRiskConfig } = useRiskConfig()
 
   useEffect(() => {
     setLocalScreenshots(trade?.screenshot_urls ?? [])
   }, [trade?.id])
+
+  useEffect(() => {
+    fetchRiskConfig().then(cfg => setTargetRR(cfg?.min_rr_ratio ?? null))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleScreenshotAdded = (url: string) => {
     setLocalScreenshots(prev => {
@@ -214,9 +221,16 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, 
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">RR</p>
-                  <p className="text-xl font-bold tabular-nums">
+                  <p className={`text-xl font-bold tabular-nums ${
+                    trade.rr_ratio !== null && targetRR !== null
+                      ? trade.rr_ratio >= targetRR ? 'text-emerald-400' : 'text-red-400'
+                      : ''
+                  }`}>
                     {trade.rr_ratio !== null ? `1:${trade.rr_ratio}` : '–'}
                   </p>
+                  {targetRR !== null && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Ziel: 1:{targetRR}</p>
+                  )}
                 </div>
               </div>
 
@@ -362,6 +376,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, 
                 chartUrl={trade.chart_url}
                 isActive={activeTab === 'chart'}
                 onScreenshotAdded={handleScreenshotAdded}
+                targetRR={targetRR}
               />
             </TabsContent>
 

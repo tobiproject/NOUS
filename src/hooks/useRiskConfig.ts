@@ -12,6 +12,7 @@ export interface RiskConfig {
   max_daily_trades: number | null
   max_risk_per_trade_pct: number | null
   max_drawdown_pct: number | null
+  min_rr_ratio: number | null
   updated_at: string
 }
 
@@ -20,6 +21,7 @@ export interface RiskConfigInput {
   max_daily_trades?: number | null
   max_risk_per_trade_pct?: number | null
   max_drawdown_pct?: number | null
+  min_rr_ratio?: number | null
 }
 
 export function useRiskConfig() {
@@ -62,6 +64,7 @@ export function useRiskConfig() {
           max_daily_trades: input.max_daily_trades ?? null,
           max_risk_per_trade_pct: input.max_risk_per_trade_pct ?? null,
           max_drawdown_pct: input.max_drawdown_pct ?? null,
+          min_rr_ratio: input.min_rr_ratio ?? null,
         }, { onConflict: 'account_id' })
         .select()
         .single()

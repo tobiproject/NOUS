@@ -17,6 +17,7 @@ const schema = z.object({
   max_daily_trades: z.number().int('Muss eine ganze Zahl sein').positive('Muss > 0').max(999).optional(),
   max_risk_per_trade_pct: z.number().positive('Muss > 0').max(100).optional(),
   max_drawdown_pct: z.number().positive('Muss > 0').max(100).optional(),
+  min_rr_ratio: z.number().positive('Muss > 0').max(100).optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -36,6 +37,7 @@ export function RiskConfigForm({ config, isSaving, onSave }: Props) {
       max_daily_trades: undefined,
       max_risk_per_trade_pct: undefined,
       max_drawdown_pct: undefined,
+      min_rr_ratio: undefined,
     },
   })
 
@@ -46,6 +48,7 @@ export function RiskConfigForm({ config, isSaving, onSave }: Props) {
         max_daily_trades: config.max_daily_trades ?? undefined,
         max_risk_per_trade_pct: config.max_risk_per_trade_pct ?? undefined,
         max_drawdown_pct: config.max_drawdown_pct ?? undefined,
+        min_rr_ratio: config.min_rr_ratio ?? undefined,
       })
     }
   }, [config, form])
@@ -109,6 +112,7 @@ export function RiskConfigForm({ config, isSaving, onSave }: Props) {
               {numField('max_daily_trades', 'Max. Daily Trades', 'z.B. 3', 'Trades')}
               {numField('max_risk_per_trade_pct', 'Max. Risk / Trade', 'z.B. 2')}
               {numField('max_drawdown_pct', 'Max. Drawdown', 'z.B. 10')}
+              {numField('min_rr_ratio', 'Ziel-RRR (min.)', 'z.B. 1.5', 'R')}
             </div>
             <Button type="submit" disabled={isSaving} className="gap-2">
               {isSaving

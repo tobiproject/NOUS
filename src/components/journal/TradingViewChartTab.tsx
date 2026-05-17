@@ -63,9 +63,10 @@ interface Props {
   chartUrl?: string | null
   isActive: boolean
   onScreenshotAdded?: (url: string) => void
+  targetRR?: number | null
 }
 
-export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdded }: Props) {
+export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdded, targetRR }: Props) {
   const asset = trade.asset
   const uid = useId().replace(/:/g, '')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -252,6 +253,21 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
             value={`${trade.result_currency >= 0 ? '+' : ''}${trade.result_currency.toFixed(2)} €`}
             color={trade.result_currency > 0 ? 'var(--long)' : trade.result_currency < 0 ? 'var(--short)' : undefined}
           />
+        )}
+
+        {targetRR !== null && targetRR !== undefined && (
+          <>
+            <div className="w-px h-3 shrink-0" style={{ background: 'var(--border-1)' }} />
+            <RefVal
+              label="Ziel-RRR"
+              value={`1:${targetRR}`}
+              color={
+                trade.rr_ratio !== null
+                  ? trade.rr_ratio >= targetRR ? 'var(--long)' : 'var(--short)'
+                  : 'var(--fg-3)'
+              }
+            />
+          </>
         )}
       </div>
 

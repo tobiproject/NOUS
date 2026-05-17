@@ -80,12 +80,14 @@ export function RiskContent() {
     max_daily_trades?: number
     max_risk_per_trade_pct?: number
     max_drawdown_pct?: number
+    min_rr_ratio?: number
   }) => {
     const { data } = await saveRiskConfig({
       max_daily_loss_pct: values.max_daily_loss_pct ?? null,
       max_daily_trades: values.max_daily_trades ?? null,
       max_risk_per_trade_pct: values.max_risk_per_trade_pct ?? null,
       max_drawdown_pct: values.max_drawdown_pct ?? null,
+      min_rr_ratio: values.min_rr_ratio ?? null,
     })
     if (data) {
       setConfig(data)

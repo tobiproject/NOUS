@@ -360,19 +360,38 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
 
       {/* Screenshot lightbox */}
       <Dialog open={!!lightboxUrl} onOpenChange={closeLightbox}>
-        <DialogContent className="max-w-5xl p-0 bg-black border-border/60 [&>button]:hidden">
-          <div className="relative" style={{ lineHeight: 0 }}>
+        <DialogContent className="max-w-5xl p-0 border-border/60 [&>button]:hidden flex flex-col" style={{ background: '#111' }}>
+
+          {/* Top bar — always outside the image */}
+          <div className="flex items-center justify-between px-4 py-2.5 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            {cropMode ? (
+              <span className="text-sm font-medium text-white/70">Bereich mit der Maus auswählen</span>
+            ) : (
+              <span className="text-sm font-medium text-white/70">Screenshot</span>
+            )}
+            <button
+              onClick={closeLightbox}
+              className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-white/10 transition-colors"
+              style={{ color: 'rgba(255,255,255,0.6)' }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Image area */}
+          <div className="relative flex-1 min-h-0" style={{ lineHeight: 0 }}>
             {lightboxUrl && (
               <img
                 ref={lightboxImgRef}
                 src={lightboxUrl}
                 alt="Screenshot"
-                className="w-full h-auto max-h-[88vh] object-contain select-none"
+                className="w-full h-auto object-contain select-none"
+                style={{ maxHeight: 'calc(90vh - 110px)', display: 'block' }}
                 draggable={false}
               />
             )}
 
-            {/* Crop overlay */}
+            {/* Crop drag overlay */}
             {cropMode && lightboxUrl && (
               <div
                 className="absolute inset-0"
@@ -393,64 +412,56 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
                 {cropRect && cropRect.w > 5 && cropRect.h > 5 && (
                   <div
                     className="absolute border-2 border-white pointer-events-none"
-                    style={{ left: cropRect.x, top: cropRect.y, width: cropRect.w, height: cropRect.h, boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)' }}
+                    style={{ left: cropRect.x, top: cropRect.y, width: cropRect.w, height: cropRect.h, boxShadow: '0 0 0 9999px rgba(0,0,0,0.6)' }}
                   />
                 )}
               </div>
             )}
-
-            {/* Top-right: close */}
-            <button
-              onClick={closeLightbox}
-              className="absolute top-3 right-3 flex items-center justify-center w-8 h-8 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors z-10"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            {/* Bottom bar: actions */}
-            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 z-10" style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.75))' }}>
-              {cropMode ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/70">Bereich ziehen → bestätigen</span>
-                  <button
-                    onClick={saveCrop}
-                    disabled={!cropRect || cropRect.w < 10 || isProcessing}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-40 transition-opacity"
-                    style={{ background: 'var(--brand-blue)', color: '#fff' }}
-                  >
-                    {isProcessing ? <Loader2 size={12} className="animate-spin" /> : <Crop size={12} />}
-                    Zuschnitt speichern
-                  </button>
-                  <button
-                    onClick={() => { setCropMode(false); setCropRect(null) }}
-                    className="text-xs px-3 py-1.5 rounded-lg"
-                    style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
-                  >
-                    Abbrechen
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCropMode(true)}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
-                    style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
-                  >
-                    <Crop size={12} /> Zuschneiden
-                  </button>
-                  <button
-                    onClick={() => lightboxUrl && deleteScreenshot(lightboxUrl)}
-                    disabled={isProcessing}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg disabled:opacity-50"
-                    style={{ background: 'rgba(239,68,68,0.25)', color: '#f87171' }}
-                  >
-                    {isProcessing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                    Löschen
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
+
+          {/* Bottom action bar — always outside the image */}
+          <div className="flex items-center gap-2 px-4 py-3 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            {cropMode ? (
+              <>
+                <button
+                  onClick={saveCrop}
+                  disabled={!cropRect || cropRect.w < 10 || isProcessing}
+                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium disabled:opacity-40 transition-opacity"
+                  style={{ background: 'var(--brand-blue)', color: '#fff' }}
+                >
+                  {isProcessing ? <Loader2 size={13} className="animate-spin" /> : <Crop size={13} />}
+                  Zuschnitt speichern
+                </button>
+                <button
+                  onClick={() => { setCropMode(false); setCropRect(null) }}
+                  className="text-sm px-4 py-2 rounded-lg"
+                  style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }}
+                >
+                  Abbrechen
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setCropMode(true)}
+                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg"
+                  style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)' }}
+                >
+                  <Crop size={13} /> Zuschneiden
+                </button>
+                <button
+                  onClick={() => lightboxUrl && deleteScreenshot(lightboxUrl)}
+                  disabled={isProcessing}
+                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg disabled:opacity-50"
+                  style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}
+                >
+                  {isProcessing ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  Löschen
+                </button>
+              </>
+            )}
+          </div>
+
         </DialogContent>
       </Dialog>
     </>

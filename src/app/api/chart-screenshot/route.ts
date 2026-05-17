@@ -25,8 +25,8 @@ export async function POST(req: NextRequest) {
       range: '1D',
     }).toString()
 
-    // thum.io: free, no API key, no signup — renders JS pages
-    const thumbUrl = `https://image.thum.io/get/width/1280/crop/688/noanimate/${encodeURIComponent(tvUrl)}`
+    // thum.io: free, no API key, no signup — URL placed raw at the end (not encoded)
+    const thumbUrl = `https://image.thum.io/get/width/1280/crop/688/${tvUrl}`
 
     const ssRes = await fetch(thumbUrl, {
       signal: AbortSignal.timeout(35_000),

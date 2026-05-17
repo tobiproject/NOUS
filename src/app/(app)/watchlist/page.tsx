@@ -10,6 +10,7 @@ import { useAccountContext } from '@/contexts/AccountContext'
 import { cn } from '@/lib/utils'
 import { searchAssets, type AssetEntry } from '@/lib/asset-database'
 import { DailyWatchlistPanel } from '@/components/watchlist/DailyWatchlistPanel'
+import { TradingViewMarketWidget } from '@/components/watchlist/TradingViewMarketWidget'
 
 // ─── Category metadata ────────────────────────────────────────────────────────
 
@@ -715,6 +716,17 @@ export default function WatchlistPage() {
               </div>
             )}
           </div>
+
+          {/* Live Preise (TradingView) */}
+          {items.length > 0 && (
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-raw)' }}>
+              <div className="px-4 pt-3 pb-2" style={{ background: 'var(--bg-2)' }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>Live Preise</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--fg-4)' }}>Powered by TradingView</p>
+              </div>
+              <TradingViewMarketWidget items={items} />
+            </div>
+          )}
         </TabsContent>
 
         {/* ── Heutige Trading-Watchlist ── */}

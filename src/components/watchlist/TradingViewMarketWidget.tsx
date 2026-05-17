@@ -5,17 +5,22 @@ import type { WatchlistItem } from '@/hooks/useWatchlist'
 
 // Map our symbols to TradingView's exchange:symbol format
 const FUTURES_MAP: Record<string, string> = {
-  NQ: 'CME_MINI:NQ1!', MNQ: 'CME_MINI:MNQ1!',
-  ES: 'CME_MINI:ES1!', MES: 'CME_MINI:MES1!',
-  YM: 'CBOT_MINI:YM1!', MYM: 'CBOT_MINI:MYM1!',
-  RTY: 'CME_MINI:RTY1!',
-  CL: 'NYMEX:CL1!', MCL: 'NYMEX:MCL1!',
-  NG: 'NYMEX:NG1!',
-  GC: 'COMEX:GC1!', MGC: 'COMEX:MGC1!',
-  SI: 'COMEX:SI1!', SIL: 'COMEX:SIL1!',
-  HG: 'COMEX:HG1!',
-  ZC: 'CBOT:ZC1!', ZW: 'CBOT:ZW1!', ZS: 'CBOT:ZS1!',
-  ZN: 'CBOT:ZN1!', ZB: 'CBOT:ZB1!',
+  // E-mini & Micro Index Futures → underlying index (more reliable in widget)
+  NQ: 'NASDAQ:NDX', MNQ: 'NASDAQ:NDX',
+  ES: 'SP:SPX', MES: 'SP:SPX',
+  YM: 'DJ:DJI', MYM: 'DJ:DJI',
+  RTY: 'TVC:RUT',
+  // Energy
+  CL: 'TVC:USOIL', MCL: 'TVC:USOIL',
+  NG: 'TVC:NATURALGAS',
+  // Metals
+  GC: 'TVC:GOLD', MGC: 'TVC:GOLD',
+  SI: 'TVC:SILVER', SIL: 'TVC:SILVER',
+  HG: 'TVC:COPPER',
+  // Agriculture
+  ZC: 'TVC:CORN', ZW: 'TVC:WHEAT', ZS: 'TVC:SOYBEANS',
+  // Bonds
+  ZN: 'TVC:US10Y', ZB: 'TVC:US30Y',
 }
 
 const INDICES_MAP: Record<string, string> = {

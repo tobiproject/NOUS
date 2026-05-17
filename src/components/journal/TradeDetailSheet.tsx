@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { Edit2, Trash2, TrendingUp, TrendingDown, X } from 'lucide-react'
+import { Edit2, Trash2, TrendingUp, TrendingDown, X, Crop, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,8 @@ import { TradeAnalysisTab } from '@/components/ai/TradeAnalysisTab'
 import { TradeSimulationTab } from './TradeSimulationTab'
 import { TradeReviewTab } from './TradeReviewTab'
 import { TradingViewChartTab } from './TradingViewChartTab'
+import { createClient } from '@/lib/supabase'
+import { toast } from 'sonner'
 import type { Trade } from '@/hooks/useTrades'
 
 const EMOTION_LABELS: Record<string, string> = {
@@ -58,6 +60,11 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('detail')
   const [localScreenshots, setLocalScreenshots] = useState<string[]>(trade?.screenshot_urls ?? [])
+  const [cropMode, setCropMode] = useState(false)
+  const [cropStart, setCropStart] = useState<{ x: number; y: number } | null>(null)
+  const [cropRect, setCropRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const lightboxImgRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     setLocalScreenshots(trade?.screenshot_urls ?? [])
@@ -67,6 +74,64 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
     setLocalScreenshots(prev => [...prev, url])
     setActiveTab('detail')
   }
+
+  const closeLightbox = () => {
+    setLightboxUrl(null)
+    setCropMode(false)
+    setCropRect(null)
+    setCropStart(null)
+  }
+
+  const deleteScreenshot = useCallback(async (url: string) => {
+    setIsProcessing(true)
+    const supabase = createClient()
+    const pathMatch = url.match(/\/storage\/v1\/object\/public\/screenshots\/(.+)/)
+    if (pathMatch) await supabase.storage.from('screenshots').remove([pathMatch[1]])
+    const newUrls = localScreenshots.filter(u => u !== url)
+    await supabase.from('trades').update({ screenshot_urls: newUrls }).eq('id', trade.id)
+    setLocalScreenshots(newUrls)
+    closeLightbox()
+    setIsProcessing(false)
+    toast.success('Screenshot gelöscht')
+  }, [localScreenshots, trade.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveCrop = useCallback(async () => {
+    if (!cropRect || !lightboxUrl || !lightboxImgRef.current) return
+    setIsProcessing(true)
+    try {
+      const resp = await fetch(lightboxUrl)
+      const blob = await resp.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const img = new Image()
+      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = blobUrl })
+      const rendered = lightboxImgRef.current.getBoundingClientRect()
+      const sx = img.naturalWidth / rendered.width
+      const sy = img.naturalHeight / rendered.height
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(cropRect.w * sx)
+      canvas.height = Math.round(cropRect.h * sy)
+      canvas.getContext('2d')!.drawImage(img, Math.round(cropRect.x * sx), Math.round(cropRect.y * sy), canvas.width, canvas.height, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(blobUrl)
+      const croppedBlob = await new Promise<Blob>((res, rej) => canvas.toBlob(b => b ? res(b) : rej(), 'image/png'))
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error()
+      const path = `${user.id}/${trade.id}/${Date.now()}_cropped.png`
+      await supabase.storage.from('screenshots').upload(path, croppedBlob, { contentType: 'image/png' })
+      const { data: { publicUrl } } = supabase.storage.from('screenshots').getPublicUrl(path)
+      const pathMatch = lightboxUrl.match(/\/storage\/v1\/object\/public\/screenshots\/(.+)/)
+      if (pathMatch) await supabase.storage.from('screenshots').remove([pathMatch[1]])
+      const newUrls = [...localScreenshots.filter(u => u !== lightboxUrl), publicUrl]
+      await supabase.from('trades').update({ screenshot_urls: newUrls }).eq('id', trade.id)
+      setLocalScreenshots(newUrls)
+      closeLightbox()
+      toast.success('Screenshot zugeschnitten ✓')
+    } catch {
+      toast.error('Zuschneiden fehlgeschlagen')
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [cropRect, lightboxUrl, localScreenshots, trade.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!trade) return null
 
@@ -238,13 +303,19 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
                     {localScreenshots.length > 0 && (
                       <div className="grid grid-cols-2 gap-2">
                         {localScreenshots.map((url, i) => (
-                          <button
-                            key={url}
-                            onClick={() => setLightboxUrl(url)}
-                            className="relative aspect-video rounded-md overflow-hidden border border-border/60 hover:border-primary/50 transition-colors bg-muted"
-                          >
-                            <img src={url} alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover" />
-                          </button>
+                          <div key={url} className="relative group aspect-video rounded-md overflow-hidden border border-border/60 bg-muted">
+                            <button onClick={() => setLightboxUrl(url)} className="w-full h-full">
+                              <img src={url} alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover" />
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); deleteScreenshot(url) }}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ background: 'rgba(0,0,0,0.7)' }}
+                              title="Löschen"
+                            >
+                              <X className="h-3 w-3 text-white" />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -287,18 +358,97 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
       </Dialog>
 
       {/* Screenshot lightbox */}
-      <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
+      <Dialog open={!!lightboxUrl} onOpenChange={closeLightbox}>
         <DialogContent className="max-w-5xl p-0 bg-black border-border/60 [&>button]:hidden">
-          <div className="relative">
+          <div className="relative" style={{ lineHeight: 0 }}>
             {lightboxUrl && (
-              <img src={lightboxUrl} alt="Screenshot" className="w-full h-auto max-h-[88vh] object-contain" />
+              <img
+                ref={lightboxImgRef}
+                src={lightboxUrl}
+                alt="Screenshot"
+                className="w-full h-auto max-h-[88vh] object-contain select-none"
+                draggable={false}
+              />
             )}
+
+            {/* Crop overlay */}
+            {cropMode && lightboxUrl && (
+              <div
+                className="absolute inset-0"
+                style={{ cursor: 'crosshair' }}
+                onMouseDown={e => {
+                  const r = e.currentTarget.getBoundingClientRect()
+                  setCropStart({ x: e.clientX - r.left, y: e.clientY - r.top })
+                  setCropRect(null)
+                }}
+                onMouseMove={e => {
+                  if (!cropStart) return
+                  const r = e.currentTarget.getBoundingClientRect()
+                  const x2 = e.clientX - r.left, y2 = e.clientY - r.top
+                  setCropRect({ x: Math.min(cropStart.x, x2), y: Math.min(cropStart.y, y2), w: Math.abs(x2 - cropStart.x), h: Math.abs(y2 - cropStart.y) })
+                }}
+                onMouseUp={() => setCropStart(null)}
+              >
+                {cropRect && cropRect.w > 5 && cropRect.h > 5 && (
+                  <div
+                    className="absolute border-2 border-white pointer-events-none"
+                    style={{ left: cropRect.x, top: cropRect.y, width: cropRect.w, height: cropRect.h, boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)' }}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Top-right: close */}
             <button
-              onClick={() => setLightboxUrl(null)}
-              className="absolute top-3 right-3 flex items-center justify-center w-8 h-8 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+              onClick={closeLightbox}
+              className="absolute top-3 right-3 flex items-center justify-center w-8 h-8 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors z-10"
             >
               <X className="h-4 w-4" />
             </button>
+
+            {/* Bottom bar: actions */}
+            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 z-10" style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.75))' }}>
+              {cropMode ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-white/70">Bereich ziehen → bestätigen</span>
+                  <button
+                    onClick={saveCrop}
+                    disabled={!cropRect || cropRect.w < 10 || isProcessing}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-40 transition-opacity"
+                    style={{ background: 'var(--brand-blue)', color: '#fff' }}
+                  >
+                    {isProcessing ? <Loader2 size={12} className="animate-spin" /> : <Crop size={12} />}
+                    Zuschnitt speichern
+                  </button>
+                  <button
+                    onClick={() => { setCropMode(false); setCropRect(null) }}
+                    className="text-xs px-3 py-1.5 rounded-lg"
+                    style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCropMode(true)}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
+                    style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
+                  >
+                    <Crop size={12} /> Zuschneiden
+                  </button>
+                  <button
+                    onClick={() => lightboxUrl && deleteScreenshot(lightboxUrl)}
+                    disabled={isProcessing}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg disabled:opacity-50"
+                    style={{ background: 'rgba(239,68,68,0.25)', color: '#f87171' }}
+                  >
+                    {isProcessing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                    Löschen
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

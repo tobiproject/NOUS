@@ -83,6 +83,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
   }
 
   const deleteScreenshot = useCallback(async (url: string) => {
+    if (!trade) return
     setIsProcessing(true)
     const supabase = createClient()
     const pathMatch = url.match(/\/storage\/v1\/object\/public\/screenshots\/(.+)/)
@@ -93,10 +94,10 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
     closeLightbox()
     setIsProcessing(false)
     toast.success('Screenshot gelöscht')
-  }, [localScreenshots, trade.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [localScreenshots, trade]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveCrop = useCallback(async () => {
-    if (!cropRect || !lightboxUrl || !lightboxImgRef.current) return
+    if (!cropRect || !lightboxUrl || !lightboxImgRef.current || !trade) return
     setIsProcessing(true)
     try {
       const resp = await fetch(lightboxUrl)

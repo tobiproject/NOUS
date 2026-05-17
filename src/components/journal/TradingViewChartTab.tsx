@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { ExternalLink } from 'lucide-react'
+import { useEffect, useRef, useCallback } from 'react'
+import { ExternalLink, Upload } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 const FUTURES_MAP: Record<string, string> = {
   NQ: 'NASDAQ:NDX', MNQ: 'NASDAQ:NDX',
@@ -51,11 +53,15 @@ function toTvUrl(asset: string): string {
 
 interface Props {
   asset: string
+  tradeId: string
+  accountId: string
   isActive: boolean
+  onScreenshotAdded?: () => void
 }
 
-export function TradingViewChartTab({ asset, isActive }: Props) {
+export function TradingViewChartTab({ asset, tradeId, accountId, isActive, onScreenshotAdded }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const symbol = toTvSymbol(asset)
   const tvUrl = toTvUrl(asset)
 
@@ -89,7 +95,7 @@ export function TradingViewChartTab({ asset, isActive }: Props) {
       range: '1D',
       hide_side_toolbar: false,
       allow_symbol_change: false,
-      save_image: false,
+      save_image: true,
       support_host: 'https://www.tradingview.com',
     })
 
@@ -100,33 +106,124 @@ export function TradingViewChartTab({ asset, isActive }: Props) {
     }
   }, [isActive, symbol])
 
+  const handleFileUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Nur Bilddateien erlaubt')
+      return
+    }
+
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const ext = file.name.split('.').pop() ?? 'png'
+    const path = `${user.id}/${accountId}/${tradeId}/chart-${Date.now()}.${ext}`
+
+    toast.loading('Wird hochgeladen…', { id: 'chart-upload' })
+
+    const { error: uploadError } = await supabase.storage
+      .from('trade-screenshots')
+      .upload(path, file, { upsert: false })
+
+    if (uploadError) {
+      toast.error('Upload fehlgeschlagen', { id: 'chart-upload' })
+      return
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('trade-screenshots')
+      .getPublicUrl(path)
+
+    const { data: existing } = await supabase
+      .from('trades')
+      .select('screenshot_urls')
+      .eq('id', tradeId)
+      .single()
+
+    const current: string[] = existing?.screenshot_urls ?? []
+    const { error: updateError } = await supabase
+      .from('trades')
+      .update({ screenshot_urls: [...current, publicUrl] })
+      .eq('id', tradeId)
+
+    if (updateError) {
+      toast.error('Speichern fehlgeschlagen', { id: 'chart-upload' })
+      return
+    }
+
+    toast.success('Chart-Screenshot gespeichert', { id: 'chart-upload' })
+    onScreenshotAdded?.()
+  }, [tradeId, accountId, onScreenshotAdded])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file) handleFileUpload(file)
+  }, [handleFileUpload])
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleFileUpload(file)
+    e.target.value = ''
+  }, [handleFileUpload])
+
   return (
-    <div className="flex flex-col h-full gap-3">
+    <div className="flex flex-col gap-3" style={{ height: 'calc(90vh - 180px)' }}>
+      {/* Toolbar */}
       <div className="flex items-center justify-between shrink-0">
         <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>
           {asset} · {symbol}
         </span>
-        <a
-          href={tvUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors"
-          style={{
-            background: 'rgba(41,98,255,0.10)',
-            border: '1px solid rgba(41,98,255,0.25)',
-            color: 'var(--brand-blue)',
-          }}
-        >
-          <ExternalLink size={11} />
-          In TradingView öffnen
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors"
+            style={{
+              background: 'var(--bg-2)',
+              border: '1px solid var(--border-1)',
+              color: 'var(--fg-2)',
+            }}
+          >
+            <Upload size={11} />
+            Screenshot hinzufügen
+          </button>
+          <a
+            href={tvUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors"
+            style={{
+              background: 'rgba(41,98,255,0.10)',
+              border: '1px solid rgba(41,98,255,0.25)',
+              color: 'var(--brand-blue)',
+            }}
+          >
+            <ExternalLink size={11} />
+            In TradingView öffnen
+          </a>
+        </div>
       </div>
 
+      {/* Chart */}
       <div
         ref={containerRef}
         className="tradingview-widget-container flex-1 rounded-xl overflow-hidden"
-        style={{ minHeight: 400 }}
+        onDrop={handleDrop}
+        onDragOver={e => e.preventDefault()}
       />
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleInputChange}
+      />
+
+      <p className="text-xs shrink-0" style={{ color: 'var(--fg-4)' }}>
+        Tipp: Nutze das 📷-Icon im Chart, um einen Screenshot zu speichern — dann hier hochladen.
+      </p>
     </div>
   )
 }

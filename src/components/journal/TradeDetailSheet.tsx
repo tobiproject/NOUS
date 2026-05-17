@@ -243,8 +243,13 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
               )}
             </TabsContent>
 
-            <TabsContent value="chart" className="flex-1 px-6 py-4 mt-0 flex flex-col">
-              <TradingViewChartTab asset={trade.asset} isActive={activeTab === 'chart'} />
+            <TabsContent value="chart" className="flex-1 px-6 py-4 mt-0 flex flex-col overflow-hidden">
+              <TradingViewChartTab
+                asset={trade.asset}
+                tradeId={trade.id}
+                accountId={trade.account_id}
+                isActive={activeTab === 'chart'}
+              />
             </TabsContent>
 
             <TabsContent value="review" className="flex-1 overflow-y-auto px-6 py-4 mt-0">

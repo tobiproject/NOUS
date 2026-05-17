@@ -11,10 +11,6 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Nicht eingeloggt' }, { status: 401 })
 
-    const key = process.env.SCREENSHOT_ONE_KEY
-    if (!key) return NextResponse.json({ error: 'no_key' }, { status: 503 })
-
-    // TradingView embed widget — shows only the chart, no TV header/navigation
     const tvUrl = 'https://www.tradingview.com/embed-widget/advanced-chart/?' + new URLSearchParams({
       locale: 'de_DE',
       symbol,
@@ -29,33 +25,15 @@ export async function POST(req: NextRequest) {
       range: '1D',
     }).toString()
 
-    const params = new URLSearchParams({
-      access_key: key,
-      url: tvUrl,
-      viewport_width: '1280',
-      viewport_height: '720',
-      device_scale_factor: '2',
-      format: 'png',
-      block_ads: 'true',
-      block_cookie_banners: 'true',
-      dark_mode: 'true',
-      // Wait for chart candles to fully render
-      delay: '5',
-      timeout: '30',
-      // Clip off the small TradingView copyright bar at the bottom (~32px)
-      clip_x: '0',
-      clip_y: '0',
-      clip_width: '1280',
-      clip_height: '688',
-    })
+    // thum.io: free, no API key, no signup — renders JS pages
+    const thumbUrl = `https://image.thum.io/get/width/1280/crop/688/noanimate/${encodeURIComponent(tvUrl)}`
 
-    const ssRes = await fetch(`https://api.screenshotone.com/take?${params}`, {
+    const ssRes = await fetch(thumbUrl, {
       signal: AbortSignal.timeout(35_000),
     })
 
     if (!ssRes.ok) {
-      const err = await ssRes.text()
-      console.error('[chart-screenshot] ScreenshotOne error:', err)
+      console.error('[chart-screenshot] thum.io error:', ssRes.status)
       return NextResponse.json({ error: `Screenshot fehlgeschlagen: ${ssRes.status}` }, { status: 500 })
     }
 

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Loader2, Upload, Sparkles, Check } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Loader2, Upload, Sparkles, Check, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { createClient } from '@/lib/supabase'
 import type { Trade } from '@/hooks/useTrades'
 
 interface Props {
@@ -13,14 +14,19 @@ interface Props {
 }
 
 export function TradeSimulationTab({ trade, screenshots = [], targetRR }: Props) {
-  const [maxRunPrice, setMaxRunPrice] = useState('')
-  const [trueRR, setTrueRR] = useState<number | null>(null)
+  const [maxRunPrice, setMaxRunPrice] = useState(() =>
+    trade.max_run_price !== null && trade.max_run_price !== undefined ? String(trade.max_run_price) : ''
+  )
+  const [trueRR, setTrueRR] = useState<number | null>(() => trade.true_rr ?? null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<string | null>(null)
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null)
   const [fetchingUrl, setFetchingUrl] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [savedAt, setSavedAt] = useState<Date | null>(null)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const sl = trade.sl_price
   const entry = trade.entry_price
@@ -37,10 +43,23 @@ export function TradeSimulationTab({ trade, screenshots = [], targetRR }: Props)
     return Math.round((favorable / slDistance) * 100) / 100
   }
 
+  const saveToDb = async (price: number, rr: number) => {
+    setSaving(true)
+    const supabase = createClient()
+    await supabase.from('trades').update({ max_run_price: price, true_rr: rr }).eq('id', trade.id)
+    setSaving(false)
+    setSavedAt(new Date())
+  }
+
   const handlePriceChange = (val: string) => {
     setMaxRunPrice(val)
     const num = parseFloat(val)
-    setTrueRR(isNaN(num) ? null : calcTrueRR(num))
+    const rr = isNaN(num) ? null : calcTrueRR(num)
+    setTrueRR(rr)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    if (!isNaN(num) && rr !== null) {
+      saveTimer.current = setTimeout(() => saveToDb(num, rr), 800)
+    }
   }
 
   const handleScreenshot = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,9 +167,22 @@ export function TradeSimulationTab({ trade, screenshots = [], targetRR }: Props)
 
       {/* Manual input */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--fg-3)' }}>
-          Max. Kurs-Bewegung {trade.direction === 'long' ? '(Hochpunkt)' : '(Tiefpunkt)'}
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--fg-3)' }}>
+            Max. Kurs-Bewegung {trade.direction === 'long' ? '(Hochpunkt)' : '(Tiefpunkt)'}
+          </label>
+          {saving ? (
+            <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--fg-4)' }}>
+              <Loader2 size={10} className="animate-spin" /> Speichern…
+            </span>
+          ) : savedAt ? (
+            <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--long)' }}>
+              <Save size={10} /> Gespeichert
+            </span>
+          ) : trade.max_run_price ? (
+            <span className="text-[11px]" style={{ color: 'var(--fg-4)' }}>Gespeicherter Wert</span>
+          ) : null}
+        </div>
         <Input
           type="number"
           step="any"

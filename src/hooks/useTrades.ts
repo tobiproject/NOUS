@@ -31,6 +31,8 @@ export interface Trade {
   screenshot_urls: string[]
   chart_url: string | null
   review_notes: string | null
+  max_run_price: number | null
+  true_rr: number | null
   what_went_well: string | null
   what_to_improve: string | null
   lesson_learned: string | null

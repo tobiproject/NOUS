@@ -117,12 +117,17 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { toast.error('Nicht eingeloggt', { id: 'chart-upload' }); setUploading(false); return }
 
-    const ext = file.name.split('.').pop() ?? 'png'
+    const mimeToExt: Record<string, string> = {
+      'image/png': 'png', 'image/jpeg': 'jpg',
+      'image/webp': 'webp', 'image/gif': 'gif', 'image/heic': 'heic',
+    }
+    const ext = mimeToExt[file.type] ?? file.name.split('.').pop() ?? 'png'
+    const contentType = file.type || 'image/png'
     const path = `${user.id}/${tradeId}/${Date.now()}.${ext}`
 
     const { error: uploadError } = await supabase.storage
       .from('screenshots')
-      .upload(path, file, { upsert: false })
+      .upload(path, file, { upsert: false, contentType })
 
     if (uploadError) {
       toast.error(`Upload fehlgeschlagen: ${uploadError.message}`, { id: 'chart-upload' })

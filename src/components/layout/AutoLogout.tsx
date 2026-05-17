@@ -7,11 +7,9 @@ const AUTH_PAGES = ['/login', '/register', '/reset-password']
 
 function clearSupabaseSession() {
   try {
-    // localStorage synchron löschen
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith('sb-')) localStorage.removeItem(k)
     })
-    // Cookies synchron löschen (document.cookie ist synchron)
     document.cookie.split(';').forEach(c => {
       const name = c.split('=')[0].trim()
       if (name.startsWith('sb-')) {
@@ -26,13 +24,22 @@ export function AutoLogout() {
   const pathname = usePathname()
 
   useEffect(() => {
-    // Auf Auth-Seiten kein Listener — window.location.href dort würde pagehide triggern
     if (AUTH_PAGES.some(p => pathname.startsWith(p))) return
 
+    // pagehide with persisted:false fires on iOS when the app is truly closed
+    // (home button / app switcher). On desktop Safari and Chrome it also fires
+    // on normal reloads — so we restrict this to iOS only to avoid clearing the
+    // session on every page reload.
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    if (!isIOS) return
+
     const handleHide = (e: PageTransitionEvent) => {
-      // persisted: true = nur Hintergrund (Home-Button) → kein Logout
-      // persisted: false = App wirklich beendet (Dock, App-Switcher) → Logout
       if (!e.persisted) {
+        // Skip if a reload was triggered intentionally (e.g. update banner)
+        if (sessionStorage.getItem('nous-skip-inactivity-logout')) {
+          sessionStorage.removeItem('nous-skip-inactivity-logout')
+          return
+        }
         clearSupabaseSession()
       }
     }

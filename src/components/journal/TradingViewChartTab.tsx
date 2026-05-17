@@ -92,7 +92,7 @@ export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScre
       theme: 'dark',
       style: '1',
       locale: 'de_DE',
-      backgroundColor: 'rgba(0,0,0,0)',
+      backgroundColor: 'rgba(19,23,34,1)',
       gridColor: 'rgba(255,255,255,0.06)',
       withdateranges: true,
       range: '1D',

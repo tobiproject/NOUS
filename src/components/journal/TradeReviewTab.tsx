@@ -16,6 +16,7 @@ interface ReviewValues {
 
 interface Props {
   trade: Trade
+  screenshots?: string[]
   onSaved?: (updated: ReviewValues) => void
 }
 
@@ -58,7 +59,7 @@ const FIELDS: ReviewField[] = [
   },
 ]
 
-export function TradeReviewTab({ trade, onSaved }: Props) {
+export function TradeReviewTab({ trade, screenshots = [], onSaved }: Props) {
   const [values, setValues] = useState<ReviewValues>({
     what_went_well:  trade.what_went_well ?? '',
     what_to_improve: trade.what_to_improve ?? '',
@@ -95,6 +96,27 @@ export function TradeReviewTab({ trade, onSaved }: Props) {
 
   return (
     <div className="space-y-5">
+      {/* Chart-Screenshots als Referenz */}
+      {screenshots.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>
+            Chart-Screenshots
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {screenshots.map((url, i) => (
+              <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                <img
+                  src={url}
+                  alt={`Screenshot ${i + 1}`}
+                  className="h-28 rounded-lg object-cover"
+                  style={{ border: '1px solid var(--border-1)' }}
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--fg-4)' }}>
           Nachbereitung

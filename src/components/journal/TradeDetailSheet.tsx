@@ -81,7 +81,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
     <>
       {/* Centered trade detail modal */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl w-full p-0 gap-0 flex flex-col max-h-[90vh] [&>button:last-child]:hidden">
+        <DialogContent className="max-w-4xl w-full p-0 gap-0 flex flex-col max-h-[90vh] [&>button:last-child]:hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 shrink-0">
             <div className="flex items-center gap-2">
@@ -264,7 +264,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
             </TabsContent>
 
             <TabsContent value="review" className="flex-1 overflow-y-auto px-6 py-4 mt-0">
-              <TradeReviewTab trade={trade} />
+              <TradeReviewTab trade={trade} screenshots={localScreenshots} />
             </TabsContent>
 
             <TabsContent value="ki" className="flex-1 overflow-y-auto px-6 py-4 mt-0">

@@ -205,7 +205,7 @@ export function RrrAnalyseTab({ trades }: Props) {
                 <YAxis tick={{ fontSize: 11, fill: 'var(--fg-4)' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: 6, fontSize: 12 }}
-                  formatter={(v: number) => [`${v} Trades`, 'Anzahl']}
+                  formatter={(v) => [`${String(v ?? 0)} Trades`, 'Anzahl']}
                 />
                 <ReferenceLine x="1R" stroke="var(--brand-blue)" strokeDasharray="3 3" strokeWidth={1.5} />
                 <Bar dataKey="count" radius={[3, 3, 0, 0]}>

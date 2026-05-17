@@ -71,6 +71,21 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
 
     container.innerHTML = ''
 
+    // Intercept iframe creation so allow-attribute is set BEFORE content loads.
+    // Safari only respects clipboard-write/downloads permissions when the attribute
+    // exists at load time — MutationObserver / setTimeout are always too late.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const origCreate = document.createElement.bind(document) as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(document as any).createElement = (tag: string, opts?: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const el = origCreate(tag, opts) as any
+      if (tag.toLowerCase() === 'iframe') {
+        el.setAttribute('allow', 'clipboard-read; clipboard-write; downloads; fullscreen')
+      }
+      return el
+    }
+
     const widgetDiv = document.createElement('div')
     widgetDiv.className = 'tradingview-widget-container__widget'
     widgetDiv.style.cssText = 'height:calc(100% - 32px);width:100%'
@@ -96,17 +111,18 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     })
     container.appendChild(script)
 
-    // Set permissions on TV iframe as soon as it's added to the DOM (before it loads)
-    const observer = new MutationObserver(() => {
-      container.querySelectorAll('iframe').forEach(f => {
-        if (!f.getAttribute('allow')?.includes('clipboard-write')) {
-          f.setAttribute('allow', 'clipboard-read; clipboard-write; downloads; fullscreen')
-        }
-      })
-    })
-    observer.observe(container, { childList: true, subtree: true })
+    // Restore original createElement once TV widget had time to create its iframe
+    const restoreTimer = setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(document as any).createElement = origCreate
+    }, 3000)
 
-    return () => { observer.disconnect(); container.innerHTML = '' }
+    return () => {
+      clearTimeout(restoreTimer)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(document as any).createElement = origCreate
+      container.innerHTML = ''
+    }
   }, [isActive, symbol, uid])
 
   const uploadFile = useCallback(async (file: File) => {

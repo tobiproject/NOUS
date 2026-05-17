@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState, useId } from 'react'
-import { ExternalLink, Upload, Check, ImageIcon, Command } from 'lucide-react'
+import { ExternalLink, Upload, Check, ImageIcon, Command, Camera, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -59,6 +59,7 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
   const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [capturing, setCapturing] = useState(false)
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null)
   const symbol = toTvSymbol(asset)
   const tvUrl = `https://www.tradingview.com/chart/?symbol=${symbol.replace(':', '%3A')}`
@@ -147,6 +148,27 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     onScreenshotAdded?.(publicUrl)
   }, [tradeId, onScreenshotAdded])
 
+  const captureServerScreenshot = useCallback(async () => {
+    setCapturing(true)
+    toast.loading('Chart wird fotografiert…', { id: 'chart-capture' })
+    try {
+      const res = await fetch('/api/chart-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol, tradeId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Screenshot fehlgeschlagen', { id: 'chart-capture' })
+        return
+      }
+      toast.success('Chart gespeichert ✓', { id: 'chart-capture' })
+      onScreenshotAdded?.(data.url)
+    } finally {
+      setCapturing(false)
+    }
+  }, [symbol, tradeId, onScreenshotAdded])
+
   // Listen for Cmd+V paste when tab is active — works in Safari too
   useEffect(() => {
     if (!isActive) return
@@ -206,54 +228,49 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
 
       {/* Screenshot actions */}
       <div className="shrink-0 rounded-lg p-3 space-y-2" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}>
-        {/* Steps */}
-        <div className="flex items-center gap-1.5 text-[11px] flex-wrap" style={{ color: 'var(--fg-4)' }}>
-          <kbd
-            className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold"
-            style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--fg-2)' }}
-          >
-            ⌘⇧4
-          </kbd>
-          <span style={{ color: 'var(--fg-5)' }}>→</span>
-          <span>Chart-Bereich auswählen</span>
-          <span style={{ color: 'var(--fg-5)' }}>→</span>
-          <span>zurück hier</span>
-          <span style={{ color: 'var(--fg-5)' }}>→</span>
-          <kbd
-            className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold"
-            style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--fg-2)' }}
-          >
-            ⌘V
-          </kbd>
-        </div>
-
         <div className="flex items-center gap-2">
-          {/* Primary: Cmd+V paste zone */}
-          <div
-            className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg flex-1 justify-center"
+          {/* Primary: server-side auto screenshot */}
+          <button
+            onClick={captureServerScreenshot}
+            disabled={capturing || uploading}
+            className="flex items-center justify-center gap-2 text-sm px-4 py-2.5 rounded-lg flex-1 font-medium transition-opacity disabled:opacity-60"
             style={{
-              background: uploading ? 'rgba(41,98,255,0.08)' : uploadedPreview ? 'rgba(34,197,94,0.08)' : 'rgba(41,98,255,0.08)',
-              border: `1px dashed ${uploading ? 'rgba(41,98,255,0.4)' : uploadedPreview ? 'rgba(34,197,94,0.4)' : 'rgba(41,98,255,0.3)'}`,
-              color: uploadedPreview ? '#22c55e' : 'var(--brand-blue)',
+              background: capturing ? 'rgba(41,98,255,0.15)' : 'var(--brand-blue)',
+              color: '#fff',
+            }}
+          >
+            {capturing ? (
+              <><Loader2 size={13} className="animate-spin" /><span>Wird fotografiert…</span></>
+            ) : (
+              <><Camera size={13} /><span>Chart-Screenshot speichern</span></>
+            )}
+          </button>
+
+          {/* Fallback: Cmd+V paste */}
+          <div
+            className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-lg shrink-0 cursor-default"
+            title="⌘V — Screenshot aus Zwischenablage einfügen"
+            style={{
+              background: uploading ? 'rgba(41,98,255,0.08)' : uploadedPreview ? 'rgba(34,197,94,0.08)' : 'var(--bg-3)',
+              border: `1px solid ${uploadedPreview ? 'rgba(34,197,94,0.4)' : 'var(--border-1)'}`,
+              color: uploadedPreview ? '#22c55e' : 'var(--fg-3)',
             }}
           >
             {uploading ? (
-              <span className="animate-pulse text-xs">Hochladen…</span>
+              <Loader2 size={11} className="animate-spin" />
             ) : uploadedPreview ? (
-              <><Check size={12} /> <span>Gespeichert — Details-Tab geöffnet</span></>
+              <Check size={11} />
             ) : (
-              <>
-                <Command size={11} />
-                <span>⌘V — Bild aus Zwischenablage einfügen</span>
-              </>
+              <Command size={11} />
             )}
+            <span className="text-[11px]">⌘V</span>
           </div>
 
           {/* Fallback: file upload */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg transition-colors disabled:opacity-60 shrink-0"
+            disabled={uploading || capturing}
+            className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-lg transition-colors disabled:opacity-60 shrink-0"
             style={{
               background: 'var(--bg-3)',
               border: '1px solid var(--border-1)',
@@ -262,7 +279,6 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
             title="Bilddatei hochladen"
           >
             <Upload size={11} />
-            Datei
           </button>
         </div>
 

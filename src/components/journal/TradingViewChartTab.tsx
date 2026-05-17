@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState, useId } from 'react'
-import { ExternalLink, Upload, Check, Loader2, Camera } from 'lucide-react'
+import { ExternalLink, Upload, Check, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -60,7 +60,6 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null)
-  const [autoCapturing, setAutoCapturing] = useState(false)
   const symbol = toTvSymbol(asset)
   const tvUrl = `https://www.tradingview.com/chart/?symbol=${symbol.replace(':', '%3A')}`
 
@@ -172,27 +171,6 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
     onScreenshotAdded?.(publicUrl)
   }, [tradeId, onScreenshotAdded])
 
-  const captureAutoScreenshot = useCallback(async () => {
-    setAutoCapturing(true)
-    toast.loading('Chart wird gespeichert…', { id: 'auto-capture' })
-    try {
-      const res = await fetch('/api/chart-screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol, tradeId }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.url) throw new Error(data.error ?? 'Fehler')
-      toast.success('Chart gespeichert ✓', { id: 'auto-capture' })
-      setUploadedPreview(data.url)
-      onScreenshotAdded?.(data.url)
-    } catch (err) {
-      toast.error(`Fehler: ${err instanceof Error ? err.message : 'Unbekannt'}`, { id: 'auto-capture' })
-    } finally {
-      setAutoCapturing(false)
-    }
-  }, [symbol, tradeId, onScreenshotAdded])
-
   // Cmd+V paste listener
   useEffect(() => {
     if (!isActive) return
@@ -263,22 +241,10 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
           )}
         </div>
 
-        {/* Auto-capture button */}
-        <button
-          onClick={captureAutoScreenshot}
-          disabled={autoCapturing || uploading}
-          className="shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md transition-opacity disabled:opacity-50"
-          style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
-          title="Chart automatisch als Screenshot speichern"
-        >
-          {autoCapturing ? <Loader2 size={11} className="animate-spin" /> : <Camera size={11} />}
-          <span>Speichern</span>
-        </button>
-
         {/* Upload button */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploading || autoCapturing}
+          disabled={uploading}
           className="shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md transition-opacity disabled:opacity-50"
           style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--fg-3)' }}
           title="Datei hochladen"

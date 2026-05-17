@@ -208,9 +208,14 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
       <div className="shrink-0 rounded-lg p-3 space-y-2" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}>
         {/* Steps */}
         <div className="flex items-center gap-1.5 text-[11px] flex-wrap" style={{ color: 'var(--fg-4)' }}>
-          <span>📷 Kamera-Icon</span>
+          <kbd
+            className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold"
+            style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--fg-2)' }}
+          >
+            ⌘⇧4
+          </kbd>
           <span style={{ color: 'var(--fg-5)' }}>→</span>
-          <span style={{ color: 'var(--fg-2)' }}>"Copy image"</span>
+          <span>Chart-Bereich auswählen</span>
           <span style={{ color: 'var(--fg-5)' }}>→</span>
           <span>zurück hier</span>
           <span style={{ color: 'var(--fg-5)' }}>→</span>

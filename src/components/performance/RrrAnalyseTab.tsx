@@ -36,28 +36,34 @@ function confidenceLabel(n: number): { label: string; color: string } {
 }
 
 export function RrrAnalyseTab({ trades }: Props) {
-  const { winRate, closed, total, avgTrueRR, tradeRows, maxRR, scenarios, optimalRR } = useMemo(() => {
+  const { winRate, closed, total, avgTrueRR, trueRRCount, tradeRows, maxRR, scenarios, optimalRR } = useMemo(() => {
     const wins   = trades.filter(t => t.outcome === 'win').length
     const losses = trades.filter(t => t.outcome === 'loss').length
     const closed = wins + losses
     const winRate = closed >= 5 ? wins / closed : null
 
+    // Show all trades that have at least rr_ratio; use true_rr if available, else rr_ratio
     const tradeRows = trades
-      .filter(t => typeof t.true_rr === 'number' && t.true_rr !== null)
+      .filter(t => t.rr_ratio !== null || t.true_rr !== null)
       .sort((a, b) => b.traded_at.localeCompare(a.traded_at))
-      .map(t => ({
-        id: t.id,
-        label: `${t.traded_at.slice(8, 10)}.${t.traded_at.slice(5, 7)}. ${t.asset}`,
-        true_rr: t.true_rr as number,
-        outcome: t.outcome,
-        rr_ratio: t.rr_ratio,
-        direction: t.direction,
-      }))
+      .map(t => {
+        const displayRR = (t.true_rr ?? t.rr_ratio) as number
+        return {
+          id: t.id,
+          label: `${t.traded_at.slice(8, 10)}.${t.traded_at.slice(5, 7)}. ${t.asset}`,
+          display_rr: displayRR,
+          is_true_rr: t.true_rr !== null,
+          outcome: t.outcome,
+          rr_ratio: t.rr_ratio,
+          direction: t.direction,
+        }
+      })
 
-    const maxRR = Math.max(3, ...tradeRows.map(r => r.true_rr))
+    const maxRR = Math.max(3, ...tradeRows.map(r => r.display_rr))
 
-    const avgTrueRR = tradeRows.length > 0
-      ? Math.round((tradeRows.reduce((s, r) => s + r.true_rr, 0) / tradeRows.length) * 100) / 100
+    const trueRRCount = trades.filter(t => t.true_rr !== null).length
+    const avgTrueRR = trueRRCount > 0
+      ? Math.round((trades.filter(t => t.true_rr !== null).reduce((s, t) => s + t.true_rr!, 0) / trueRRCount) * 100) / 100
       : null
 
     const scenarios = RR_SCENARIOS.map(({ rr, label }) => {
@@ -73,7 +79,7 @@ export function RrrAnalyseTab({ trades }: Props) {
       ? profitable.reduce((best, s) => (s.ev! > best.ev! ? s : best))
       : null
 
-    return { winRate, closed, total: trades.length, avgTrueRR, tradeRows, maxRR, scenarios, optimalRR }
+    return { winRate, closed, total: trades.length, avgTrueRR, trueRRCount, tradeRows, maxRR, scenarios, optimalRR }
   }, [trades])
 
   const conf = confidenceLabel(closed)
@@ -93,7 +99,7 @@ export function RrrAnalyseTab({ trades }: Props) {
         <Kpi
           label="Ø True RR"
           value={avgTrueRR !== null ? `${avgTrueRR}R` : '–'}
-          sub={`${tradeRows.length} mit Max-Kurs`}
+          sub={trueRRCount > 0 ? `${trueRRCount} mit Max-Kurs` : 'noch keine eingetragen'}
         />
       </div>
 
@@ -112,65 +118,69 @@ export function RrrAnalyseTab({ trades }: Props) {
 
       {/* True RR Balkendiagramm — wie weit liefen die Trades */}
       <div className="rounded-lg p-4" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)' }}>
-        <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--fg-4)' }}>
-          Wie weit lief jeder Trade?
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>
+            RR pro Trade
+          </p>
+          <p className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
+            Grün = Gewinn · Rot = Verlust · gestrichelt = 1R
+          </p>
+        </div>
 
         {tradeRows.length === 0 ? (
           <div className="flex items-center justify-center h-24 text-sm rounded-lg"
             style={{ background: 'var(--bg-2)', border: '1px dashed var(--border-1)', color: 'var(--fg-4)' }}>
-            Max-Kurs im Journal → Simulation eintragen
+            Noch keine Trades vorhanden
           </div>
         ) : (
-          <>
-            <ResponsiveContainer width="100%" height={chartHeight}>
-              <BarChart
-                data={tradeRows}
-                layout="vertical"
-                margin={{ top: 4, right: 52, left: 4, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" horizontal={false} />
-                <XAxis
-                  type="number"
-                  domain={[0, Math.ceil(maxRR)]}
-                  tickCount={Math.ceil(maxRR) + 1}
-                  tick={{ fontSize: 10, fill: 'var(--fg-4)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={v => `${v}R`}
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <BarChart
+              data={tradeRows}
+              layout="vertical"
+              margin={{ top: 4, right: 52, left: 4, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" horizontal={false} />
+              <XAxis
+                type="number"
+                domain={[0, Math.ceil(maxRR)]}
+                tickCount={Math.ceil(maxRR) + 1}
+                tick={{ fontSize: 10, fill: 'var(--fg-4)' }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={v => `${v}R`}
+              />
+              <YAxis
+                type="category"
+                dataKey="label"
+                tick={{ fontSize: 11, fill: 'var(--fg-4)' }}
+                tickLine={false}
+                axisLine={false}
+                width={88}
+                tickFormatter={v => v.length > 14 ? v.slice(0, 14) + '…' : v}
+              />
+              <Tooltip
+                contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: 6, fontSize: 12 }}
+                formatter={(v, _name, props) => {
+                  const row = props?.payload
+                  const label = row?.is_true_rr ? 'True RR (Max-Kurs)' : 'Geplant RR'
+                  return [`${String(v ?? 0)}R`, label]
+                }}
+                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+              />
+              <ReferenceLine x={1} stroke="rgba(255,255,255,0.25)" strokeDasharray="3 3" strokeWidth={1.5} />
+              <Bar dataKey="display_rr" radius={[0, 3, 3, 0]} barSize={16}>
+                {tradeRows.map((row, i) => (
+                  <Cell key={i} fill={rrColor(row.outcome)} fillOpacity={row.is_true_rr ? 0.85 : 0.45} />
+                ))}
+                <LabelList
+                  dataKey="display_rr"
+                  position="right"
+                  formatter={(v: unknown) => `${String(v ?? 0)}R`}
+                  style={{ fontSize: 11, fill: 'var(--fg-3)', fontVariantNumeric: 'tabular-nums' }}
                 />
-                <YAxis
-                  type="category"
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: 'var(--fg-4)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={88}
-                  tickFormatter={v => v.length > 14 ? v.slice(0, 14) + '…' : v}
-                />
-                <Tooltip
-                  contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: 6, fontSize: 12 }}
-                  formatter={(v) => [`${String(v ?? 0)}R`, 'True RR']}
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                />
-                <ReferenceLine x={1} stroke="rgba(255,255,255,0.25)" strokeDasharray="3 3" strokeWidth={1.5} />
-                <Bar dataKey="true_rr" radius={[0, 3, 3, 0]} barSize={16}>
-                  {tradeRows.map((row, i) => (
-                    <Cell key={i} fill={rrColor(row.outcome)} fillOpacity={0.8} />
-                  ))}
-                  <LabelList
-                    dataKey="true_rr"
-                    position="right"
-                    formatter={(v: unknown) => `${String(v ?? 0)}R`}
-                    style={{ fontSize: 11, fill: 'var(--fg-3)', fontVariantNumeric: 'tabular-nums' }}
-                  />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <p className="text-[10px] mt-2" style={{ color: 'var(--fg-4)' }}>
-              Gestrichelte Linie = 1R. Grün = Gewinn, Rot = Verlust.
-            </p>
-          </>
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         )}
       </div>
 

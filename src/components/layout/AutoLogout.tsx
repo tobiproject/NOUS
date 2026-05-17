@@ -35,9 +35,11 @@ export function AutoLogout() {
 
     const handleHide = (e: PageTransitionEvent) => {
       if (!e.persisted) {
-        // Skip if a reload was triggered intentionally (e.g. update banner)
-        if (sessionStorage.getItem('nous-skip-inactivity-logout')) {
-          sessionStorage.removeItem('nous-skip-inactivity-logout')
+        // Skip if a reload was triggered intentionally within the last 10 s
+        // (uses localStorage so it survives the pagehide/reload boundary on iOS)
+        const skipTs = Number(localStorage.getItem('nous-skip-logout-ts') || '0')
+        if (Date.now() - skipTs < 10_000) {
+          localStorage.removeItem('nous-skip-logout-ts')
           return
         }
         clearSupabaseSession()

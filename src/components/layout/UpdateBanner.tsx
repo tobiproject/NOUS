@@ -67,7 +67,7 @@ export function UpdateBanner() {
         <div className="mt-4 pl-9">
           <button
             onClick={() => {
-              sessionStorage.setItem('nous-skip-inactivity-logout', '1')
+              localStorage.setItem('nous-skip-logout-ts', String(Date.now()))
               window.location.reload()
             }}
             className="flex items-center gap-2 px-4 py-2 rounded text-[13px] font-semibold transition-opacity active:opacity-70"

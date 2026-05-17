@@ -564,7 +564,7 @@ export function AppSidebar() {
                 </span>
               </div>
               <button
-                onClick={() => { sessionStorage.setItem('nous-skip-inactivity-logout', '1'); window.location.reload() }}
+                onClick={() => { localStorage.setItem('nous-skip-logout-ts', String(Date.now())); window.location.reload() }}
                 className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold shrink-0"
                 style={{ background: '#2962FF', color: '#fff' }}
               >

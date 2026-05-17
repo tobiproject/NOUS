@@ -355,7 +355,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete, 
 
             <TabsContent value="chart" className="flex-1 px-6 py-4 mt-0 flex flex-col overflow-hidden">
               <TradingViewChartTab
-                asset={trade.asset}
+                trade={trade}
                 tradeId={trade.id}
                 chartUrl={trade.chart_url}
                 isActive={activeTab === 'chart'}

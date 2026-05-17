@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useCallback, useState, useId } from 'react'
+import React, { useEffect, useRef, useCallback, useState, useId } from 'react'
 import { ExternalLink, Upload, Check, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { format, parseISO } from 'date-fns'
+import type { Trade } from '@/hooks/useTrades'
 
 const FUTURES_MAP: Record<string, string> = {
   NQ: 'NASDAQ:NDX', MNQ: 'NASDAQ:NDX',
@@ -46,15 +48,25 @@ function toTvSymbol(asset: string): string {
   return `FX:${s}`
 }
 
+function RefVal({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
+  return (
+    <div className="flex items-baseline gap-1 shrink-0">
+      <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>{label}</span>
+      <span className="text-[11px] font-semibold num" style={{ color: color ?? 'var(--fg-1)' }}>{value}</span>
+    </div>
+  )
+}
+
 interface Props {
-  asset: string
+  trade: Trade
   tradeId: string
   chartUrl?: string | null
   isActive: boolean
   onScreenshotAdded?: (url: string) => void
 }
 
-export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdded }: Props) {
+export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdded }: Props) {
+  const asset = trade.asset
   const uid = useId().replace(/:/g, '')
   const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -207,6 +219,41 @@ export function TradingViewChartTab({ asset, tradeId, isActive, onScreenshotAdde
         onDragOver={e => e.preventDefault()}
         style={{ flex: '1 1 0', minHeight: 0, height: 0, width: '100%' }}
       />
+
+      {/* Trade reference bar */}
+      <div
+        className="shrink-0 flex items-center gap-3 flex-wrap rounded-lg px-3 py-2"
+        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
+      >
+        {/* Direction */}
+        <span
+          className="text-[11px] font-bold px-1.5 py-0.5 rounded"
+          style={{
+            background: trade.direction === 'long' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+            color: trade.direction === 'long' ? 'var(--long)' : 'var(--short)',
+          }}
+        >
+          {trade.direction === 'long' ? 'Long' : 'Short'}
+        </span>
+
+        <RefVal label="Entry" value={trade.entry_price} />
+        <RefVal label="SL" value={trade.sl_price} color="var(--short)" />
+        {trade.tp_price ? <RefVal label="TP" value={trade.tp_price} color="var(--long)" /> : null}
+        {trade.rr_ratio !== null ? <RefVal label="RR" value={`1:${trade.rr_ratio}`} /> : null}
+        {trade.lot_size ? <RefVal label="Lots" value={trade.lot_size} /> : null}
+
+        <div className="w-px h-3 shrink-0" style={{ background: 'var(--border-1)' }} />
+
+        <RefVal label="Zeit" value={format(parseISO(trade.traded_at), 'dd.MM.yy HH:mm')} />
+
+        {trade.result_currency !== null && (
+          <RefVal
+            label="Ergebnis"
+            value={`${trade.result_currency >= 0 ? '+' : ''}${trade.result_currency.toFixed(2)} €`}
+            color={trade.result_currency > 0 ? 'var(--long)' : trade.result_currency < 0 ? 'var(--short)' : undefined}
+          />
+        )}
+      </div>
 
       {/* Action strip — single compact row */}
       <div

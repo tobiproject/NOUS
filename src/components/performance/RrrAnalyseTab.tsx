@@ -299,7 +299,8 @@ export function RrrAnalyseTab({ trades }: Props) {
               <YAxis
                 type="category"
                 dataKey="label"
-                tick={CustomYTick as React.ComponentType<unknown>}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                tick={CustomYTick as any}
                 tickLine={false}
                 axisLine={false}
                 width={96}

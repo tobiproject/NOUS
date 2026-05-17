@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, Upload, Sparkles, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,9 +9,10 @@ import type { Trade } from '@/hooks/useTrades'
 interface Props {
   trade: Trade
   screenshots?: string[]
+  targetRR?: number | null
 }
 
-export function TradeSimulationTab({ trade, screenshots = [] }: Props) {
+export function TradeSimulationTab({ trade, screenshots = [], targetRR }: Props) {
   const [maxRunPrice, setMaxRunPrice] = useState('')
   const [trueRR, setTrueRR] = useState<number | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
@@ -67,6 +68,13 @@ export function TradeSimulationTab({ trade, screenshots = [] }: Props) {
     }
   }
 
+  // Auto-select first screenshot when tab loads
+  useEffect(() => {
+    if (screenshots.length > 0 && !selectedUrl) {
+      selectSavedScreenshot(screenshots[0])
+    }
+  }, [screenshots]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const analyzeWithAI = async () => {
     if (!screenshotFile) return
     setAiLoading(true)
@@ -115,7 +123,7 @@ export function TradeSimulationTab({ trade, screenshots = [] }: Props) {
       </div>
 
       {/* Reference data */}
-      <div className="grid grid-cols-3 gap-3 text-center">
+      <div className="grid grid-cols-4 gap-3 text-center">
         <div className="rounded px-3 py-2.5" style={{ background: 'var(--bg-3)' }}>
           <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--fg-4)' }}>Entry</p>
           <p className="num text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>{entry}</p>
@@ -128,6 +136,12 @@ export function TradeSimulationTab({ trade, screenshots = [] }: Props) {
           <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--fg-4)' }}>Geplant RRR</p>
           <p className="num text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>
             {trade.rr_ratio !== null ? `1:${trade.rr_ratio}` : '—'}
+          </p>
+        </div>
+        <div className="rounded px-3 py-2.5" style={{ background: 'var(--bg-3)' }}>
+          <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--fg-4)' }}>Ziel-RRR</p>
+          <p className="num text-sm font-semibold" style={{ color: 'var(--brand-blue)' }}>
+            {targetRR !== null && targetRR !== undefined ? `1:${targetRR}` : '—'}
           </p>
         </div>
       </div>
@@ -164,6 +178,13 @@ export function TradeSimulationTab({ trade, screenshots = [] }: Props) {
                 : trueRR < trade.rr_ratio
                 ? `Trade lief nicht bis zum geplanten TP (${trade.rr_ratio}R)`
                 : 'Exakt am geplanten TP'}
+            </p>
+          )}
+          {targetRR !== null && targetRR !== undefined && (
+            <p className="text-xs mt-1 font-medium" style={{ color: trueRR >= targetRR ? 'var(--long)' : 'var(--short)' }}>
+              {trueRR >= targetRR
+                ? `✓ Ziel 1:${targetRR} erreicht`
+                : `✗ Ziel 1:${targetRR} nicht erreicht`}
             </p>
           )}
         </div>

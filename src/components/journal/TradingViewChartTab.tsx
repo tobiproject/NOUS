@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useCallback, useState, useId } from 'react'
-import { ExternalLink, Upload, Check, Loader2 } from 'lucide-react'
+import { ExternalLink, Upload, Check, Loader2, Clipboard } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { format, parseISO } from 'date-fns'
@@ -184,6 +184,25 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
     onScreenshotAdded?.(publicUrl)
   }, [tradeId, onScreenshotAdded])
 
+  const pasteFromClipboard = useCallback(async () => {
+    try {
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        for (const type of item.types) {
+          if (type.startsWith('image/')) {
+            const blob = await item.getType(type)
+            const file = new File([blob], 'screenshot.png', { type })
+            uploadFile(file)
+            return
+          }
+        }
+      }
+      toast.error('Kein Bild in der Zwischenablage')
+    } catch {
+      toast.error('Kein Zugriff — bitte ⌘V verwenden')
+    }
+  }, [uploadFile])
+
   // Cmd+V paste listener
   useEffect(() => {
     if (!isActive) return
@@ -314,6 +333,18 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
         >
           <Upload size={11} />
           <span>Datei</span>
+        </button>
+
+        {/* Paste from clipboard */}
+        <button
+          onClick={pasteFromClipboard}
+          disabled={uploading}
+          className="shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md transition-opacity disabled:opacity-50"
+          style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--fg-3)' }}
+          title="Bild aus Zwischenablage einfügen"
+        >
+          <Clipboard size={11} />
+          <span>Einfügen</span>
         </button>
 
         {/* TV link */}

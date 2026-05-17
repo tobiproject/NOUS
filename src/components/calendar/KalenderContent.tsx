@@ -1,37 +1,62 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
-import { format } from 'date-fns'
-import { de } from 'date-fns/locale'
-import { RefreshCw } from 'lucide-react'
+import { useMemo } from 'react'
 import { useEconomicCalendar } from '@/hooks/useEconomicCalendar'
 import { useWatchlist } from '@/hooks/useWatchlist'
 import { useDailyWatchlist } from '@/hooks/useDailyWatchlist'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { getCategoryColor } from '@/lib/category-colors'
 import { CountdownBanner } from './CountdownBanner'
-import { KalenderWeekNav } from './KalenderWeekNav'
-import { KalenderFilterBar } from './KalenderFilterBar'
-import { EconomicEventList } from './EconomicEventList'
+import { TradingViewCalendarWidget } from './TradingViewCalendarWidget'
+import { KalenderKiSection } from './KalenderKiSection'
 import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
+
+const CURRENCY_TO_TV_COUNTRY: Record<string, string> = {
+  USD: 'us', EUR: 'eu', GBP: 'gb', JPY: 'jp',
+  CAD: 'ca', AUD: 'au', NZD: 'nz', CHF: 'ch',
+  CNY: 'cn', HKD: 'hk', SGD: 'sg', NOK: 'no',
+  SEK: 'se', DKK: 'dk', MXN: 'mx', BRL: 'br',
+  INR: 'in', KRW: 'kr', ZAR: 'za', TRY: 'tr',
+}
+
+const INDEX_COUNTRY_MAP: Array<[string[], string]> = [
+  [['US100', 'NAS100', 'US500', 'SPX', 'US30', 'DOW', 'GOLD', 'XAUUSD', 'OIL', 'USOIL'], 'us'],
+  [['GER40', 'DAX', 'GER30'], 'de'],
+  [['UK100', 'FTSE'], 'gb'],
+  [['JPN225', 'JP225', 'NKY'], 'jp'],
+  [['AUS200', 'ASX'], 'au'],
+  [['FRA40', 'CAC'], 'fr'],
+]
+
+function symbolsToCountryFilter(symbols: string[]): string {
+  const countries = new Set<string>(['us', 'eu'])
+  for (const sym of symbols) {
+    const upper = sym.toUpperCase().replace(/[-/_.]/g, '')
+    // 6-char forex pairs (e.g. EURUSD, GBPJPY)
+    if (upper.length === 6 && /^[A-Z]{6}$/.test(upper)) {
+      const cc1 = CURRENCY_TO_TV_COUNTRY[upper.slice(0, 3)]
+      const cc2 = CURRENCY_TO_TV_COUNTRY[upper.slice(3, 6)]
+      if (cc1) countries.add(cc1)
+      if (cc2) countries.add(cc2)
+    }
+    // Indices and commodities
+    for (const [keys, cc] of INDEX_COUNTRY_MAP) {
+      if (keys.some(k => upper.includes(k))) countries.add(cc)
+    }
+  }
+  return [...countries].join(',')
+}
 
 export function KalenderContent() {
   const { activeAccount } = useAccountContext()
-  const {
-    events, filters, weekOffset, weekStart, weekEnd,
-    fetchedAt, isLoading, isRefreshing, filtersLoading,
-    updateFilters, goToPrevWeek, goToNextWeek, goToThisWeek, manualRefresh,
-  } = useEconomicCalendar()
-
+  const { events, isLoading } = useEconomicCalendar()
   const { items: watchlistItems } = useWatchlist(activeAccount?.id)
   const { todaySymbols } = useDailyWatchlist(activeAccount?.id)
 
-  // Prefer today's watchlist; fall back to general watchlist if today is empty
   const watchlistSymbols = todaySymbols.length > 0
     ? todaySymbols
     : watchlistItems.map(i => i.symbol)
 
-  // Symbol → Farbe aus der Watchlist (eigene Farbe des Users oder Kategorie-Farbe)
   const watchlistColorMap = useMemo(() => {
     const map: Record<string, string> = {}
     watchlistItems.forEach(item => {
@@ -40,66 +65,54 @@ export function KalenderContent() {
     return map
   }, [watchlistItems])
 
-  const handleScrollToEvent = useCallback((eventId: string) => {
-    const el = document.getElementById(`event-${eventId}`)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [])
+  const countryFilter = useMemo(
+    () => symbolsToCountryFilter(watchlistSymbols),
+    [watchlistSymbols]
+  )
 
-  const fetchedAtLabel = fetchedAt
-    ? `Daten vom ${format(new Date(fetchedAt), "d. MMM HH:mm 'Uhr'", { locale: de })}`
-    : null
+  const highImpactEvents = useMemo(
+    () => events.filter(e => e.impact === 'High'),
+    [events]
+  )
 
   return (
     <div className="space-y-4">
       <WorkflowVisitTracker step="kalender" />
-      <CountdownBanner events={events} onScrollToEvent={handleScrollToEvent} />
+      <CountdownBanner events={events} onScrollToEvent={() => {}} />
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <KalenderWeekNav
-          weekStart={weekStart} weekEnd={weekEnd} weekOffset={weekOffset}
-          onPrev={goToPrevWeek} onNext={goToNextWeek} onToday={goToThisWeek}
-        />
-        <div className="hidden sm:flex items-center gap-2">
-          {fetchedAtLabel && (
-            <span className="text-xs" style={{ color: 'var(--fg-4)' }}>
-              {fetchedAtLabel}
+      {watchlistSymbols.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs" style={{ color: 'var(--fg-4)' }}>
+            Kalender gefiltert nach Watchlist:
+          </span>
+          {watchlistSymbols.map(s => (
+            <span
+              key={s}
+              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{
+                background: watchlistColorMap[s] ? `${watchlistColorMap[s]}22` : 'var(--bg-2)',
+                color: watchlistColorMap[s] ?? 'var(--fg-2)',
+                border: `1px solid ${watchlistColorMap[s] ? `${watchlistColorMap[s]}44` : 'var(--border-1)'}`,
+              }}
+            >
+              {s}
             </span>
-          )}
-          <button
-            onClick={manualRefresh}
-            disabled={isRefreshing}
-            title="Daten aktualisieren"
-            className="p-1 rounded transition-colors"
-            style={{ color: 'var(--fg-4)' }}
-          >
-            <RefreshCw
-              className={isRefreshing ? 'animate-spin' : ''}
-              style={{ width: 13, height: 13 }}
-            />
-          </button>
+          ))}
         </div>
+      )}
+
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ border: '1px solid var(--border-1)' }}
+      >
+        <TradingViewCalendarWidget countryFilter={countryFilter} height={700} />
       </div>
 
-      {!filtersLoading && (
-        <KalenderFilterBar filters={filters} onChange={updateFilters} />
-      )}
-
-      <EconomicEventList
-        events={events}
-        weekStart={weekStart}
-        weekEnd={weekEnd}
-        isLoading={isLoading}
-        userTimezone={Intl.DateTimeFormat().resolvedOptions().timeZone}
-        allImpactFiltersOff={filters.impact.length === 0}
+      <KalenderKiSection
+        events={highImpactEvents}
         watchlistSymbols={watchlistSymbols}
-        watchlistColorMap={watchlistColorMap}
+        isLoading={isLoading}
       />
-
-      {fetchedAtLabel && (
-        <p className="text-xs sm:hidden text-center" style={{ color: 'var(--fg-4)' }}>
-          {fetchedAtLabel}
-        </p>
-      )}
     </div>
   )
 }

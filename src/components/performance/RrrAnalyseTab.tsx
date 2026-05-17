@@ -102,61 +102,82 @@ export function RrrAnalyseTab({ trades }: Props) {
         </div>
       )}
 
-      {/* Breakeven Tabelle */}
+      {/* Breakeven Tabelle mit visuellen Balken */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--fg-4)' }}>
           Breakeven-Analyse — Welches RRR ist profitabel?
         </p>
-        <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-1)' }}>
-          {/* Header */}
-          <div className="grid grid-cols-5 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider" style={{ background: 'var(--bg-3)', color: 'var(--fg-4)' }}>
-            <span>RRR</span>
-            <span className="text-right">Benötigte TQ</span>
-            <span className="text-right">Deine TQ</span>
-            <span className="text-right">Puffer</span>
-            <span className="text-right">Erwartungswert</span>
-          </div>
-          {scenarios.map((s, i) => {
+        <div className="space-y-2">
+          {scenarios.map((s) => {
             const isOptimal = optimalRR?.rr === s.rr
             const isRecommended = closed < 100 && s.rr === 1.0
+            const tqPct = winRate !== null ? winRate * 100 : null
+            const profitable = tqPct !== null && tqPct >= s.needed
+            const barColor = profitable ? 'var(--long)' : 'var(--short)'
+            // Bar width: cap at 100%, scale your TQ within 0–80% range for visual clarity
+            const barWidthPct = tqPct !== null ? Math.min(tqPct, 100) : 0
+            // Breakeven marker position
+            const markerPct = Math.min(s.needed, 100)
+
             return (
               <div
                 key={s.rr}
-                className="grid grid-cols-5 items-center px-4 py-3 text-sm"
+                className="rounded-lg px-4 py-3 space-y-2"
                 style={{
-                  borderTop: i > 0 ? '1px solid var(--border-1)' : undefined,
-                  background: isOptimal ? 'rgba(59,130,246,0.08)' : isRecommended ? 'rgba(245,158,11,0.06)' : undefined,
+                  background: isOptimal ? 'rgba(59,130,246,0.08)' : 'var(--bg-3)',
+                  border: `1px solid ${isOptimal ? 'rgba(59,130,246,0.35)' : isRecommended ? 'rgba(245,158,11,0.35)' : 'var(--border-1)'}`,
                 }}
               >
-                <div className="flex items-center gap-2">
-                  <span className="font-bold num" style={{ color: 'var(--fg-1)' }}>{s.label}</span>
-                  {isOptimal && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: 'rgba(59,130,246,0.2)', color: 'var(--brand-blue)' }}>
-                      Optimal
+                {/* Row header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold num" style={{ color: 'var(--fg-1)' }}>{s.label}</span>
+                    {isOptimal && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: 'rgba(59,130,246,0.2)', color: 'var(--brand-blue)' }}>Optimal</span>
+                    )}
+                    {isRecommended && !isOptimal && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: 'rgba(245,158,11,0.2)', color: '#f59e0b' }}>Empfohlen</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 text-xs">
+                    <span style={{ color: 'var(--fg-4)' }}>Break-Even: <span className="num font-medium" style={{ color: 'var(--fg-2)' }}>{s.needed.toFixed(1)}%</span></span>
+                    <span style={{ color: 'var(--fg-4)' }}>Deine TQ: <span className="num font-semibold" style={{ color: barColor }}>{tqPct !== null ? `${tqPct.toFixed(1)}%` : '–'}</span></span>
+                    <span className="num font-semibold" style={{ color: s.ev !== null ? (s.ev > 0 ? 'var(--long)' : 'var(--short)') : 'var(--fg-4)', minWidth: 48, textAlign: 'right' }}>
+                      {s.ev !== null ? (s.ev > 0 ? `+${s.ev.toFixed(2)}R` : `${s.ev.toFixed(2)}R`) : '–'}
                     </span>
-                  )}
-                  {isRecommended && !isOptimal && closed < 100 && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: 'rgba(245,158,11,0.2)', color: '#f59e0b' }}>
-                      Empfohlen
-                    </span>
-                  )}
+                  </div>
                 </div>
-                <span className="text-right num" style={{ color: 'var(--fg-3)' }}>{s.needed.toFixed(1)}%</span>
-                <span className="text-right num" style={{ color: winRate !== null ? (winRate * 100 >= s.needed ? 'var(--long)' : 'var(--short)') : 'var(--fg-4)' }}>
-                  {winRate !== null ? `${(winRate * 100).toFixed(1)}%` : '–'}
-                </span>
-                <span className="text-right num font-medium" style={{ color: s.gap !== null ? (s.gap > 0 ? 'var(--long)' : 'var(--short)') : 'var(--fg-4)' }}>
-                  {s.gap !== null ? (s.gap > 0 ? `+${s.gap.toFixed(1)}%` : `${s.gap.toFixed(1)}%`) : '–'}
-                </span>
-                <span className="text-right num font-semibold" style={{ color: s.ev !== null ? (s.ev > 0 ? 'var(--long)' : 'var(--short)') : 'var(--fg-4)' }}>
-                  {s.ev !== null ? (s.ev > 0 ? `+${s.ev.toFixed(2)}R` : `${s.ev.toFixed(2)}R`) : '–'}
-                </span>
+
+                {/* Visual bar */}
+                <div className="relative h-5 rounded-sm overflow-visible" style={{ background: 'var(--bg-2)' }}>
+                  {/* Filled bar — your TQ */}
+                  {tqPct !== null && (
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-sm transition-all"
+                      style={{ width: `${barWidthPct}%`, background: profitable ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)' }}
+                    />
+                  )}
+                  {/* Breakeven marker line */}
+                  <div
+                    className="absolute inset-y-0 w-0.5 z-10"
+                    style={{ left: `${markerPct}%`, background: 'rgba(255,255,255,0.5)' }}
+                  />
+                  {/* Labels inside bar */}
+                  <div className="absolute inset-0 flex items-center px-2 justify-between">
+                    <span className="text-[10px] font-semibold" style={{ color: profitable ? '#86efac' : '#fca5a5' }}>
+                      {tqPct !== null ? `${tqPct.toFixed(0)}%` : ''}
+                    </span>
+                    <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      {s.gap !== null ? (s.gap > 0 ? `+${s.gap.toFixed(1)}% Puffer` : `${s.gap.toFixed(1)}% zu wenig`) : ''}
+                    </span>
+                  </div>
+                </div>
               </div>
             )
           })}
         </div>
         <p className="text-[11px] mt-2" style={{ color: 'var(--fg-4)' }}>
-          Erwartungswert = Gewinn pro eingesetztem 1R über viele Trades. Positiv = langfristig profitabel.
+          Weißer Strich = Break-Even-Schwelle. Balken = deine Trefferquote. Grün = profitabel, Rot = nicht profitabel.
         </p>
       </div>
 

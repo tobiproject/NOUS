@@ -147,6 +147,55 @@ const EVENT_DESCRIPTIONS: Record<string, string> = {
   'SNB Quarterly Bulletin': 'Vierteljährlicher Wirtschaftsbericht der Schweizerischen Nationalbank mit geldpolitischer Einschätzung.',
 }
 
+// Source attribution for economic events (keyword → official source)
+const EVENT_SOURCES: [string[], string][] = [
+  [['Non-Farm Payrolls', 'ADP Non-Farm', 'JOLTS', 'Unemployment', 'Average Hourly Earnings', 'Challenger', 'Continuing Claims'], 'Bureau of Labor Statistics (BLS)'],
+  [['CPI', 'PPI', 'Import Prices'], 'Bureau of Labor Statistics (BLS)'],
+  [['FOMC', 'Federal Funds Rate', 'Fed Chair', 'Beige Book', 'Industrial Production', 'Capacity Utilization'], 'Federal Reserve'],
+  [['Empire State'], 'Federal Reserve Bank of New York'],
+  [['Philly Fed'], 'Federal Reserve Bank of Philadelphia'],
+  [['GDP', 'PCE', 'Current Account'], 'Bureau of Economic Analysis (BEA)'],
+  [['Retail Sales', 'Factory Orders', 'Durable Goods', 'Business Inventories', 'Trade Balance', 'Building Permits', 'Housing Starts', 'New Home Sales'], 'U.S. Census Bureau'],
+  [['Existing Home Sales', 'Pending Home Sales'], 'National Association of Realtors (NAR)'],
+  [['Case-Shiller'], 'S&P Dow Jones Indices'],
+  [['ISM', 'Chicago PMI'], 'Institute for Supply Management (ISM)'],
+  [['Flash Manufacturing PMI', 'Flash Services PMI'], 'S&P Global'],
+  [['CB Consumer Confidence'], 'Conference Board'],
+  [['UoM Consumer Sentiment'], 'University of Michigan'],
+  [['Crude Oil Inventories', 'Natural Gas Storage'], 'Energy Information Administration (EIA)'],
+  [['BOE', 'MPC'], 'Bank of England'],
+  [['ECB'], 'European Central Bank (ECB)'],
+  [['German Ifo', 'ifo'], 'ifo Institut für Wirtschaftsforschung'],
+  [['ZEW'], 'ZEW – Leibniz Centre for European Economic Research'],
+  [['BOJ'], 'Bank of Japan'],
+  [['Tankan'], 'Bank of Japan'],
+  [['BOC'], 'Bank of Canada'],
+  [['RBA'], 'Reserve Bank of Australia'],
+  [['RBNZ'], 'Reserve Bank of New Zealand'],
+  [['SNB'], 'Swiss National Bank (SNB)'],
+]
+
+function getEventSource(title: string, currency: string): string | null {
+  const lower = title.toLowerCase()
+  // Currency-specific overrides for ambiguous titles
+  if (currency === 'GBP' && (lower.includes('gdp') || lower.includes('cpi') || lower.includes('retail') || lower.includes('claimant') || lower.includes('earnings'))) {
+    return 'Office for National Statistics (ONS)'
+  }
+  if (currency === 'EUR' && (lower.includes('gdp') || lower.includes('cpi') || lower.includes('pmi'))) {
+    return currency === 'EUR' && lower.includes('german') ? 'Statistisches Bundesamt (Destatis)' : 'Eurostat'
+  }
+  if (currency === 'CAD' && (lower.includes('employment') || lower.includes('gdp') || lower.includes('cpi'))) {
+    return 'Statistics Canada'
+  }
+  if (currency === 'JPY' && (lower.includes('cpi') || lower.includes('gdp'))) {
+    return 'Statistics Bureau of Japan'
+  }
+  for (const [keywords, source] of EVENT_SOURCES) {
+    if (keywords.some(k => lower.includes(k.toLowerCase()))) return source
+  }
+  return null
+}
+
 // Also check for partial title matches (e.g. "Unemployment Claims" matches "Initial Unemployment Claims")
 const EVENT_DESCRIPTIONS_PARTIAL: [string, string][] = [
   ['Non-Farm', 'Misst die Beschäftigungsveränderung außerhalb der Landwirtschaft. Einer der marktbewegendsten US-Wirtschaftsindikatoren.'],
@@ -227,6 +276,7 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
   const [tradeHistoryLoading, setTradeHistoryLoading] = useState(true)
 
   const description = getEventDescription(event.title)
+  const source = getEventSource(event.title, event.currency)
 
   // On mount: if no local cache, fetch from DB (syncs across devices)
   useEffect(() => {
@@ -321,7 +371,7 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
     }
   }
 
-  const showWatchlistButton = event.impact === 'High' || matchedSymbols.length > 0
+  const showWatchlistButton = true
 
   const handleWatchlistAnalysis = async () => {
     setWatchlistAnalysisState('loading')
@@ -372,9 +422,17 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
       style={{ borderTop: '1px solid var(--border-raw)', background: 'var(--bg-1)' }}
     >
       {description && (
-        <p className="text-xs leading-relaxed" style={{ color: 'var(--fg-3)' }}>
-          {description}
-        </p>
+        <div className="space-y-1.5">
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--fg-3)' }}>
+            {description}
+          </p>
+          {source && (
+            <p className="text-[11px]" style={{ color: 'var(--fg-4)' }}>
+              Quelle:&nbsp;
+              <span style={{ color: 'var(--fg-3)' }}>{source}</span>
+            </p>
+          )}
+        </div>
       )}
 
       {/* Assets: watchlist matches highlighted, generic assets dimmer */}
@@ -532,25 +590,37 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
         </div>
       )}
 
-      {/* ── Watchlist Impact ─────────────────────────────────────────── */}
+      {/* ── Portfolio Impact ─────────────────────────────────────────── */}
       {showWatchlistButton && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--fg-4)' }}>
-            Watchlist Impact
-          </p>
-
           {watchlistAnalysisState === 'idle' && (
-            <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={handleWatchlistAnalysis}>
-              <Sparkles size={11} />
-              KI-Analyse: Auswirkung auf meine Watchlist
-            </Button>
+            <button
+              onClick={handleWatchlistAnalysis}
+              className="w-full flex items-center gap-2 rounded-md px-3 py-2.5 text-xs font-medium transition-opacity hover:opacity-90"
+              style={{
+                background: 'linear-gradient(135deg, rgba(41,98,255,0.12) 0%, rgba(128,90,213,0.12) 100%)',
+                border: '1px solid rgba(41,98,255,0.3)',
+                color: 'var(--brand-blue)',
+              }}
+            >
+              <Sparkles size={12} />
+              Wie wirkt sich dieser Datenpunkt auf mein Portfolio aus?
+            </button>
           )}
 
           {watchlistAnalysisState === 'loading' && (
-            <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" disabled>
-              <Loader2 size={11} className="animate-spin" />
+            <button
+              disabled
+              className="w-full flex items-center gap-2 rounded-md px-3 py-2.5 text-xs font-medium opacity-60"
+              style={{
+                background: 'linear-gradient(135deg, rgba(41,98,255,0.12) 0%, rgba(128,90,213,0.12) 100%)',
+                border: '1px solid rgba(41,98,255,0.3)',
+                color: 'var(--brand-blue)',
+              }}
+            >
+              <Loader2 size={12} className="animate-spin" />
               Analysiere…
-            </Button>
+            </button>
           )}
 
           {(watchlistAnalysisState === 'streaming' || watchlistAnalysisState === 'done' || watchlistAnalysisState === 'error') && (

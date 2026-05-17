@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
-import { ExternalLink, Upload } from 'lucide-react'
+import { useEffect, useRef, useCallback, useState } from 'react'
+import { ExternalLink, Upload, Link } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -54,14 +54,17 @@ function toTvUrl(asset: string): string {
 interface Props {
   asset: string
   tradeId: string
-  accountId: string
+  chartUrl?: string | null
   isActive: boolean
   onScreenshotAdded?: () => void
+  onChartUrlSaved?: (url: string) => void
 }
 
-export function TradingViewChartTab({ asset, tradeId, accountId, isActive, onScreenshotAdded }: Props) {
+export function TradingViewChartTab({ asset, tradeId, chartUrl, isActive, onScreenshotAdded, onChartUrlSaved }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [linkInput, setLinkInput] = useState(chartUrl ?? '')
+  const [savingLink, setSavingLink] = useState(false)
   const symbol = toTvSymbol(asset)
   const tvUrl = toTvUrl(asset)
 
@@ -117,21 +120,21 @@ export function TradingViewChartTab({ asset, tradeId, accountId, isActive, onScr
     if (!user) return
 
     const ext = file.name.split('.').pop() ?? 'png'
-    const path = `${user.id}/${accountId}/${tradeId}/chart-${Date.now()}.${ext}`
+    const path = `${user.id}/${tradeId}/${Date.now()}.${ext}`
 
     toast.loading('Wird hochgeladen…', { id: 'chart-upload' })
 
     const { error: uploadError } = await supabase.storage
-      .from('trade-screenshots')
+      .from('screenshots')
       .upload(path, file, { upsert: false })
 
     if (uploadError) {
-      toast.error('Upload fehlgeschlagen', { id: 'chart-upload' })
+      toast.error(`Upload fehlgeschlagen: ${uploadError.message}`, { id: 'chart-upload' })
       return
     }
 
     const { data: { publicUrl } } = supabase.storage
-      .from('trade-screenshots')
+      .from('screenshots')
       .getPublicUrl(path)
 
     const { data: existing } = await supabase
@@ -151,9 +154,27 @@ export function TradingViewChartTab({ asset, tradeId, accountId, isActive, onScr
       return
     }
 
-    toast.success('Chart-Screenshot gespeichert', { id: 'chart-upload' })
+    toast.success('Chart-Screenshot gespeichert ✓', { id: 'chart-upload' })
     onScreenshotAdded?.()
-  }, [tradeId, accountId, onScreenshotAdded])
+  }, [tradeId, onScreenshotAdded])
+
+  const handleSaveLink = useCallback(async () => {
+    if (!linkInput.trim()) return
+    setSavingLink(true)
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('trades')
+      .update({ chart_url: linkInput.trim() })
+      .eq('id', tradeId)
+
+    if (error) {
+      toast.error('Link konnte nicht gespeichert werden')
+    } else {
+      toast.success('Chart-Link gespeichert ✓')
+      onChartUrlSaved?.(linkInput.trim())
+    }
+    setSavingLink(false)
+  }, [linkInput, tradeId, onChartUrlSaved])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -168,9 +189,9 @@ export function TradingViewChartTab({ asset, tradeId, accountId, isActive, onScr
   }, [handleFileUpload])
 
   return (
-    <div className="flex flex-col gap-3" style={{ height: 'calc(90vh - 180px)' }}>
+    <div className="flex flex-col gap-3" style={{ height: 'calc(90vh - 200px)' }}>
       {/* Toolbar */}
-      <div className="flex items-center justify-between shrink-0">
+      <div className="flex items-center justify-between shrink-0 flex-wrap gap-2">
         <span className="text-xs font-medium" style={{ color: 'var(--fg-3)' }}>
           {asset} · {symbol}
         </span>
@@ -185,7 +206,7 @@ export function TradingViewChartTab({ asset, tradeId, accountId, isActive, onScr
             }}
           >
             <Upload size={11} />
-            Screenshot hinzufügen
+            Screenshot hochladen
           </button>
           <a
             href={tvUrl}
@@ -212,6 +233,44 @@ export function TradingViewChartTab({ asset, tradeId, accountId, isActive, onScr
         onDragOver={e => e.preventDefault()}
       />
 
+      {/* Link input */}
+      <div
+        className="shrink-0 flex items-center gap-2 rounded-lg px-3 py-2"
+        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
+      >
+        <Link size={12} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />
+        <input
+          type="url"
+          value={linkInput}
+          onChange={e => setLinkInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSaveLink()}
+          placeholder="TradingView Chart-Link einfügen…"
+          className="flex-1 bg-transparent text-xs outline-none"
+          style={{ color: 'var(--fg-1)' }}
+        />
+        {linkInput.trim() && linkInput !== (chartUrl ?? '') && (
+          <button
+            onClick={handleSaveLink}
+            disabled={savingLink}
+            className="text-xs px-2.5 py-1 rounded font-medium shrink-0 disabled:opacity-50"
+            style={{ background: 'var(--brand-blue)', color: '#fff' }}
+          >
+            {savingLink ? '…' : 'Speichern'}
+          </button>
+        )}
+        {linkInput.trim() && (
+          <a
+            href={linkInput}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0"
+            style={{ color: 'var(--fg-4)' }}
+          >
+            <ExternalLink size={11} />
+          </a>
+        )}
+      </div>
+
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -220,10 +279,6 @@ export function TradingViewChartTab({ asset, tradeId, accountId, isActive, onScr
         className="hidden"
         onChange={handleInputChange}
       />
-
-      <p className="text-xs shrink-0" style={{ color: 'var(--fg-4)' }}>
-        Tipp: Nutze das 📷-Icon im Chart, um einen Screenshot zu speichern — dann hier hochladen.
-      </p>
     </div>
   )
 }

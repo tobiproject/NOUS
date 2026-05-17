@@ -247,7 +247,7 @@ export function TradeDetailSheet({ trade, open, onOpenChange, onEdit, onDelete }
               <TradingViewChartTab
                 asset={trade.asset}
                 tradeId={trade.id}
-                accountId={trade.account_id}
+                chartUrl={trade.chart_url}
                 isActive={activeTab === 'chart'}
               />
             </TabsContent>

@@ -438,18 +438,13 @@ export function AppSidebar() {
               )}
             </div>
 
-            {/* Active strategy badge */}
-            <Link
-              href="/einstellungen?tab=strategie&solo=1"
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition-opacity hover:opacity-80 max-w-full"
-              style={{
-                background: strategyName ? 'rgba(41,98,255,0.1)' : 'var(--bg-3)',
-                color: strategyName ? '#60a5fa' : 'var(--fg-4)',
-                border: strategyName ? '1px solid rgba(41,98,255,0.2)' : '1px solid var(--border-raw)',
-              }}
-            >
-              <span className="truncate">{strategyName ?? 'Strategie setzen'}</span>
-            </Link>
+            {/* Account · Strategie annotation */}
+            <p className="px-1.5 text-[10px] truncate" style={{ color: 'var(--fg-4)', letterSpacing: '0.01em' }}>
+              {activeAccount.name}
+              {strategyName && (
+                <span style={{ color: 'var(--fg-4)', opacity: 0.6 }}> · {strategyName}</span>
+              )}
+            </p>
           </div>
         )}
 

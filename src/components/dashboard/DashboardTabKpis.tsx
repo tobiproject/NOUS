@@ -1,70 +1,5 @@
 'use client'
 
-import {
-  TrendingUp, TrendingDown, Activity, Target, BarChart2, AlertTriangle,
-} from 'lucide-react'
-
-interface KpiCardProps {
-  label: string
-  value: React.ReactNode
-  sub?: string
-  accentColor?: string
-  accentBg?: string
-  icon?: React.ElementType
-}
-
-function KpiCard({ label, value, sub, accentColor, accentBg, icon: Icon }: KpiCardProps) {
-  return (
-    <div
-      className="rounded-xl p-4"
-      style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        borderTop: `2px solid ${accentColor ?? 'rgba(255,255,255,0.15)'}`,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }}
-    >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div
-          className="metric truncate leading-none"
-          style={{ color: 'var(--fg-1)', fontSize: '26px' }}
-        >
-          {value}
-        </div>
-        {Icon && (
-          <div
-            className="flex-shrink-0 h-8 w-8 rounded-lg flex items-center justify-center"
-            style={{
-              background: accentBg ?? 'rgba(255,255,255,0.06)',
-              color: accentColor ?? 'var(--fg-4)',
-            }}
-          >
-            <Icon className="h-4 w-4" />
-          </div>
-        )}
-      </div>
-      <div className="eyebrow">{label}</div>
-      {sub && (
-        <div className="num text-xs mt-0.5" style={{ color: 'var(--fg-4)' }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function pnlStyle(val: number): React.CSSProperties {
-  if (val > 0) return { color: 'var(--long)' }
-  if (val < 0) return { color: 'var(--short)' }
-  return { color: 'var(--fg-3)' }
-}
-
-function formatPnl(val: number) {
-  return `${val >= 0 ? '+' : ''}${val.toFixed(2)} €`
-}
-
 export interface TabKpiData {
   pnl: number
   pnlPct: number
@@ -74,98 +9,82 @@ export interface TabKpiData {
   drawdownPct?: number
 }
 
+interface CellProps {
+  label: string
+  value: React.ReactNode
+  sub?: string
+  last?: boolean
+}
+
+function Cell({ label, value, sub, last }: CellProps) {
+  return (
+    <div
+      className="flex-1 min-w-[80px] px-4 py-3"
+      style={last ? undefined : { borderRight: '1px solid rgba(255,255,255,0.07)' }}
+    >
+      <div className="eyebrow mb-1.5" style={{ fontSize: '10px' }}>{label}</div>
+      <div className="num text-lg font-bold leading-none" style={{ color: 'var(--fg-1)' }}>
+        {value}
+      </div>
+      {sub && (
+        <div className="num text-xs mt-1" style={{ color: 'var(--fg-4)' }}>{sub}</div>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   data: TabKpiData
   tab: 'today' | 'week' | 'month'
 }
 
 export function DashboardTabKpis({ data, tab }: Props) {
-  const { pnl, pnlPct, tradeCount, winRate, avgRR, drawdownPct } = data
+  const { tradeCount, winRate, avgRR, drawdownPct } = data
 
-  const pnlLabel =
-    tab === 'today' ? 'Tages-P&L' : tab === 'week' ? 'Wochen-P&L' : 'Monats-P&L'
+  const winRateColor = winRate === null ? 'var(--fg-4)' : winRate >= 50 ? 'var(--long)' : 'var(--short)'
+  const ddColor = (drawdownPct ?? 0) > 10 ? 'var(--short)' : (drawdownPct ?? 0) > 5 ? 'var(--warn)' : 'var(--long)'
 
-  const hasTrades = tradeCount > 0
-
-  const pnlValue = !hasTrades ? (
-    <span className="text-sm font-normal" style={{ color: 'var(--fg-3)' }}>
-      Keine Trades
-    </span>
-  ) : (
-    <span style={pnlStyle(pnl)}>{formatPnl(pnl)}</span>
-  )
-
-  const pnlAccent = !hasTrades
-    ? 'rgba(255,255,255,0.15)'
-    : pnl > 0 ? '#089981' : pnl < 0 ? '#F23645' : 'rgba(255,255,255,0.15)'
-  const pnlAccentBg = !hasTrades
-    ? 'rgba(255,255,255,0.06)'
-    : pnl > 0 ? 'rgba(8,153,129,0.12)' : pnl < 0 ? 'rgba(242,54,69,0.12)' : 'rgba(255,255,255,0.06)'
-  const PnlIcon = !hasTrades ? TrendingUp : pnl >= 0 ? TrendingUp : TrendingDown
-
-  const winRateValue = winRate === null ? (
-    <span className="text-sm font-normal" style={{ color: 'var(--fg-3)' }}>—</span>
-  ) : `${winRate.toFixed(1)}%`
-  const winRateAccent = winRate === null ? 'rgba(255,255,255,0.15)' : winRate >= 50 ? '#089981' : '#F23645'
-  const winRateAccentBg = winRate === null ? 'rgba(255,255,255,0.06)' : winRate >= 50 ? 'rgba(8,153,129,0.12)' : 'rgba(242,54,69,0.12)'
-
-  const rrValue = avgRR === null ? (
-    <span className="text-sm font-normal" style={{ color: 'var(--fg-3)' }}>—</span>
-  ) : `1:${avgRR.toFixed(2)}`
-
-  const ddAccent = (drawdownPct ?? 0) > 10
-    ? '#F23645'
-    : (drawdownPct ?? 0) > 5 ? '#FF9800' : '#089981'
-  const ddAccentBg = (drawdownPct ?? 0) > 10
-    ? 'rgba(242,54,69,0.12)'
-    : (drawdownPct ?? 0) > 5 ? 'rgba(255,152,0,0.12)' : 'rgba(8,153,129,0.12)'
-  const ddStyle: React.CSSProperties = { color: ddAccent }
+  const hasDd = tab === 'month' && drawdownPct !== undefined
 
   return (
     <div
-      className={
-        tab === 'month'
-          ? 'grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
-          : 'grid gap-3 grid-cols-2 sm:grid-cols-4'
-      }
+      className="rounded-xl flex flex-wrap"
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        overflow: 'hidden',
+      }}
     >
-      <KpiCard
-        label={pnlLabel}
-        value={pnlValue}
-        sub={hasTrades ? `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%` : undefined}
-        accentColor={pnlAccent}
-        accentBg={pnlAccentBg}
-        icon={PnlIcon}
-      />
-      <KpiCard
+      <Cell
         label="Trades"
         value={<span style={{ color: 'var(--fg-1)' }}>{tradeCount}</span>}
-        accentColor="#2962FF"
-        accentBg="rgba(41,98,255,0.12)"
-        icon={Activity}
       />
-      <KpiCard
+      <Cell
         label="Win Rate"
-        value={winRateValue}
-        accentColor={winRateAccent}
-        accentBg={winRateAccentBg}
-        icon={Target}
+        value={
+          winRate === null
+            ? <span style={{ color: 'var(--fg-4)' }}>—</span>
+            : <span style={{ color: winRateColor }}>{winRate.toFixed(1)}%</span>
+        }
       />
-      <KpiCard
+      <Cell
         label="Ø Risk/Reward"
-        value={rrValue}
-        accentColor="#2962FF"
-        accentBg="rgba(41,98,255,0.12)"
-        icon={BarChart2}
+        value={
+          avgRR === null
+            ? <span style={{ color: 'var(--fg-4)' }}>—</span>
+            : <span style={{ color: 'var(--brand-blue)' }}>1:{avgRR.toFixed(2)}</span>
+        }
+        last={!hasDd}
       />
-      {tab === 'month' && drawdownPct !== undefined && (
-        <KpiCard
+      {hasDd && (
+        <Cell
           label="Max. Drawdown"
-          value={<span style={ddStyle}>{drawdownPct.toFixed(2)}%</span>}
-          sub={drawdownPct > 10 ? 'Kritisch' : drawdownPct > 5 ? 'Erhöht' : undefined}
-          accentColor={ddAccent}
-          accentBg={ddAccentBg}
-          icon={AlertTriangle}
+          value={<span style={{ color: ddColor }}>{drawdownPct!.toFixed(2)}%</span>}
+          sub={drawdownPct! > 10 ? 'Kritisch' : drawdownPct! > 5 ? 'Erhöht' : undefined}
+          last
         />
       )}
     </div>

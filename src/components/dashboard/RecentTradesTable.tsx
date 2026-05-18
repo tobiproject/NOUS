@@ -17,7 +17,7 @@ export function RecentTradesTable({ trades, onTradeClick, emptyMessage }: Props)
     <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-raw)' }}>
       <div>
         <div className="eyebrow mb-0.5">Recent trades</div>
-        <div className="text-sm font-semibold" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+        <div className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>
           {trades.length > 0 ? `${trades.length} Trades` : 'Noch keine Trades'}
         </div>
       </div>

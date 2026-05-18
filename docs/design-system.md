@@ -58,10 +58,10 @@ font-feature-settings: 'cv11', 'ss01', 'ss03';
 
 | Token | Hex | Verwendung |
 |-------|-----|------------|
-| `--fg-1` | `#f0f0f0` | Primärtext: Überschriften, wichtige Werte |
-| `--fg-2` | `#a0a0a0` | Sekundärtext: Labels, beschreibende Texte |
-| `--fg-3` | `#606060` | Tertiärtext: Hints, Zeitstempel |
-| `--fg-4` | `#404040` | Sehr gedämpft: Platzhalter, inaktive Elemente |
+| `--fg-1` | `#ffffff` | Primärtext |
+| `--fg-2` | `#ffffff` | Sekundärtext |
+| `--fg-3` | `#ffffff` | Tertiärtext |
+| `--fg-4` | `#ffffff` | Alle Texte — komplett weiß, keine Graustufen |
 
 ### Semantische Farben
 

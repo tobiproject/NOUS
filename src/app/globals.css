@@ -9,25 +9,25 @@
   :root {
     /* shadcn vars — neutral dark, kein Farbstich */
     --background: 0 0% 5%;              /* #0d0d0d */
-    --foreground: 0 0% 94%;             /* #f0f0f0 */
+    --foreground: 0 0% 100%;             /* #ffffff */
 
     --card: 0 0% 9%;                    /* #161616 */
-    --card-foreground: 0 0% 94%;
+    --card-foreground: 0 0% 100%;
 
     --popover: 0 0% 9%;                 /* #161616 */
-    --popover-foreground: 0 0% 94%;
+    --popover-foreground: 0 0% 100%;
 
     --primary: 29 100% 54%;            /* #ff8210 — brand orange */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 12%;              /* #1e1e1e */
-    --secondary-foreground: 0 0% 94%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 12%;                  /* #1e1e1e */
-    --muted-foreground: 0 0% 63%;       /* #a0a0a0 */
+    --muted-foreground: 0 0% 100%;      /* #ffffff */
 
     --accent: 0 0% 15%;                 /* #262626 */
-    --accent-foreground: 0 0% 94%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 355 88% 58%;        /* #F23645 */
     --destructive-foreground: 0 0% 98%;
@@ -47,7 +47,7 @@
 
     /* sidebar vars */
     --sidebar-background: 0 0% 7%;     /* #111111 */
-    --sidebar-foreground: 0 0% 63%;    /* #a0a0a0 */
+    --sidebar-foreground: 0 0% 100%;   /* #ffffff */
     --sidebar-primary: 29 100% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 10%;        /* #1a1a1a */
@@ -66,10 +66,10 @@
     --short-soft:        rgba(242,54,69,0.14);
     --warn:              #FF9800;
     --warn-soft:         rgba(255,152,0,0.14);
-    --fg-1:              #f0f0f0;
-    --fg-2:              #a0a0a0;
-    --fg-3:              #606060;
-    --fg-4:              #404040;
+    --fg-1:              #ffffff;
+    --fg-2:              #ffffff;
+    --fg-3:              #ffffff;
+    --fg-4:              #ffffff;
     --bg-0:              #0a0a0a;
     --bg-1:              #0d0d0d;
     --bg-2:              #111111;
@@ -180,8 +180,8 @@
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--fg-2);
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #ffffff;
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
   /* Ticker: mono uppercase */
@@ -202,7 +202,7 @@
 
   /* Metric: large display number */
   .metric {
-    font-family: 'Manrope', ui-sans-serif, sans-serif;
+    font-family: 'Space Grotesk', ui-sans-serif, sans-serif;
     font-size: 26px;
     font-weight: 700;
     letter-spacing: -0.02em;

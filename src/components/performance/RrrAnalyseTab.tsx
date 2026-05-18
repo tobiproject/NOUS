@@ -64,7 +64,7 @@ function TradeTooltip({ active, payload }: { active?: boolean; payload?: Array<{
   return (
     <div style={{
       background: 'var(--bg-1)',
-      border: `1px solid ${isWin ? 'rgba(34,197,94,0.3)' : isLoss ? 'rgba(239,68,68,0.3)' : 'var(--border-1)'}`,
+      border: `1px solid ${isWin ? 'rgba(34,197,94,0.3)' : isLoss ? 'rgba(239,68,68,0.3)' : 'var(--border-raw)'}`,
       borderRadius: 8,
       padding: '10px 14px',
       minWidth: 190,
@@ -243,7 +243,7 @@ export function RrrAnalyseTab({ trades }: Props) {
       </div>
 
       {/* RR Balkendiagramm */}
-      <div className="rounded-lg p-4" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)' }}>
+      <div className="rounded-lg p-4" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)' }}>
         <div className="flex items-center justify-between mb-1">
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>
             RR pro Trade
@@ -276,7 +276,7 @@ export function RrrAnalyseTab({ trades }: Props) {
 
         {tradeRows.length === 0 ? (
           <div className="flex items-center justify-center h-24 text-sm rounded-lg"
-            style={{ background: 'var(--bg-2)', border: '1px dashed var(--border-1)', color: 'var(--fg-4)' }}>
+            style={{ background: 'var(--bg-2)', border: '1px dashed var(--border-raw)', color: 'var(--fg-4)' }}>
             Noch keine Trades vorhanden
           </div>
         ) : (
@@ -334,71 +334,68 @@ export function RrrAnalyseTab({ trades }: Props) {
         </p>
       </div>
 
-      {/* Breakeven Szenarien */}
+      {/* Breakeven Szenarien — horizontale Scorecard */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--fg-4)' }}>
-          Welches RRR ist bei deiner Winrate profitabel?
+        <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--fg-4)' }}>
+          Welches RRR ist profitabel?
         </p>
-        <div className="space-y-2">
-          {scenarios.map((s) => {
-            const isOptimal = optimalRR?.rr === s.rr
-            const isRecommended = closed < 100 && s.rr === 1.0
-            const tqPct = winRate !== null ? winRate * 100 : null
-            const profitable = tqPct !== null && tqPct >= s.needed
-            const barWidthPct = tqPct !== null ? Math.min(tqPct, 100) : 0
-            const markerPct = Math.min(s.needed, 100)
 
-            return (
-              <div
-                key={s.rr}
-                className="rounded-lg px-4 py-3 space-y-2"
-                style={{
-                  background: isOptimal ? 'rgba(59,130,246,0.08)' : 'var(--bg-3)',
-                  border: `1px solid ${isOptimal ? 'rgba(59,130,246,0.35)' : isRecommended ? 'rgba(245,158,11,0.35)' : 'var(--border-1)'}`,
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold num" style={{ color: 'var(--fg-1)' }}>{s.label}</span>
-                    {isOptimal && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: 'rgba(59,130,246,0.2)', color: 'var(--brand-blue)' }}>Optimal</span>
-                    )}
-                    {isRecommended && !isOptimal && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: 'rgba(245,158,11,0.2)', color: '#f59e0b' }}>Empfohlen</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs">
-                    <span style={{ color: 'var(--fg-4)' }}>Break-Even: <span className="num font-medium" style={{ color: 'var(--fg-2)' }}>{s.needed.toFixed(1)}%</span></span>
-                    <span style={{ color: 'var(--fg-4)' }}>Deine TQ: <span className="num font-semibold" style={{ color: profitable ? 'var(--long)' : 'var(--short)' }}>{tqPct !== null ? `${tqPct.toFixed(1)}%` : '–'}</span></span>
-                    <span className="num font-semibold" style={{ color: s.ev !== null ? (s.ev > 0 ? 'var(--long)' : 'var(--short)') : 'var(--fg-4)', minWidth: 48, textAlign: 'right' }}>
-                      {s.ev !== null ? (s.ev > 0 ? `+${s.ev.toFixed(2)}R` : `${s.ev.toFixed(2)}R`) : '–'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="relative h-5 rounded-sm" style={{ background: 'var(--bg-2)' }}>
-                  {tqPct !== null && (
-                    <div
-                      className="absolute inset-y-0 left-0 rounded-sm transition-all"
-                      style={{ width: `${barWidthPct}%`, background: profitable ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)' }}
-                    />
-                  )}
-                  <div
-                    className="absolute inset-y-0 w-0.5 z-10"
-                    style={{ left: `${markerPct}%`, background: 'rgba(255,255,255,0.5)' }}
-                  />
-                  <div className="absolute inset-0 flex items-center px-2">
-                    <span className="text-[10px] font-semibold" style={{ color: profitable ? '#86efac' : '#fca5a5' }}>
-                      {tqPct !== null ? `${tqPct.toFixed(0)}%` : ''}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+        {/* Sticky header row */}
+        <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid var(--border-raw)' }}>
+          <table className="w-full text-[11px] border-collapse" style={{ minWidth: 480 }}>
+            <thead>
+              <tr style={{ background: 'var(--bg-3)', borderBottom: '1px solid var(--border-raw)' }}>
+                <th className="text-left px-3 py-2 font-semibold sticky left-0 z-10" style={{ color: 'var(--fg-4)', background: 'var(--bg-3)', minWidth: 80 }}>
+                  RR-Ratio
+                </th>
+                {scenarios.map(s => {
+                  const isOptimal = optimalRR?.rr === s.rr
+                  return (
+                    <th key={s.rr} className="px-3 py-2 text-center font-bold num" style={{ color: isOptimal ? '#2962FF' : 'var(--fg-2)', whiteSpace: 'nowrap' }}>
+                      {s.label}
+                      {isOptimal && <span className="block text-[9px] font-semibold" style={{ color: '#2962FF' }}>★ Optimal</span>}
+                    </th>
+                  )
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {/* Break-Even row */}
+              <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border-raw)' }}>
+                <td className="px-3 py-2 font-medium sticky left-0" style={{ color: 'var(--fg-4)', background: 'var(--bg-2)' }}>Break-Even WR</td>
+                {scenarios.map(s => (
+                  <td key={s.rr} className="px-3 py-2 text-center num font-medium" style={{ color: 'var(--fg-3)' }}>
+                    {s.needed.toFixed(1)}%
+                  </td>
+                ))}
+              </tr>
+              {/* Deine Winrate row */}
+              <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border-raw)' }}>
+                <td className="px-3 py-2 font-medium sticky left-0" style={{ color: 'var(--fg-4)', background: 'var(--bg-2)' }}>Deine WR</td>
+                {scenarios.map(s => {
+                  const tqPct = winRate !== null ? winRate * 100 : null
+                  const profitable = tqPct !== null && tqPct >= s.needed
+                  return (
+                    <td key={s.rr} className="px-3 py-2 text-center num font-bold" style={{ color: tqPct !== null ? (profitable ? 'var(--long)' : 'var(--short)') : 'var(--fg-4)' }}>
+                      {tqPct !== null ? `${tqPct.toFixed(1)}%` : '–'}
+                    </td>
+                  )
+                })}
+              </tr>
+              {/* Expected Value row */}
+              <tr style={{ background: 'var(--bg-2)' }}>
+                <td className="px-3 py-2 font-medium sticky left-0" style={{ color: 'var(--fg-4)', background: 'var(--bg-2)' }}>Erw. Wert (EV)</td>
+                {scenarios.map(s => (
+                  <td key={s.rr} className="px-3 py-2 text-center num font-bold" style={{ color: s.ev !== null ? (s.ev > 0 ? 'var(--long)' : 'var(--short)') : 'var(--fg-4)' }}>
+                    {s.ev !== null ? (s.ev > 0 ? `+${s.ev.toFixed(2)}R` : `${s.ev.toFixed(2)}R`) : '–'}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <p className="text-[11px] mt-2" style={{ color: 'var(--fg-4)' }}>
-          Weißer Strich = Break-Even-Schwelle. Grün = profitabel, Rot = nicht profitabel.
+        <p className="text-[10px] mt-2" style={{ color: 'var(--fg-4)' }}>
+          Grün = profitabel bei deiner aktuellen Winrate · ★ = bestes EV
         </p>
       </div>
 
@@ -408,7 +405,7 @@ export function RrrAnalyseTab({ trades }: Props) {
 
 function Kpi({ label, value, color, sub }: { label: string; value: string; color?: string; sub?: string }) {
   return (
-    <div className="rounded-lg px-4 py-3" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)' }}>
+    <div className="rounded-lg px-4 py-3" style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)' }}>
       <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--fg-4)' }}>{label}</p>
       <p className="text-lg font-bold num" style={{ color: color ?? 'var(--fg-1)' }}>{value}</p>
       {sub && <p className="text-[10px] mt-0.5" style={{ color: 'var(--fg-4)' }}>{sub}</p>}

@@ -243,7 +243,7 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
       {/* Trade reference bar */}
       <div
         className="shrink-0 flex items-center gap-3 flex-wrap rounded-lg px-3 py-2"
-        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
+        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
       >
         {/* Direction */}
         <span
@@ -262,7 +262,7 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
         {trade.rr_ratio !== null ? <RefVal label="RR" value={`1:${trade.rr_ratio}`} /> : null}
         {trade.lot_size ? <RefVal label="Lots" value={trade.lot_size} /> : null}
 
-        <div className="w-px h-3 shrink-0" style={{ background: 'var(--border-1)' }} />
+        <div className="w-px h-3 shrink-0" style={{ background: 'var(--border-raw)' }} />
 
         <RefVal label="Zeit" value={format(parseISO(trade.traded_at), 'dd.MM.yy HH:mm')} />
 
@@ -276,7 +276,7 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
 
         {targetRR !== null && targetRR !== undefined && (
           <>
-            <div className="w-px h-3 shrink-0" style={{ background: 'var(--border-1)' }} />
+            <div className="w-px h-3 shrink-0" style={{ background: 'var(--border-raw)' }} />
             <RefVal
               label="Ziel-RRR"
               value={`1:${targetRR}`}
@@ -293,7 +293,7 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
       {/* Action strip — single compact row */}
       <div
         className="shrink-0 flex items-center gap-2 rounded-lg px-3 py-2"
-        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
+        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
       >
         {/* Status / instructions */}
         <div className="flex-1 min-w-0">
@@ -315,7 +315,7 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
               </span>
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0"
-                style={{ background: 'var(--bg-3)', color: 'var(--fg-4)', border: '1px solid var(--border-1)' }}
+                style={{ background: 'var(--bg-3)', color: 'var(--fg-4)', border: '1px solid var(--border-raw)' }}
               >
                 oder ⌘V
               </span>
@@ -328,7 +328,7 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
           className="shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md transition-opacity disabled:opacity-50"
-          style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--fg-3)' }}
+          style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-3)' }}
           title="Datei hochladen"
         >
           <Upload size={11} />
@@ -340,7 +340,7 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
           onClick={pasteFromClipboard}
           disabled={uploading}
           className="shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md transition-opacity disabled:opacity-50"
-          style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--fg-3)' }}
+          style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-3)' }}
           title="Bild aus Zwischenablage einfügen"
         >
           <Clipboard size={11} />
@@ -353,7 +353,7 @@ export function TradingViewChartTab({ trade, tradeId, isActive, onScreenshotAdde
           target="_blank"
           rel="noopener noreferrer"
           className="shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md"
-          style={{ background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--fg-4)' }}
+          style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-4)' }}
           title="In TradingView öffnen"
         >
           <ExternalLink size={11} />

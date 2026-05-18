@@ -109,7 +109,7 @@ export function TradeReviewTab({ trade, screenshots = [], onSaved }: Props) {
                   src={url}
                   alt={`Screenshot ${i + 1}`}
                   className="h-28 rounded-lg object-cover"
-                  style={{ border: '1px solid var(--border-1)' }}
+                  style={{ border: '1px solid var(--border-raw)' }}
                 />
               </a>
             ))}

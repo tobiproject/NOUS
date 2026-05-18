@@ -283,7 +283,7 @@ export function KalenderContent() {
       {filterOpen && (
         <div
           className="rounded-lg p-3 space-y-2.5"
-          style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
+          style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
         >
           {/* Impact */}
           <div className="flex items-center gap-3 flex-wrap">
@@ -365,7 +365,7 @@ export function KalenderContent() {
       {/* ── Calendar ── */}
       <div
         className="rounded-xl p-4"
-        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
+        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
       >
         <EconomicEventList
           events={displayEvents}

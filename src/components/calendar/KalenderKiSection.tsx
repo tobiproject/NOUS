@@ -66,7 +66,7 @@ function EventCard({ event, watchlistSymbols }: { event: EconomicEvent; watchlis
   return (
     <div
       className="rounded-lg p-3"
-      style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
+      style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -117,7 +117,7 @@ function EventCard({ event, watchlistSymbols }: { event: EconomicEvent; watchlis
       {open && text && (
         <div
           className="mt-3 pt-3 text-xs leading-relaxed whitespace-pre-wrap"
-          style={{ color: 'var(--fg-2)', borderTop: '1px solid var(--border-1)' }}
+          style={{ color: 'var(--fg-2)', borderTop: '1px solid var(--border-raw)' }}
         >
           {text}
           {state === 'streaming' && <span className="animate-pulse ml-0.5">▋</span>}

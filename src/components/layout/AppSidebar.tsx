@@ -62,11 +62,11 @@ function lerpColor(a: [number,number,number], b: [number,number,number], t: numb
 }
 
 function ringColor(pct: number): string {
-  const red:    [number,number,number] = [242, 54,  69]
-  const orange: [number,number,number] = [255, 130, 16]
-  const green:  [number,number,number] = [74,  222, 128]
-  if (pct <= 0.5) return lerpColor(red, orange, pct * 2)
-  return lerpColor(orange, green, (pct - 0.5) * 2)
+  const red:   [number,number,number] = [242, 54,  69]
+  const blue:  [number,number,number] = [41,  98,  255]
+  const green: [number,number,number] = [8,   153, 129]
+  if (pct <= 0.5) return lerpColor(red, blue, pct * 2)
+  return lerpColor(blue, green, (pct - 0.5) * 2)
 }
 
 function WorkflowRing({ done, total }: { done: number; total: number }) {
@@ -75,8 +75,8 @@ function WorkflowRing({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? done / total : 0
   const offset = circ * (1 - pct)
   const complete = done === total && total > 0
-  const color = pct === 0 ? 'rgba(255,255,255,0.15)' : ringColor(pct)
-  const glowColor = pct === 0 ? 'none' : ringColor(pct)
+  const color = pct === 0 ? 'rgba(255,255,255,0.12)' : ringColor(pct)
+  const glowColor = pct === 0 ? '#2962FF' : ringColor(pct)
 
   return (
     <svg

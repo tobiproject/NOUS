@@ -149,7 +149,9 @@ export function AppSidebar() {
   const [strategies, setStrategies] = useState<{ id: string; name: string }[]>([])
   const [activeStrategyId, setActiveStrategyId] = useState<string | null>(null)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const [strategyMenuOpen, setStrategyMenuOpen] = useState(false)
   const accountMenuRef = useRef<HTMLDivElement>(null)
+  const strategyMenuRef = useRef<HTMLDivElement>(null)
   const update = useVersionCheck()
   const { data: workflowData } = useWorkflowProgress(activeAccount?.id)
 
@@ -196,7 +198,7 @@ export function AppSidebar() {
     return () => window.removeEventListener('nous-strategy-changed', onChanged)
   }, [activeAccount?.id])
 
-  // Close account menu on outside click
+  // Close menus on outside click
   useEffect(() => {
     if (!accountMenuOpen) return
     function handleOutside(e: MouseEvent) {
@@ -205,6 +207,23 @@ export function AppSidebar() {
     document.addEventListener('mousedown', handleOutside)
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [accountMenuOpen])
+
+  useEffect(() => {
+    if (!strategyMenuOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (!strategyMenuRef.current?.contains(e.target as Node)) setStrategyMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [strategyMenuOpen])
+
+  function selectStrategy(id: string) {
+    if (!activeAccount?.id) return
+    localStorage.setItem(`nous-active-strategy-${activeAccount.id}`, id)
+    setActiveStrategyId(id)
+    setStrategyMenuOpen(false)
+    window.dispatchEvent(new CustomEvent('nous-strategy-changed', { detail: { strategyId: id } }))
+  }
 
   useEffect(() => {
     function check() {
@@ -382,51 +401,33 @@ export function AppSidebar() {
           )}
         </div>
 
-        {/* Account switcher + strategy badge */}
+        {/* Konto + Strategie selectors */}
         {!collapsed && activeAccount && (
-          <div className="px-3 pb-2 shrink-0 space-y-1.5">
-            {/* Account switcher */}
+          <div className="px-3 pb-2 shrink-0 space-y-0.5">
+
+            {/* Konto */}
             <div className="relative" ref={accountMenuRef}>
               <button
                 onClick={() => accounts.length > 1 && setAccountMenuOpen(v => !v)}
-                className="flex items-center gap-1 w-full text-left rounded-md px-1.5 py-1 transition-colors"
-                style={{
-                  cursor: accounts.length > 1 ? 'pointer' : 'default',
-                  background: accountMenuOpen ? 'var(--bg-3)' : 'transparent',
-                }}
+                className="flex items-center gap-1.5 w-full text-left rounded px-1.5 py-[3px] transition-colors"
+                style={{ cursor: accounts.length > 1 ? 'pointer' : 'default', background: accountMenuOpen ? 'var(--bg-3)' : 'transparent' }}
                 onMouseEnter={e => { if (accounts.length > 1) (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
                 onMouseLeave={e => { if (!accountMenuOpen) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
               >
-                <span className="text-[11px] truncate flex-1 font-medium" style={{ color: 'var(--fg-4)' }}>
-                  {activeAccount.name}
-                </span>
+                <span className="text-[10px] shrink-0" style={{ color: 'var(--fg-4)' }}>Konto:</span>
+                <span className="text-[11px] font-semibold truncate flex-1" style={{ color: 'var(--fg-2)' }}>{activeAccount.name}</span>
                 {accounts.length > 1 && (
-                  <ChevronDown
-                    className="h-3 w-3 shrink-0 transition-transform duration-150"
-                    style={{ color: 'var(--fg-4)', transform: accountMenuOpen ? 'rotate(180deg)' : 'none' }}
-                  />
+                  <ChevronDown className="h-3 w-3 shrink-0" style={{ color: 'var(--fg-4)', transform: accountMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
                 )}
               </button>
               {accountMenuOpen && (
-                <div
-                  className="absolute left-0 top-full z-50 mt-1 rounded-lg overflow-hidden"
-                  style={{
-                    minWidth: 180,
-                    background: 'var(--bg-2)',
-                    border: '1px solid var(--border-raw)',
-                    boxShadow: 'var(--elev-2)',
-                  }}
-                >
+                <div className="absolute left-0 top-full z-50 mt-1 rounded-lg overflow-hidden" style={{ minWidth: 180, background: 'var(--bg-2)', border: '1px solid var(--border-raw)', boxShadow: 'var(--elev-2)' }}>
                   {accounts.map(acc => (
                     <button
                       key={acc.id}
                       onClick={() => { setActiveAccount(acc); setAccountMenuOpen(false) }}
                       className="w-full flex items-center px-3 py-2 text-[12px] text-left transition-colors"
-                      style={{
-                        color: acc.id === activeAccount.id ? '#ff8210' : 'var(--fg-2)',
-                        fontWeight: acc.id === activeAccount.id ? 600 : 400,
-                        background: 'transparent',
-                      }}
+                      style={{ color: acc.id === activeAccount.id ? '#ff8210' : 'var(--fg-2)', fontWeight: acc.id === activeAccount.id ? 600 : 400, background: 'transparent' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                     >
@@ -437,13 +438,39 @@ export function AppSidebar() {
               )}
             </div>
 
-            {/* Account · Strategie annotation */}
-            <p className="px-1.5 text-[10px] truncate" style={{ color: 'var(--fg-4)', letterSpacing: '0.01em' }}>
-              {activeAccount.name}
-              {strategyName && (
-                <span style={{ color: 'var(--fg-4)', opacity: 0.6 }}> · {strategyName}</span>
+            {/* Strategie */}
+            <div className="relative" ref={strategyMenuRef}>
+              <button
+                onClick={() => strategies.length > 0 && setStrategyMenuOpen(v => !v)}
+                className="flex items-center gap-1.5 w-full text-left rounded px-1.5 py-[3px] transition-colors"
+                style={{ cursor: strategies.length > 0 ? 'pointer' : 'default', background: strategyMenuOpen ? 'var(--bg-3)' : 'transparent' }}
+                onMouseEnter={e => { if (strategies.length > 0) (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
+                onMouseLeave={e => { if (!strategyMenuOpen) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                <span className="text-[10px] shrink-0" style={{ color: 'var(--fg-4)' }}>Strategie:</span>
+                <span className="text-[11px] font-semibold truncate flex-1" style={{ color: strategyName ? 'var(--fg-2)' : 'var(--fg-4)' }}>{strategyName ?? '—'}</span>
+                {strategies.length > 0 && (
+                  <ChevronDown className="h-3 w-3 shrink-0" style={{ color: 'var(--fg-4)', transform: strategyMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                )}
+              </button>
+              {strategyMenuOpen && (
+                <div className="absolute left-0 top-full z-50 mt-1 rounded-lg overflow-hidden" style={{ minWidth: 180, background: 'var(--bg-2)', border: '1px solid var(--border-raw)', boxShadow: 'var(--elev-2)' }}>
+                  {strategies.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => selectStrategy(s.id)}
+                      className="w-full flex items-center px-3 py-2 text-[12px] text-left transition-colors"
+                      style={{ color: s.id === activeStrategyId ? '#ff8210' : 'var(--fg-2)', fontWeight: s.id === activeStrategyId ? 600 : 400, background: 'transparent' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
               )}
-            </p>
+            </div>
+
           </div>
         )}
 

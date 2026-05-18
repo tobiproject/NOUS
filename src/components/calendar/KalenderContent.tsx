@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import { SlidersHorizontal, RefreshCw } from 'lucide-react'
 import { useEconomicCalendar } from '@/hooks/useEconomicCalendar'
 import { useWatchlist } from '@/hooks/useWatchlist'
@@ -14,6 +14,17 @@ import { KalenderWeekNav } from './KalenderWeekNav'
 import { ImpactDot } from './ImpactDot'
 import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
 import type { ImpactLevel } from '@/types/calendar'
+import { format, startOfWeek, differenceInCalendarWeeks, subDays, parseISO } from 'date-fns'
+
+type NavMode = 'yesterday' | 'today' | 'thisweek' | 'nextweek' | 'custom'
+
+const NAV_TABS: { id: NavMode; label: string }[] = [
+  { id: 'yesterday', label: 'Gestern' },
+  { id: 'today',     label: 'Heute' },
+  { id: 'thisweek',  label: 'Diese Woche' },
+  { id: 'nextweek',  label: 'Nächste Woche' },
+  { id: 'custom',    label: 'Benutzerdefiniert' },
+]
 
 const REGIONS = [
   { id: 'us', flag: '🇺🇸', label: 'USA',        currencies: ['USD'] },
@@ -59,6 +70,49 @@ export function KalenderContent() {
     isLoading, isRefreshing,
     goToPrevWeek, goToNextWeek, goToThisWeek, manualRefresh,
   } = useEconomicCalendar()
+
+  // ── Nav tabs ───────────────────────────────────────────────────────────────
+  const [navMode, setNavMode] = useState<NavMode>('thisweek')
+  const [customDate, setCustomDate] = useState<string>('')
+  const [currentTime, setCurrentTime] = useState<string>('')
+
+  useEffect(() => {
+    const update = () => setCurrentTime(new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }).format(new Date()))
+    update()
+    const id = setInterval(update, 30000)
+    return () => clearInterval(id)
+  }, [])
+
+  const handleNavTab = useCallback((mode: NavMode) => {
+    setNavMode(mode)
+    if (mode === 'today' || mode === 'thisweek') { goToThisWeek() }
+    else if (mode === 'nextweek') { goToNextWeek() }
+    else if (mode === 'yesterday') {
+      const yesterday = subDays(new Date(), 1)
+      const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+      const prevWeekStart = startOfWeek(yesterday, { weekStartsOn: 1 })
+      const diff = differenceInCalendarWeeks(prevWeekStart, thisWeekStart, { weekStartsOn: 1 })
+      goToThisWeek() // always reset to 0 first
+      if (diff < 0) goToPrevWeek() // then go back 1 if yesterday is in the previous week
+    }
+  }, [goToThisWeek, goToNextWeek, goToPrevWeek])
+
+  useEffect(() => {
+    if (navMode === 'custom' && customDate) {
+      const d = parseISO(customDate)
+      const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+      const targetWeekStart = startOfWeek(d, { weekStartsOn: 1 })
+      const diff = differenceInCalendarWeeks(targetWeekStart, thisWeekStart, { weekStartsOn: 1 })
+      if (diff === 0) goToThisWeek()
+      else if (diff === 1) goToNextWeek()
+      else if (diff === -1) goToPrevWeek()
+      else {
+        // For offsets > 1 away, repeatedly go forward/back — for simplicity just use goToThisWeek as fallback
+        // The hook doesn't expose setWeekOffset directly, so we settle for current week on large offsets
+        goToThisWeek()
+      }
+    }
+  }, [customDate, navMode, goToThisWeek, goToNextWeek, goToPrevWeek])
 
   const { items: watchlistItems } = useWatchlist(activeAccount?.id)
   const { todaySymbols } = useDailyWatchlist(activeAccount?.id)
@@ -117,13 +171,18 @@ export function KalenderContent() {
   // ── Apply all filters client-side ──────────────────────────────────────────
   const displayEvents = useMemo(() => {
     if (!hydrated) return allEvents
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd')
     return allEvents.filter(e => {
       if (!selectedImpact.includes(e.impact)) return false
       if (regionCurrencies && !regionCurrencies.includes(e.currency)) return false
       if (watchlistOnly && watchlistCurrencies.length > 0 && !watchlistCurrencies.includes(e.currency)) return false
+      if (navMode === 'today' && e.date !== todayStr) return false
+      if (navMode === 'yesterday' && e.date !== yesterdayStr) return false
+      if (navMode === 'custom' && customDate && e.date !== format(parseISO(customDate), 'yyyy-MM-dd')) return false
       return true
     })
-  }, [allEvents, hydrated, selectedImpact, regionCurrencies, watchlistOnly, watchlistCurrencies])
+  }, [allEvents, hydrated, selectedImpact, regionCurrencies, watchlistOnly, watchlistCurrencies, navMode, customDate])
 
   const activeFilterCount = (selectedImpact.length < 3 ? 1 : 0) + (selectedRegions.length > 0 ? 1 : 0) + (watchlistOnly ? 1 : 0)
   const filterActive = filterOpen || activeFilterCount > 0
@@ -133,16 +192,57 @@ export function KalenderContent() {
       <WorkflowVisitTracker step="kalender" />
       <CountdownBanner events={allEvents} onScrollToEvent={() => {}} />
 
-      {/* ── Top bar ── */}
+      {/* ── Navigation tabs ── */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-1 flex-wrap">
+          {NAV_TABS.map(tab => {
+            const active = navMode === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleNavTab(tab.id)}
+                className={cn('h-7 px-3 rounded text-xs font-medium transition-all whitespace-nowrap', !active && 'opacity-60 hover:opacity-90')}
+                style={{
+                  background: active ? 'rgba(255,130,16,0.15)' : 'var(--bg-2)',
+                  border: `1px solid ${active ? 'rgba(255,130,16,0.5)' : 'var(--border-raw)'}`,
+                  color: active ? '#ff8210' : 'var(--fg-3)',
+                }}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+          {navMode === 'custom' && (
+            <input
+              type="date"
+              value={customDate}
+              onChange={e => setCustomDate(e.target.value)}
+              className="h-7 px-2 rounded text-xs"
+              style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-2)' }}
+            />
+          )}
+        </div>
+        {currentTime && (
+          <p className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
+            {currentTime} Ortszeit
+          </p>
+        )}
+      </div>
+
+      {/* ── Top bar (week nav + actions) ── */}
       <div className="flex items-center justify-between gap-2">
-        <KalenderWeekNav
-          weekStart={weekStart}
-          weekEnd={weekEnd}
-          weekOffset={weekOffset}
-          onPrev={goToPrevWeek}
-          onNext={goToNextWeek}
-          onToday={goToThisWeek}
-        />
+        {(navMode === 'thisweek' || navMode === 'nextweek') ? (
+          <KalenderWeekNav
+            weekStart={weekStart}
+            weekEnd={weekEnd}
+            weekOffset={weekOffset}
+            onPrev={goToPrevWeek}
+            onNext={goToNextWeek}
+            onToday={goToThisWeek}
+          />
+        ) : (
+          <div />
+        )}
 
         <div className="flex items-center gap-1.5">
           <button

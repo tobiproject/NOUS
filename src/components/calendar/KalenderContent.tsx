@@ -1,55 +1,48 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { useEconomicCalendar } from '@/hooks/useEconomicCalendar'
 import { useWatchlist } from '@/hooks/useWatchlist'
 import { useDailyWatchlist } from '@/hooks/useDailyWatchlist'
 import { useAccountContext } from '@/contexts/AccountContext'
 import { getCategoryColor } from '@/lib/category-colors'
+import { cn } from '@/lib/utils'
 import { CountdownBanner } from './CountdownBanner'
-import { TradingViewCalendarWidget } from './TradingViewCalendarWidget'
+import { EconomicEventList } from './EconomicEventList'
+import { KalenderFilterBar } from './KalenderFilterBar'
+import { KalenderWeekNav } from './KalenderWeekNav'
 import { KalenderKiSection } from './KalenderKiSection'
 import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
 
-const CURRENCY_TO_TV_COUNTRY: Record<string, string> = {
-  USD: 'us', EUR: 'eu', GBP: 'gb', JPY: 'jp',
-  CAD: 'ca', AUD: 'au', NZD: 'nz', CHF: 'ch',
-  CNY: 'cn', HKD: 'hk', SGD: 'sg', NOK: 'no',
-  SEK: 'se', DKK: 'dk', MXN: 'mx', BRL: 'br',
-  INR: 'in', KRW: 'kr', ZAR: 'za', TRY: 'tr',
-}
+const LS_KEY = 'nous-kalender-watchlist-only'
 
-const INDEX_COUNTRY_MAP: Array<[string[], string]> = [
-  [['US100', 'NAS100', 'US500', 'SPX', 'US30', 'DOW', 'GOLD', 'XAUUSD', 'OIL', 'USOIL'], 'us'],
-  [['GER40', 'DAX', 'GER30'], 'de'],
-  [['UK100', 'FTSE'], 'gb'],
-  [['JPN225', 'JP225', 'NKY'], 'jp'],
-  [['AUS200', 'ASX'], 'au'],
-  [['FRA40', 'CAC'], 'fr'],
-]
-
-function symbolsToCountryFilter(symbols: string[]): string {
-  const countries = new Set<string>(['us', 'eu'])
+function extractCurrencies(symbols: string[]): string[] {
+  const currencies = new Set<string>()
   for (const sym of symbols) {
     const upper = sym.toUpperCase().replace(/[-/_.]/g, '')
-    // 6-char forex pairs (e.g. EURUSD, GBPJPY)
-    if (upper.length === 6 && /^[A-Z]{6}$/.test(upper)) {
-      const cc1 = CURRENCY_TO_TV_COUNTRY[upper.slice(0, 3)]
-      const cc2 = CURRENCY_TO_TV_COUNTRY[upper.slice(3, 6)]
-      if (cc1) countries.add(cc1)
-      if (cc2) countries.add(cc2)
+    if (/^[A-Z]{6}$/.test(upper)) {
+      currencies.add(upper.slice(0, 3))
+      currencies.add(upper.slice(3, 6))
     }
-    // Indices and commodities
-    for (const [keys, cc] of INDEX_COUNTRY_MAP) {
-      if (keys.some(k => upper.includes(k))) countries.add(cc)
-    }
+    if (['US100', 'NAS100', 'US500', 'SPX', 'US30', 'DOW', 'XAUUSD', 'XAGUSD', 'USOIL', 'CL'].some(k => upper.includes(k))) currencies.add('USD')
+    if (['GER40', 'DAX', 'GER30', 'FRA40', 'CAC'].some(k => upper.includes(k))) currencies.add('EUR')
+    if (['UK100', 'FTSE'].some(k => upper.includes(k))) currencies.add('GBP')
+    if (['JPN225', 'NKY', 'JP225'].some(k => upper.includes(k))) currencies.add('JPY')
+    if (['AUS200', 'ASX'].some(k => upper.includes(k))) currencies.add('AUD')
   }
-  return [...countries].join(',')
+  return [...currencies]
 }
 
 export function KalenderContent() {
   const { activeAccount } = useAccountContext()
-  const { events, isLoading } = useEconomicCalendar()
+  const {
+    events, allEvents, filters, weekOffset,
+    weekStart, weekEnd, fetchedAt,
+    isLoading, isRefreshing, filtersLoading,
+    updateFilters, goToPrevWeek, goToNextWeek, goToThisWeek, manualRefresh,
+  } = useEconomicCalendar()
+
   const { items: watchlistItems } = useWatchlist(activeAccount?.id)
   const { todaySymbols } = useDailyWatchlist(activeAccount?.id)
 
@@ -65,30 +58,112 @@ export function KalenderContent() {
     return map
   }, [watchlistItems])
 
-  const countryFilter = useMemo(
-    () => symbolsToCountryFilter(watchlistSymbols),
+  const watchlistCurrencies = useMemo(
+    () => extractCurrencies(watchlistSymbols),
     [watchlistSymbols]
   )
 
+  // Watchlist-only toggle — persisted in localStorage
+  const [watchlistOnly, setWatchlistOnly] = useState(false)
+  useEffect(() => {
+    try { setWatchlistOnly(localStorage.getItem(LS_KEY) === '1') } catch { /* */ }
+  }, [])
+  const toggleWatchlistOnly = () => {
+    const next = !watchlistOnly
+    setWatchlistOnly(next)
+    try { localStorage.setItem(LS_KEY, next ? '1' : '0') } catch { /* */ }
+  }
+
+  // Apply watchlist-only filter on top of regular filters
+  const displayEvents = useMemo(() => {
+    if (!watchlistOnly || watchlistCurrencies.length === 0) return events
+    return events.filter(e => watchlistCurrencies.includes(e.currency))
+  }, [events, watchlistOnly, watchlistCurrencies])
+
   const highImpactEvents = useMemo(
-    () => events.filter(e => e.impact === 'High'),
-    [events]
+    () => allEvents.filter(e => e.impact === 'High'),
+    [allEvents]
   )
+
+  const allImpactFiltersOff = filters.impact.length === 0
+
+  const fetchedLabel = useMemo(() => {
+    if (!fetchedAt) return null
+    const d = new Date(fetchedAt)
+    return `Zuletzt aktualisiert: ${d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`
+  }, [fetchedAt])
 
   return (
     <div className="space-y-4">
       <WorkflowVisitTracker step="kalender" />
-      <CountdownBanner events={events} onScrollToEvent={() => {}} />
+      <CountdownBanner events={allEvents} onScrollToEvent={() => {}} />
 
-      {watchlistSymbols.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs" style={{ color: 'var(--fg-4)' }}>
-            Kalender gefiltert nach Watchlist:
-          </span>
+      {/* Top bar: week nav + refresh */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <KalenderWeekNav
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+          weekOffset={weekOffset}
+          onPrev={goToPrevWeek}
+          onNext={goToNextWeek}
+          onToday={goToThisWeek}
+        />
+        <div className="flex items-center gap-2">
+          {fetchedLabel && (
+            <span className="text-[10px] hidden sm:block" style={{ color: 'var(--fg-4)' }}>
+              {fetchedLabel}
+            </span>
+          )}
+          <button
+            onClick={manualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-opacity disabled:opacity-40"
+            style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-3)' }}
+            aria-label="Aktualisieren"
+          >
+            <RefreshCw size={11} className={isRefreshing ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">Aktualisieren</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      {!filtersLoading && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <KalenderFilterBar filters={filters} onChange={updateFilters} />
+
+          {/* Watchlist-only toggle */}
+          {watchlistSymbols.length > 0 && (
+            <>
+              <div className="w-px h-4 shrink-0" style={{ background: 'var(--border-raw)' }} />
+              <button
+                onClick={toggleWatchlistOnly}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all shrink-0',
+                  watchlistOnly ? 'opacity-100' : 'opacity-50 hover:opacity-75'
+                )}
+                style={{
+                  background: watchlistOnly ? 'rgba(255,130,16,0.12)' : 'var(--bg-2)',
+                  border: `1px solid ${watchlistOnly ? 'rgba(255,130,16,0.4)' : 'var(--border-raw)'}`,
+                  color: watchlistOnly ? '#ff8210' : 'var(--fg-3)',
+                }}
+              >
+                <span style={{ fontSize: 10 }}>◆</span>
+                Nur meine Watchlist
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Active watchlist symbols */}
+      {watchlistOnly && watchlistSymbols.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>Gefiltert nach:</span>
           {watchlistSymbols.map(s => (
             <span
               key={s}
-              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              className="text-[10px] px-1.5 py-px rounded-full font-medium"
               style={{
                 background: watchlistColorMap[s] ? `${watchlistColorMap[s]}22` : 'var(--bg-2)',
                 color: watchlistColorMap[s] ?? 'var(--fg-2)',
@@ -98,14 +173,28 @@ export function KalenderContent() {
               {s}
             </span>
           ))}
+          {watchlistCurrencies.length > 0 && (
+            <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
+              → {watchlistCurrencies.join(', ')} Events
+            </span>
+          )}
         </div>
       )}
 
+      {/* Calendar */}
       <div
-        className="rounded-xl overflow-hidden"
-        style={{ border: '1px solid var(--border-1)' }}
+        className="rounded-xl p-4"
+        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
       >
-        <TradingViewCalendarWidget countryFilter={countryFilter} height={700} />
+        <EconomicEventList
+          events={displayEvents}
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+          isLoading={isLoading}
+          allImpactFiltersOff={allImpactFiltersOff}
+          watchlistSymbols={watchlistSymbols}
+          watchlistColorMap={watchlistColorMap}
+        />
       </div>
 
       <KalenderKiSection

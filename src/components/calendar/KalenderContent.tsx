@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { SlidersHorizontal, RefreshCw } from 'lucide-react'
 import { useEconomicCalendar } from '@/hooks/useEconomicCalendar'
 import { useWatchlist } from '@/hooks/useWatchlist'
 import { useDailyWatchlist } from '@/hooks/useDailyWatchlist'
@@ -10,37 +10,54 @@ import { getCategoryColor } from '@/lib/category-colors'
 import { cn } from '@/lib/utils'
 import { CountdownBanner } from './CountdownBanner'
 import { EconomicEventList } from './EconomicEventList'
-import { KalenderFilterBar } from './KalenderFilterBar'
 import { KalenderWeekNav } from './KalenderWeekNav'
-import { KalenderKiSection } from './KalenderKiSection'
+import { ImpactDot } from './ImpactDot'
 import { WorkflowVisitTracker } from '@/components/workflow/WorkflowVisitTracker'
+import type { ImpactLevel } from '@/types/calendar'
 
-const LS_KEY = 'nous-kalender-watchlist-only'
+const REGIONS = [
+  { id: 'us', flag: '🇺🇸', label: 'USA',        currencies: ['USD'] },
+  { id: 'eu', flag: '🇪🇺', label: 'Europa',      currencies: ['EUR', 'GBP', 'CHF', 'NOK', 'SEK', 'DKK'] },
+  { id: 'jp', flag: '🇯🇵', label: 'Japan',       currencies: ['JPY'] },
+  { id: 'ap', flag: '🌏',  label: 'Asien/Paz',   currencies: ['AUD', 'NZD', 'CNY', 'HKD', 'SGD', 'KRW'] },
+  { id: 'am', flag: '🌎',  label: 'Americas',    currencies: ['CAD', 'MXN', 'BRL'] },
+]
+
+const IMPACT_LEVELS: ImpactLevel[] = ['High', 'Medium', 'Low']
+const IMPACT_LABELS: Record<ImpactLevel, string> = { High: 'High', Medium: 'Med', Low: 'Low' }
+
+const LS_OPEN     = 'nous-cal-filter-open'
+const LS_IMPACT   = 'nous-cal-impact'
+const LS_REGIONS  = 'nous-cal-regions'
+const LS_WATCHLIST = 'nous-cal-watchlist-only'
+
+function loadLS<T>(key: string, fallback: T): T {
+  try { const v = localStorage.getItem(key); return v !== null ? (JSON.parse(v) as T) : fallback } catch { return fallback }
+}
+function saveLS(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* */ }
+}
 
 function extractCurrencies(symbols: string[]): string[] {
-  const currencies = new Set<string>()
+  const c = new Set<string>()
   for (const sym of symbols) {
-    const upper = sym.toUpperCase().replace(/[-/_.]/g, '')
-    if (/^[A-Z]{6}$/.test(upper)) {
-      currencies.add(upper.slice(0, 3))
-      currencies.add(upper.slice(3, 6))
-    }
-    if (['US100', 'NAS100', 'US500', 'SPX', 'US30', 'DOW', 'XAUUSD', 'XAGUSD', 'USOIL', 'CL'].some(k => upper.includes(k))) currencies.add('USD')
-    if (['GER40', 'DAX', 'GER30', 'FRA40', 'CAC'].some(k => upper.includes(k))) currencies.add('EUR')
-    if (['UK100', 'FTSE'].some(k => upper.includes(k))) currencies.add('GBP')
-    if (['JPN225', 'NKY', 'JP225'].some(k => upper.includes(k))) currencies.add('JPY')
-    if (['AUS200', 'ASX'].some(k => upper.includes(k))) currencies.add('AUD')
+    const u = sym.toUpperCase().replace(/[-/_.]/g, '')
+    if (/^[A-Z]{6}$/.test(u)) { c.add(u.slice(0, 3)); c.add(u.slice(3, 6)) }
+    if (['US100','NAS100','US500','SPX','US30','DOW','XAUUSD','XAGUSD','USOIL','CL'].some(k => u.includes(k))) c.add('USD')
+    if (['GER40','DAX','GER30','FRA40','CAC'].some(k => u.includes(k))) c.add('EUR')
+    if (['UK100','FTSE'].some(k => u.includes(k))) c.add('GBP')
+    if (['JPN225','NKY','JP225'].some(k => u.includes(k))) c.add('JPY')
+    if (['AUS200','ASX'].some(k => u.includes(k))) c.add('AUD')
   }
-  return [...currencies]
+  return [...c]
 }
 
 export function KalenderContent() {
   const { activeAccount } = useAccountContext()
   const {
-    events, allEvents, filters, weekOffset,
-    weekStart, weekEnd, fetchedAt,
-    isLoading, isRefreshing, filtersLoading,
-    updateFilters, goToPrevWeek, goToNextWeek, goToThisWeek, manualRefresh,
+    allEvents, weekOffset, weekStart, weekEnd,
+    isLoading, isRefreshing,
+    goToPrevWeek, goToNextWeek, goToThisWeek, manualRefresh,
   } = useEconomicCalendar()
 
   const { items: watchlistItems } = useWatchlist(activeAccount?.id)
@@ -52,54 +69,72 @@ export function KalenderContent() {
 
   const watchlistColorMap = useMemo(() => {
     const map: Record<string, string> = {}
-    watchlistItems.forEach(item => {
-      map[item.symbol] = item.color ?? getCategoryColor(item.category)
-    })
+    watchlistItems.forEach(item => { map[item.symbol] = item.color ?? getCategoryColor(item.category) })
     return map
   }, [watchlistItems])
 
-  const watchlistCurrencies = useMemo(
-    () => extractCurrencies(watchlistSymbols),
-    [watchlistSymbols]
-  )
+  const watchlistCurrencies = useMemo(() => extractCurrencies(watchlistSymbols), [watchlistSymbols])
 
-  // Watchlist-only toggle — persisted in localStorage
-  const [watchlistOnly, setWatchlistOnly] = useState(false)
+  // ── Filter state (localStorage) ────────────────────────────────────────────
+  const [filterOpen,     setFilterOpen]     = useState(false)
+  const [selectedImpact, setSelectedImpact] = useState<ImpactLevel[]>(['High', 'Medium', 'Low'])
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([])
+  const [watchlistOnly,  setWatchlistOnly]  = useState(false)
+  const [hydrated, setHydrated] = useState(false)
+
   useEffect(() => {
-    try { setWatchlistOnly(localStorage.getItem(LS_KEY) === '1') } catch { /* */ }
+    setFilterOpen(loadLS(LS_OPEN, false))
+    setSelectedImpact(loadLS(LS_IMPACT, ['High', 'Medium', 'Low']))
+    setSelectedRegions(loadLS(LS_REGIONS, []))
+    setWatchlistOnly(loadLS(LS_WATCHLIST, false))
+    setHydrated(true)
   }, [])
-  const toggleWatchlistOnly = () => {
-    const next = !watchlistOnly
-    setWatchlistOnly(next)
-    try { localStorage.setItem(LS_KEY, next ? '1' : '0') } catch { /* */ }
+
+  const toggleFilterPanel = () => { const v = !filterOpen; setFilterOpen(v); saveLS(LS_OPEN, v) }
+
+  const toggleImpact = (level: ImpactLevel) => {
+    const next = selectedImpact.includes(level)
+      ? selectedImpact.filter(l => l !== level)
+      : [...selectedImpact, level]
+    setSelectedImpact(next); saveLS(LS_IMPACT, next)
   }
 
-  // Apply watchlist-only filter on top of regular filters
+  const toggleRegion = (id: string) => {
+    const next = selectedRegions.includes(id)
+      ? selectedRegions.filter(r => r !== id)
+      : [...selectedRegions, id]
+    setSelectedRegions(next); saveLS(LS_REGIONS, next)
+  }
+
+  const toggleWatchlist = () => { const v = !watchlistOnly; setWatchlistOnly(v); saveLS(LS_WATCHLIST, v) }
+
+  // ── Derived currencies from selected regions ───────────────────────────────
+  const regionCurrencies = useMemo(() => {
+    if (selectedRegions.length === 0) return null
+    return REGIONS.filter(r => selectedRegions.includes(r.id)).flatMap(r => r.currencies)
+  }, [selectedRegions])
+
+  // ── Apply all filters client-side ──────────────────────────────────────────
   const displayEvents = useMemo(() => {
-    if (!watchlistOnly || watchlistCurrencies.length === 0) return events
-    return events.filter(e => watchlistCurrencies.includes(e.currency))
-  }, [events, watchlistOnly, watchlistCurrencies])
+    if (!hydrated) return allEvents
+    return allEvents.filter(e => {
+      if (!selectedImpact.includes(e.impact)) return false
+      if (regionCurrencies && !regionCurrencies.includes(e.currency)) return false
+      if (watchlistOnly && watchlistCurrencies.length > 0 && !watchlistCurrencies.includes(e.currency)) return false
+      return true
+    })
+  }, [allEvents, hydrated, selectedImpact, regionCurrencies, watchlistOnly, watchlistCurrencies])
 
-  const highImpactEvents = useMemo(
-    () => allEvents.filter(e => e.impact === 'High'),
-    [allEvents]
-  )
-
-  const allImpactFiltersOff = filters.impact.length === 0
-
-  const fetchedLabel = useMemo(() => {
-    if (!fetchedAt) return null
-    const d = new Date(fetchedAt)
-    return `Zuletzt aktualisiert: ${d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`
-  }, [fetchedAt])
+  const activeFilterCount = (selectedImpact.length < 3 ? 1 : 0) + (selectedRegions.length > 0 ? 1 : 0) + (watchlistOnly ? 1 : 0)
+  const filterActive = filterOpen || activeFilterCount > 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <WorkflowVisitTracker step="kalender" />
       <CountdownBanner events={allEvents} onScrollToEvent={() => {}} />
 
-      {/* Top bar: week nav + refresh */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      {/* ── Top bar ── */}
+      <div className="flex items-center justify-between gap-2">
         <KalenderWeekNav
           weekStart={weekStart}
           weekEnd={weekEnd}
@@ -108,80 +143,126 @@ export function KalenderContent() {
           onNext={goToNextWeek}
           onToday={goToThisWeek}
         />
-        <div className="flex items-center gap-2">
-          {fetchedLabel && (
-            <span className="text-[10px] hidden sm:block" style={{ color: 'var(--fg-4)' }}>
-              {fetchedLabel}
-            </span>
-          )}
+
+        <div className="flex items-center gap-1.5">
           <button
             onClick={manualRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-opacity disabled:opacity-40"
-            style={{ background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-3)' }}
+            className="w-7 h-7 flex items-center justify-center rounded transition-opacity disabled:opacity-40"
+            style={{ color: 'var(--fg-4)', background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
             aria-label="Aktualisieren"
           >
-            <RefreshCw size={11} className={isRefreshing ? 'animate-spin' : ''} />
-            <span className="hidden sm:inline">Aktualisieren</span>
+            <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
+          </button>
+
+          <button
+            onClick={toggleFilterPanel}
+            className="relative flex items-center gap-1.5 h-7 px-2.5 rounded text-xs font-medium transition-all"
+            style={{
+              background: filterActive ? 'rgba(255,130,16,0.12)' : 'var(--bg-2)',
+              border: `1px solid ${filterActive ? 'rgba(255,130,16,0.4)' : 'var(--border-raw)'}`,
+              color: filterActive ? '#ff8210' : 'var(--fg-3)',
+            }}
+            aria-label="Filter"
+          >
+            <SlidersHorizontal size={12} />
+            <span className="hidden sm:inline">Filter</span>
+            {activeFilterCount > 0 && (
+              <span
+                className="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center ml-0.5"
+                style={{ background: '#ff8210', color: '#000' }}
+              >
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
 
-      {/* Filter bar */}
-      {!filtersLoading && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <KalenderFilterBar filters={filters} onChange={updateFilters} />
+      {/* ── Collapsible filter panel ── */}
+      {filterOpen && (
+        <div
+          className="rounded-lg p-3 space-y-2.5"
+          style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
+        >
+          {/* Impact */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wider w-16 shrink-0" style={{ color: 'var(--fg-4)' }}>
+              Impact
+            </span>
+            <div className="flex items-center gap-1">
+              {IMPACT_LEVELS.map(level => {
+                const active = selectedImpact.includes(level)
+                return (
+                  <button
+                    key={level}
+                    onClick={() => toggleImpact(level)}
+                    className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all', !active && 'opacity-35')}
+                    style={{
+                      background: active ? 'var(--bg-3)' : 'transparent',
+                      border: `1px solid ${active ? 'var(--border-strong)' : 'var(--border-raw)'}`,
+                      color: 'var(--fg-2)',
+                    }}
+                  >
+                    <ImpactDot impact={level} />
+                    {IMPACT_LABELS[level]}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
-          {/* Watchlist-only toggle */}
+          {/* Regions */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wider w-16 shrink-0" style={{ color: 'var(--fg-4)' }}>
+              Region
+            </span>
+            <div className="flex items-center gap-1 flex-wrap">
+              {REGIONS.map(r => {
+                const active = selectedRegions.includes(r.id)
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => toggleRegion(r.id)}
+                    className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all', !active && 'opacity-40 hover:opacity-70')}
+                    style={{
+                      background: active ? 'rgba(255,130,16,0.12)' : 'var(--bg-3)',
+                      border: `1px solid ${active ? 'rgba(255,130,16,0.4)' : 'var(--border-raw)'}`,
+                      color: active ? '#ff8210' : 'var(--fg-3)',
+                    }}
+                  >
+                    <span>{r.flag}</span>
+                    {r.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Watchlist */}
           {watchlistSymbols.length > 0 && (
-            <>
-              <div className="w-px h-4 shrink-0" style={{ background: 'var(--border-raw)' }} />
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] uppercase tracking-wider w-16 shrink-0" style={{ color: 'var(--fg-4)' }}>
+                Watchlist
+              </span>
               <button
-                onClick={toggleWatchlistOnly}
-                className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all shrink-0',
-                  watchlistOnly ? 'opacity-100' : 'opacity-50 hover:opacity-75'
-                )}
+                onClick={toggleWatchlist}
+                className={cn('flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-all', !watchlistOnly && 'opacity-40 hover:opacity-70')}
                 style={{
-                  background: watchlistOnly ? 'rgba(255,130,16,0.12)' : 'var(--bg-2)',
+                  background: watchlistOnly ? 'rgba(255,130,16,0.12)' : 'var(--bg-3)',
                   border: `1px solid ${watchlistOnly ? 'rgba(255,130,16,0.4)' : 'var(--border-raw)'}`,
                   color: watchlistOnly ? '#ff8210' : 'var(--fg-3)',
                 }}
               >
-                <span style={{ fontSize: 10 }}>◆</span>
+                <span style={{ fontSize: 9 }}>◆</span>
                 Nur meine Watchlist
               </button>
-            </>
+            </div>
           )}
         </div>
       )}
 
-      {/* Active watchlist symbols */}
-      {watchlistOnly && watchlistSymbols.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>Gefiltert nach:</span>
-          {watchlistSymbols.map(s => (
-            <span
-              key={s}
-              className="text-[10px] px-1.5 py-px rounded-full font-medium"
-              style={{
-                background: watchlistColorMap[s] ? `${watchlistColorMap[s]}22` : 'var(--bg-2)',
-                color: watchlistColorMap[s] ?? 'var(--fg-2)',
-                border: `1px solid ${watchlistColorMap[s] ? `${watchlistColorMap[s]}44` : 'var(--border-1)'}`,
-              }}
-            >
-              {s}
-            </span>
-          ))}
-          {watchlistCurrencies.length > 0 && (
-            <span className="text-[10px]" style={{ color: 'var(--fg-4)' }}>
-              → {watchlistCurrencies.join(', ')} Events
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Calendar */}
+      {/* ── Calendar ── */}
       <div
         className="rounded-xl p-4"
         style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
@@ -191,17 +272,11 @@ export function KalenderContent() {
           weekStart={weekStart}
           weekEnd={weekEnd}
           isLoading={isLoading}
-          allImpactFiltersOff={allImpactFiltersOff}
+          allImpactFiltersOff={selectedImpact.length === 0}
           watchlistSymbols={watchlistSymbols}
           watchlistColorMap={watchlistColorMap}
         />
       </div>
-
-      <KalenderKiSection
-        events={highImpactEvents}
-        watchlistSymbols={watchlistSymbols}
-        isLoading={isLoading}
-      />
     </div>
   )
 }

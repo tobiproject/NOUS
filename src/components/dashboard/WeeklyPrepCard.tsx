@@ -44,7 +44,7 @@ export function WeeklyPrepCard() {
       >
         <div>
           <div className="eyebrow mb-0.5">KI · Wochenvorbereitung</div>
-          <div className="text-sm font-semibold" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+          <div className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>
             {prep ? 'Deine Wochenanalyse' : 'Personalisiertes Briefing generieren'}
           </div>
         </div>

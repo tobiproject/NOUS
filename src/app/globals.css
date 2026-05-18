@@ -36,7 +36,7 @@
     --input: 0 0% 16%;
     --ring: 224 100% 58%;
 
-    --radius: 0.625rem;                 /* 10px */
+    --radius: 0.75rem;                  /* 12px */
 
     /* chart colors */
     --chart-1: 169 91% 32%;            /* #089981 */

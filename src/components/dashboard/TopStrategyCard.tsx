@@ -1,7 +1,6 @@
 'use client'
 
 import { Trophy } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { TopStrategy } from '@/hooks/useDashboardMetrics'
 
@@ -13,52 +12,89 @@ interface Props {
 
 export function TopStrategyCard({ strategy, periodLabel, minCountLabel = 5 }: Props) {
   return (
-    <Card className="border-border/60 h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Trophy className="h-4 w-4 text-amber-400" />
-          Beste Strategie
+    <div
+      className="rounded-xl h-full flex flex-col"
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}
+    >
+      <div
+        className="flex items-center gap-2.5 px-4 py-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+      >
+        <div
+          className="h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B' }}
+        >
+          <Trophy className="h-3.5 w-3.5" />
+        </div>
+        <div>
+          <div className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>
+            Beste Strategie
+          </div>
           {periodLabel && (
-            <span className="text-xs font-normal text-muted-foreground">({periodLabel})</span>
+            <div className="eyebrow" style={{ color: 'var(--fg-4)', fontSize: '10px' }}>
+              {periodLabel}
+            </div>
           )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </div>
+      </div>
+
+      <div className="flex-1 p-4">
         {!strategy ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm" style={{ color: 'var(--fg-4)' }}>
             Mindestens {minCountLabel} Trades mit derselben Strategie nötig.
           </p>
         ) : (
           <div className="space-y-4">
             <div>
-              <p className="text-lg font-bold truncate">{strategy.name}</p>
-              <p className="text-xs text-muted-foreground">{strategy.tradeCount} Trades</p>
+              <p className="text-base font-bold truncate" style={{ color: 'var(--fg-1)' }}>
+                {strategy.name}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--fg-4)' }}>
+                {strategy.tradeCount} Trades
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-md bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground mb-0.5">Profit-Faktor</p>
-                <p className="text-xl font-bold tabular-nums text-emerald-400">
+            <div className="grid grid-cols-2 gap-2">
+              <div
+                className="rounded-lg p-3"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <p className="eyebrow mb-1" style={{ fontSize: '10px' }}>Profit-Faktor</p>
+                <p className="num text-xl font-bold" style={{ color: 'var(--long)' }}>
                   {strategy.profitFactor >= 999 ? '∞' : strategy.profitFactor.toFixed(2)}
                 </p>
               </div>
-              <div className="rounded-md bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground mb-0.5">Winrate</p>
-                <p className="text-xl font-bold tabular-nums">{strategy.winRate.toFixed(1)}%</p>
+              <div
+                className="rounded-lg p-3"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <p className="eyebrow mb-1" style={{ fontSize: '10px' }}>Win Rate</p>
+                <p className="num text-xl font-bold" style={{ color: 'var(--fg-1)' }}>
+                  {strategy.winRate.toFixed(1)}%
+                </p>
               </div>
-              <div className="rounded-md bg-muted/40 p-3 col-span-2">
-                <p className="text-xs text-muted-foreground mb-0.5">Gesamt-P&L</p>
-                <p className={cn(
-                  'text-xl font-bold tabular-nums',
-                  strategy.totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'
-                )}>
+              <div
+                className="rounded-lg p-3 col-span-2"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <p className="eyebrow mb-1" style={{ fontSize: '10px' }}>Gesamt-P&L</p>
+                <p
+                  className={cn('num text-xl font-bold')}
+                  style={{ color: strategy.totalPnl >= 0 ? 'var(--long)' : 'var(--short)' }}
+                >
                   {strategy.totalPnl >= 0 ? '+' : ''}{strategy.totalPnl.toFixed(2)} €
                 </p>
               </div>
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

@@ -5,15 +5,15 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded text-sm font-semibold transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default:     "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98]",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:     "border border-input bg-transparent text-foreground hover:bg-secondary hover:border-border",
-        secondary:   "bg-secondary text-secondary-foreground hover:bg-secondary/70",
-        ghost:       "text-muted-foreground hover:bg-secondary hover:text-foreground",
+        default:     "bg-[rgba(255,130,16,0.06)] border border-[rgba(255,130,16,0.45)] text-[#ff8210] backdrop-blur-md hover:bg-[rgba(255,130,16,0.12)] hover:border-[#ff8210] active:scale-[0.98]",
+        destructive: "bg-[rgba(242,54,69,0.07)] border border-[rgba(242,54,69,0.45)] text-destructive backdrop-blur-md hover:bg-[rgba(242,54,69,0.12)] hover:border-destructive",
+        outline:     "border border-[rgba(255,255,255,0.12)] bg-transparent text-foreground backdrop-blur-md hover:bg-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.20)]",
+        secondary:   "bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.12)] text-muted-foreground backdrop-blur-md hover:bg-[rgba(255,255,255,0.08)] hover:text-foreground",
+        ghost:       "text-muted-foreground hover:bg-[rgba(255,255,255,0.05)] hover:text-foreground",
         link:        "text-primary underline-offset-4 hover:underline px-0",
       },
       size: {

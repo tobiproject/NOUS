@@ -145,3 +145,7 @@ tests/              E2E Tests (Playwright) — PROJ-1 bis PROJ-30 vorhanden
 ## Feature Overview
 
 @features/INDEX.md
+
+## Design System
+
+@docs/design-system.md

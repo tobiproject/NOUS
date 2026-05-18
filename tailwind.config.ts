@@ -10,10 +10,10 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Manrope', 'Euclid Circular B', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        body:    ['Inter', 'Trebuchet MS', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Space Grotesk', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body:    ['Space Grotesk', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono:    ['JetBrains Mono', 'ui-monospace', 'SF Mono', 'Consolas', 'monospace'],
-        sans:    ['Inter', 'Trebuchet MS', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans:    ['Space Grotesk', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -72,12 +72,12 @@ const config: Config = {
         }
       },
       borderRadius: {
-        lg: 'var(--radius)',          /* 6px — cards, panels */
-        md: '4px',                    /* buttons, inputs, badges */
-        sm: '3px',                    /* tight elements */
-        xl: '8px',                    /* modals */
-        '2xl': '8px',
-        full: '4px',                  /* intentionally NOT a pill */
+        lg: 'var(--radius)',   /* 10px — cards, panels, buttons */
+        md: '0.5rem',          /* 8px — smaller elements */
+        sm: '0.375rem',        /* 6px — tooltips, tags */
+        xl: '0.75rem',         /* 12px — modals */
+        '2xl': '1rem',         /* 16px — bottom sheets */
+        full: '9999px',        /* pill */
       },
       fontSize: {
         'xxs': ['11px', { lineHeight: '1.35' }],

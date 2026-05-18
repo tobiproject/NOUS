@@ -7,55 +7,55 @@
 /* ─── TradeOS Design Tokens (TradingView color scheme) ───────────────────── */
 @layer base {
   :root {
-    /* shadcn vars mapped to TradingView dark palette */
-    --background: 222 28% 10%;         /* #131722 — TV page bg */
-    --foreground: 220 13% 84%;         /* #d1d4dc — TV primary text */
+    /* shadcn vars — neutral dark, kein Farbstich */
+    --background: 0 0% 7%;             /* #111111 */
+    --foreground: 0 0% 88%;            /* #e0e0e0 */
 
-    --card: 222 20% 15%;               /* #1e222d — TV panel */
-    --card-foreground: 220 13% 84%;
+    --card: 0 0% 10%;                  /* #1a1a1a */
+    --card-foreground: 0 0% 88%;
 
-    --popover: 222 20% 15%;            /* #1e222d */
-    --popover-foreground: 220 13% 84%;
+    --popover: 0 0% 10%;               /* #1a1a1a */
+    --popover-foreground: 0 0% 88%;
 
     --primary: 29 100% 54%;            /* #ff8210 — brand orange */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 19%;          /* #2a2e39 — TV elevated */
-    --secondary-foreground: 220 13% 84%;
+    --secondary: 0 0% 14%;             /* #242424 */
+    --secondary-foreground: 0 0% 88%;
 
-    --muted: 220 15% 19%;              /* #2a2e39 */
-    --muted-foreground: 224 5% 50%;    /* #787b86 — TV muted text */
+    --muted: 0 0% 14%;                 /* #242424 */
+    --muted-foreground: 0 0% 47%;      /* #787878 */
 
-    --accent: 222 18% 25%;             /* #363c4e — TV hover/active */
-    --accent-foreground: 220 13% 84%;
+    --accent: 0 0% 18%;                /* #2e2e2e */
+    --accent-foreground: 0 0% 88%;
 
-    --destructive: 355 88% 58%;        /* #F23645 — short/loss red */
+    --destructive: 355 88% 58%;        /* #F23645 */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 19%;             /* #2a2e39 — TV panel border */
-    --input: 220 15% 19%;
-    --ring: 224 100% 58%;              /* focus ring = brand blue */
+    --border: 0 0% 16%;                /* #282828 */
+    --input: 0 0% 16%;
+    --ring: 224 100% 58%;
 
-    --radius: 0.375rem;                /* 6px */
+    --radius: 0.375rem;
 
-    /* chart colors: TradingView semantic */
-    --chart-1: 169 91% 32%;            /* #089981 long/win */
-    --chart-2: 355 88% 58%;            /* #F23645 short/loss */
-    --chart-3: 29 100% 54%;            /* #ff8210 brand orange */
-    --chart-4: 37 100% 50%;            /* #FF9800 warn */
-    --chart-5: 187 100% 41%;           /* #00BCD4 accent turquoise */
+    /* chart colors */
+    --chart-1: 169 91% 32%;            /* #089981 */
+    --chart-2: 355 88% 58%;            /* #F23645 */
+    --chart-3: 29 100% 54%;            /* #ff8210 */
+    --chart-4: 37 100% 50%;            /* #FF9800 */
+    --chart-5: 187 100% 41%;           /* #00BCD4 */
 
     /* sidebar vars */
-    --sidebar-background: 222 28% 10%; /* #131722 — same as page bg */
-    --sidebar-foreground: 224 5% 50%;  /* #787b86 */
+    --sidebar-background: 0 0% 7%;     /* #111111 */
+    --sidebar-foreground: 0 0% 47%;    /* #787878 */
     --sidebar-primary: 29 100% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 20% 15%;     /* #1e222d */
-    --sidebar-accent-foreground: 220 13% 84%;
-    --sidebar-border: 220 15% 19%;     /* #2a2e39 */
+    --sidebar-accent: 0 0% 10%;        /* #1a1a1a */
+    --sidebar-accent-foreground: 0 0% 88%;
+    --sidebar-border: 0 0% 16%;        /* #282828 */
     --sidebar-ring: 29 100% 54%;
 
-    /* TradeOS raw tokens (direct use in components) */
+    /* raw tokens */
     --brand-orange:      #ff8210;
     --brand-orange-soft: rgba(255,130,16,0.12);
     --brand-blue:        #2962FF;
@@ -66,19 +66,19 @@
     --short-soft:        rgba(242,54,69,0.14);
     --warn:              #FF9800;
     --warn-soft:         rgba(255,152,0,0.14);
-    --bg-0:              #0f111a;
-    --bg-1:              #131722;
-    --bg-2:              #1e222d;
-    --bg-3:              #2a2e39;
-    --bg-4:              #363c4e;
-    --fg-1:              #d1d4dc;
-    --fg-2:              #b2b5be;
-    --fg-3:              #787b86;
-    --fg-4:              #50535e;
-    --border-raw:        #2a2e39;
-    --border-strong:     #363c4e;
-    --elev-2:            0 4px 20px rgba(0,0,0,0.6), 0 0 0 1px #2a2e39;
-    --elev-3:            0 24px 56px rgba(0,0,0,0.8), 0 0 0 1px #363c4e;
+    --bg-0:              #0a0a0a;
+    --bg-1:              #111111;
+    --bg-2:              #1a1a1a;
+    --bg-3:              #242424;
+    --bg-4:              #2e2e2e;
+    --fg-1:              #e0e0e0;
+    --fg-2:              #b8b8b8;
+    --fg-3:              #787878;
+    --fg-4:              #4f4f4f;
+    --border-raw:        #282828;
+    --border-strong:     #383838;
+    --elev-2:            0 4px 20px rgba(0,0,0,0.6), 0 0 0 1px #282828;
+    --elev-3:            0 24px 56px rgba(0,0,0,0.8), 0 0 0 1px #383838;
   }
 }
 

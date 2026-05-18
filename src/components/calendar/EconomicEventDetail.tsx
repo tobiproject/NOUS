@@ -506,7 +506,7 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
       {/* ── Deine Geschichte ──────────────────────────────────────────────── */}
       <div>
         <p className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: 'var(--fg-4)' }}>
-          Deine Geschichte mit diesem Event
+          Deine Trades bei diesem Event
         </p>
         {tradeHistoryLoading ? (
           <div className="space-y-1">{[...Array(2)].map((_, i) => <Skeleton key={i} className="h-5 w-full" />)}</div>
@@ -604,7 +604,7 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
               }}
             >
               <Sparkles size={12} />
-              Wie wirkt sich dieser Datenpunkt auf mein Portfolio aus?
+              Wie wirkt sich dieser Datenpunkt auf meine Watchlist aus?
             </button>
           )}
 

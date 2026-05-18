@@ -35,6 +35,19 @@ function formatEventTime(timeUtc: string | null, userTimezone?: string): string 
   }
 }
 
+function formatCountdown(timeUtc: string): string {
+  const diff = new Date(timeUtc).getTime() - Date.now()
+  const abs = Math.abs(diff)
+  const past = diff < 0
+  const minutes = Math.floor(abs / 60000)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+  if (abs < 60000) return 'jetzt'
+  if (days > 0) return `${past ? 'vor' : 'in'} ${days} Tag${days !== 1 ? 'en' : ''}`
+  if (hours > 0) return `${past ? 'vor' : 'in'} ${hours} Std. ${minutes % 60} Min.`
+  return `${past ? 'vor' : 'in'} ${minutes} Min.`
+}
+
 export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols = [], watchlistColorMap = {} }: Props) {
   const [expanded, setExpanded] = useState(false)
   const toggle = useCallback(() => setExpanded(v => !v), [])
@@ -66,12 +79,30 @@ export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols
       >
         <ImpactDot impact={event.impact} className="mt-px" />
 
-        <span
-          className="text-xs tabular-nums w-10 shrink-0"
-          style={{ color: 'var(--fg-3)', fontFamily: 'JetBrains Mono, monospace' }}
-        >
-          {timeLabel}
-        </span>
+        {event.time_utc ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className="text-xs tabular-nums w-10 shrink-0 cursor-default"
+                  style={{ color: 'var(--fg-3)', fontFamily: 'JetBrains Mono, monospace' }}
+                >
+                  {timeLabel}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">
+                {formatCountdown(event.time_utc)}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <span
+            className="text-xs tabular-nums w-10 shrink-0"
+            style={{ color: 'var(--fg-3)', fontFamily: 'JetBrains Mono, monospace' }}
+          >
+            {timeLabel}
+          </span>
+        )}
 
         <CountryFlag countryCode={event.country_code} currency={event.currency} />
 

@@ -111,8 +111,7 @@ function NavItemRow({ item, isActive, dot, fillIcon }: NavItemProps) {
     <Link
       href={item.href}
       className={cn(
-        'flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13px] transition-colors duration-100',
-        isActive ? 'font-semibold' : 'font-medium'
+        'flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13px] transition-colors duration-100 font-black'
       )}
       style={{
         background: isActive ? 'rgba(255,130,16,0.1)' : hovered ? 'var(--bg-3)' : 'transparent',

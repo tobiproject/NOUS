@@ -4,81 +4,81 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── TradeOS Design Tokens (dark-first, TradingView DNA) ─────────────────── */
+/* ─── TradeOS Design Tokens (TradingView color scheme) ───────────────────── */
 @layer base {
   :root {
-    /* shadcn vars mapped to TradeOS dark palette */
-    --background: 0 0% 0%;            /* #000000 — true black */
-    --foreground: 0 0% 100%;          /* #FFFFFF */
+    /* shadcn vars mapped to TradingView dark palette */
+    --background: 222 28% 10%;         /* #131722 — TV page bg */
+    --foreground: 220 13% 84%;         /* #d1d4dc — TV primary text */
 
-    --card: 0 0% 11%;                 /* #1C1C1E — Apple dark card */
-    --card-foreground: 0 0% 100%;
+    --card: 222 20% 15%;               /* #1e222d — TV panel */
+    --card-foreground: 220 13% 84%;
 
-    --popover: 0 0% 11%;              /* #1C1C1E */
-    --popover-foreground: 0 0% 100%;
+    --popover: 222 20% 15%;            /* #1e222d */
+    --popover-foreground: 220 13% 84%;
 
     --primary: 29 100% 54%;            /* #ff8210 — brand orange */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 17%;            /* #2C2C2E */
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 220 15% 19%;          /* #2a2e39 — TV elevated */
+    --secondary-foreground: 220 13% 84%;
 
-    --muted: 0 0% 17%;
-    --muted-foreground: 0 0% 56%;     /* #8E8E93 — Apple System Gray */
+    --muted: 220 15% 19%;              /* #2a2e39 */
+    --muted-foreground: 224 5% 50%;    /* #787b86 — TV muted text */
 
-    --accent: 0 0% 23%;               /* #3A3A3C */
-    --accent-foreground: 0 0% 100%;
+    --accent: 222 18% 25%;             /* #363c4e — TV hover/active */
+    --accent-foreground: 220 13% 84%;
 
-    --destructive: 355 88% 58%;       /* #F23645 — short/loss red */
+    --destructive: 355 88% 58%;        /* #F23645 — short/loss red */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 12%;               /* rgba(255,255,255,0.08) equivalent */
-    --input: 0 0% 12%;
-    --ring: 224 100% 58%;             /* focus ring = brand blue */
+    --border: 220 15% 19%;             /* #2a2e39 — TV panel border */
+    --input: 220 15% 19%;
+    --ring: 224 100% 58%;              /* focus ring = brand blue */
 
-    --radius: 0.375rem;               /* 6px default — cards/panels */
+    --radius: 0.375rem;                /* 6px */
 
     /* chart colors: TradingView semantic */
-    --chart-1: 169 91% 32%;           /* #089981 long/win */
-    --chart-2: 355 88% 58%;           /* #F23645 short/loss */
-    --chart-3: 29 100% 54%;           /* #ff8210 brand orange */
-    --chart-4: 37 100% 50%;           /* #FF9800 warn */
-    --chart-5: 187 100% 41%;          /* #00BCD4 accent turquoise */
+    --chart-1: 169 91% 32%;            /* #089981 long/win */
+    --chart-2: 355 88% 58%;            /* #F23645 short/loss */
+    --chart-3: 29 100% 54%;            /* #ff8210 brand orange */
+    --chart-4: 37 100% 50%;            /* #FF9800 warn */
+    --chart-5: 187 100% 41%;           /* #00BCD4 accent turquoise */
 
     /* sidebar vars */
-    --sidebar-background: 0 0% 6%;     /* #0F0F0F */
-    --sidebar-foreground: 0 0% 65%;    /* rgba(255,255,255,0.65) */
+    --sidebar-background: 222 28% 10%; /* #131722 — same as page bg */
+    --sidebar-foreground: 224 5% 50%;  /* #787b86 */
     --sidebar-primary: 29 100% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 11%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 12%;
+    --sidebar-accent: 222 20% 15%;     /* #1e222d */
+    --sidebar-accent-foreground: 220 13% 84%;
+    --sidebar-border: 220 15% 19%;     /* #2a2e39 */
     --sidebar-ring: 29 100% 54%;
 
-    /* TradeOS raw tokens (for direct use in components) */
-    --brand-orange:     #ff8210;
+    /* TradeOS raw tokens (direct use in components) */
+    --brand-orange:      #ff8210;
     --brand-orange-soft: rgba(255,130,16,0.12);
-    --brand-blue:       #2962FF;
-    --brand-blue-soft:  rgba(41,98,255,0.12);
-    --long:             #089981;
-    --long-soft:        rgba(8,153,129,0.14);
-    --short:            #F23645;
-    --short-soft:       rgba(242,54,69,0.14);
-    --warn:             #FF9800;
-    --warn-soft:        rgba(255,152,0,0.14);
-    --bg-0:             #000000;
-    --bg-1:             #0F0F0F;
-    --bg-2:             #1C1C1E;
-    --bg-3:             #2C2C2E;
-    --bg-4:             #3A3A3C;
-    --fg-1:             #FFFFFF;
-    --fg-2:             #F0F0F5;
-    --fg-3:             #C0C0C8;
-    --fg-4:             #8E8E93;
-    --border-raw:       rgba(255,255,255,0.12);
-    --border-strong:    rgba(255,255,255,0.22);
-    --elev-2:           0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
-    --elev-3:           0 24px 56px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08);
+    --brand-blue:        #2962FF;
+    --brand-blue-soft:   rgba(41,98,255,0.12);
+    --long:              #089981;
+    --long-soft:         rgba(8,153,129,0.14);
+    --short:             #F23645;
+    --short-soft:        rgba(242,54,69,0.14);
+    --warn:              #FF9800;
+    --warn-soft:         rgba(255,152,0,0.14);
+    --bg-0:              #0f111a;
+    --bg-1:              #131722;
+    --bg-2:              #1e222d;
+    --bg-3:              #2a2e39;
+    --bg-4:              #363c4e;
+    --fg-1:              #d1d4dc;
+    --fg-2:              #b2b5be;
+    --fg-3:              #787b86;
+    --fg-4:              #50535e;
+    --border-raw:        #2a2e39;
+    --border-strong:     #363c4e;
+    --elev-2:            0 4px 20px rgba(0,0,0,0.6), 0 0 0 1px #2a2e39;
+    --elev-3:            0 24px 56px rgba(0,0,0,0.8), 0 0 0 1px #363c4e;
   }
 }
 
@@ -121,9 +121,9 @@
   }
 
   /* Scrollbar */
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 8px; border: 2px solid var(--bg-0); }
+  ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--fg-4); }
 
   /* Range slider — smooth, branded */

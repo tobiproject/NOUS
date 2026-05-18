@@ -171,7 +171,13 @@ export function GuidedWorkflowWidget() {
     return (
       <div
         className="rounded-lg p-5"
-        style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
+        style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+        }}
       >
         <div className="flex items-center gap-2 mb-4">
           <div className="h-4 w-32 rounded animate-pulse" style={{ background: 'var(--bg-3)' }} />
@@ -200,16 +206,22 @@ export function GuidedWorkflowWidget() {
   return (
     <div
       className="rounded-lg"
-      style={{ background: 'var(--bg-2)', border: '1px solid var(--border-raw)' }}
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-5 py-3.5"
-        style={{ borderBottom: '1px solid var(--border-raw)' }}
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
       >
         <div>
           <div className="eyebrow mb-0.5">Workflow · Diese Woche</div>
-          <div className="text-sm font-semibold" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+          <div className="text-sm font-semibold" style={{ color: 'var(--fg-1)' }}>
             Deine Trading-Woche
           </div>
         </div>
@@ -235,7 +247,7 @@ export function GuidedWorkflowWidget() {
       </div>
 
       {/* Progress bar */}
-      <div className="px-5 py-2.5" style={{ borderBottom: '1px solid var(--border-raw)' }}>
+      <div className="px-5 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <Progress value={progressPct} className="h-1.5" />
       </div>
 

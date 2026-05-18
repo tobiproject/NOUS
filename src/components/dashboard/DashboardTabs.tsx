@@ -186,7 +186,7 @@ export function DashboardTabs({ metrics, startBalance, onTradeClick }: Props) {
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="w-full sm:w-auto mb-1">
+      <TabsList className="w-full sm:w-auto mb-4">
         <TabsTrigger value="today" className="flex-1 sm:flex-none">
           Heute
         </TabsTrigger>

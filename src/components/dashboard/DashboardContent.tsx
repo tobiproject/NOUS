@@ -82,7 +82,7 @@ export function DashboardContent() {
       <div className="space-y-6">
         <div>
           <div className="eyebrow mb-1">Dashboard</div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Manrope, sans-serif' }}>Kein aktives Konto</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Kein aktives Konto</h1>
         </div>
         <p className="text-sm p-8 text-center rounded-lg" style={{ color: 'var(--fg-3)', border: '1px dashed var(--border-raw)' }}>
           Bitte wähle ein aktives Konto aus, um dein Dashboard zu sehen.
@@ -111,8 +111,8 @@ export function DashboardContent() {
         {/* Greeting */}
         <div className="flex items-end justify-between">
           <div>
-            <div className="eyebrow mb-1">{now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            <div className="eyebrow mb-1" style={{ color: 'var(--fg-3)', letterSpacing: '0.08em' }}>{now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+            <h1 className="text-3xl font-bold tracking-tight">
               {greeting}.
             </h1>
             <p className="text-sm mt-0.5" style={{ color: 'var(--fg-3)' }}>

@@ -55,10 +55,9 @@ export function WeeklyPrepCard() {
             </button>
           )}
           <Button
+            variant="ai"
             onClick={generate}
             disabled={loading}
-            className="h-8 px-3 text-[13px] font-semibold rounded"
-            style={{ background: 'var(--brand-blue)', color: '#fff', border: 'none' }}
           >
             {loading
               ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" />

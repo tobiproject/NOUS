@@ -80,7 +80,7 @@ export function AnalysenContent() {
           <div className="flex items-center gap-2">
             <TabsContent value="weekly" className="m-0 p-0">
               <Button
-                variant="outline"
+                variant="ai"
                 size="sm"
                 onClick={handleTriggerWeekly}
                 disabled={isTriggering}
@@ -92,7 +92,7 @@ export function AnalysenContent() {
             </TabsContent>
             <TabsContent value="monthly" className="m-0 p-0">
               <Button
-                variant="outline"
+                variant="ai"
                 size="sm"
                 onClick={handleTriggerMonthly}
                 disabled={isTriggering}
@@ -168,7 +168,7 @@ function EmptyState({
           Starte die erste {type === 'weekly' ? 'Wochenanalyse' : 'Monatsanalyse'} für den aktuellen Zeitraum
         </p>
       </div>
-      <Button onClick={onTrigger} disabled={isTriggering} className="gap-2">
+      <Button variant="ai" onClick={onTrigger} disabled={isTriggering} className="gap-2">
         <RefreshCw className={`h-4 w-4 ${isTriggering ? 'animate-spin' : ''}`} />
         {type === 'weekly' ? 'Wochenanalyse erstellen' : 'Monatsanalyse erstellen'}
       </Button>

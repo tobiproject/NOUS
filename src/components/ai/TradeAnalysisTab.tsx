@@ -125,7 +125,7 @@ export function TradeAnalysisTab({ tradeId, accountId, isActive }: Props) {
           <p className="font-medium">Noch keine Analyse</p>
           <p className="text-sm text-muted-foreground mt-0.5">Starte die KI-Analyse für diesen Trade</p>
         </div>
-        <Button onClick={handleTrigger} disabled={isTriggering} className="gap-2">
+        <Button variant="ai" onClick={handleTrigger} disabled={isTriggering} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${isTriggering ? 'animate-spin' : ''}`} />
           Analyse starten
         </Button>
@@ -141,7 +141,7 @@ export function TradeAnalysisTab({ tradeId, accountId, isActive }: Props) {
       <div className="flex items-center justify-between">
         <StatusBadge status={analysis.status} />
         <Button
-          variant="ghost"
+          variant="ai"
           size="sm"
           onClick={handleTrigger}
           disabled={isTriggering || isInProgress}

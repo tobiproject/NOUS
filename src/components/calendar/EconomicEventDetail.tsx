@@ -662,7 +662,7 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
       {/* ── KI-Briefing ─────────────────────────────────────────────────── */}
       <div className="space-y-2">
         {analysis === null && !analysisLoading && (
-          <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={handleAnalyze}>
+          <Button size="sm" variant="ai" className="gap-1.5 text-xs h-7" onClick={handleAnalyze}>
             <Zap size={11} />
             KI-Briefing anfordern
           </Button>

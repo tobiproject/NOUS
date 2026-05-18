@@ -87,7 +87,7 @@ export function CoachProfileWidget() {
           </CardTitle>
           <Button
             size="sm"
-            variant="ghost"
+            variant="ai"
             className="h-7 px-2 text-xs gap-1"
             onClick={handleUpdate}
             disabled={updating}
@@ -114,7 +114,7 @@ export function CoachProfileWidget() {
             <p className="text-sm text-muted-foreground mb-3">
               Noch kein Profil vorhanden. Mit mindestens 5 Trades kann der Coach dein Muster analysieren.
             </p>
-            <Button size="sm" variant="outline" onClick={handleUpdate} disabled={updating}>
+            <Button size="sm" variant="ai" onClick={handleUpdate} disabled={updating}>
               {updating ? 'Analysiert…' : 'Jetzt analysieren'}
             </Button>
           </div>

@@ -13,7 +13,7 @@ export default function KalenderPage() {
         <div className="eyebrow mb-0.5">Makroökonomie</div>
         <h1
           className="text-2xl font-bold tracking-tight"
-          style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}
+          style={{ color: 'var(--fg-1)' }}
         >
           Wirtschaftskalender
         </h1>

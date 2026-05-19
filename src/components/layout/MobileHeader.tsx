@@ -51,7 +51,7 @@ export function MobileHeader() {
             width: 36,
             height: 36,
             borderRadius: '50%',
-            background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.16)',
+            background: avatarUrl ? 'transparent' : 'rgba(0,196,255,0.15)',
             color: 'var(--brand-blue)',
             display: 'flex',
             alignItems: 'center',

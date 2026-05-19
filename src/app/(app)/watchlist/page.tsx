@@ -637,7 +637,7 @@ export default function WatchlistPage() {
       {/* Header */}
       <div>
         <div className="eyebrow mb-1">Assets</div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--fg-1)' }}>
           Watchlist
         </h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--fg-3)' }}>

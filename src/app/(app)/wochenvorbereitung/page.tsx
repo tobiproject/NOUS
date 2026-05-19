@@ -153,7 +153,7 @@ export default function WochenvorbereitungPage() {
         <div className="min-w-0">
           <div className="eyebrow mb-1">Planung</div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+            <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--fg-1)' }}>
               Wochenvorbereitung
             </h1>
             {isNextWeek && (

@@ -116,7 +116,7 @@ export function MorningBriefing() {
           </div>
           <h2
             className="text-xl font-bold"
-            style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}
+            style={{ color: 'var(--fg-1)' }}
           >
             {step === 1
               ? 'Tagesplan erstellen'

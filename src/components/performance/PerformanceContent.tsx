@@ -83,11 +83,7 @@ export function PerformanceContent() {
   if (!activeAccount) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Performance & Statistik</h1>
-          <p className="text-muted-foreground text-sm">Kein aktives Konto</p>
-        </div>
-        <p className="text-muted-foreground text-sm border border-dashed border-border/60 rounded-lg p-8 text-center">
+        <p className="text-sm border border-dashed border-border/60 rounded-lg p-8 text-center" style={{ color: '#555' }}>
           Bitte wähle ein aktives Konto aus.
         </p>
       </div>

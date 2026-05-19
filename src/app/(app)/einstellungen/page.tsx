@@ -761,7 +761,7 @@ function FontSizeSection() {
             style={{ width: 40, height: 40, background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-2)' }}
             aria-label="Schrift kleiner"
           >
-            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'Manrope, sans-serif' }}>A</span>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>A</span>
           </button>
           <span className="flex-1 text-center text-sm font-medium" style={{ color: 'var(--fg-3)' }}>{label}</span>
           <button
@@ -771,7 +771,7 @@ function FontSizeSection() {
             style={{ width: 40, height: 40, background: 'var(--bg-3)', border: '1px solid var(--border-raw)', color: 'var(--fg-2)' }}
             aria-label="Schrift größer"
           >
-            <span style={{ fontSize: 19, fontWeight: 700, fontFamily: 'Manrope, sans-serif' }}>A</span>
+            <span style={{ fontSize: 19, fontWeight: 700 }}>A</span>
           </button>
         </div>
 
@@ -2600,7 +2600,7 @@ function EinstellungenInner() {
           </button>
           <h1
             className="text-2xl font-bold tracking-tight"
-            style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}
+            style={{ color: 'var(--fg-1)' }}
           >
             {currentMeta.label}
           </h1>
@@ -2615,7 +2615,7 @@ function EinstellungenInner() {
       {/* Mobile: horizontal scrollable tabs */}
       <div className="md:hidden mb-6">
         <div className="eyebrow mb-1">Mein Konto</div>
-        <h1 className="text-2xl font-bold tracking-tight mb-4" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+        <h1 className="text-2xl font-bold tracking-tight mb-4" style={{ color: 'var(--fg-1)' }}>
           Einstellungen
         </h1>
         <div className="overflow-x-auto">
@@ -2669,7 +2669,7 @@ function EinstellungenInner() {
 
         {/* Right content */}
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold tracking-tight mb-6" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+          <h1 className="text-xl font-bold tracking-tight mb-6" style={{ color: 'var(--fg-1)' }}>
             {currentMeta.label}
           </h1>
           {tabContent[tab]}

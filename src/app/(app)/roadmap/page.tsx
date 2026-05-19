@@ -171,7 +171,7 @@ function TraderJourneyCurve({ phase }: { phase: number }) {
       >
         <span
           className="text-lg font-bold tabular-nums shrink-0"
-          style={{ color: LEVEL_COLORS[phase <= 2 ? 'Beginner' : phase <= 3 ? 'Developing' : phase <= 4 ? 'Consistent' : 'Profitabel'], fontFamily: 'Manrope, sans-serif' }}
+          style={{ color: LEVEL_COLORS[phase <= 2 ? 'Beginner' : phase <= 3 ? 'Developing' : phase <= 4 ? 'Consistent' : 'Profitabel'] }}
         >
           {phase}
         </span>
@@ -234,7 +234,7 @@ export default function RoadmapPage() {
       <div className="flex items-end justify-between">
         <div>
           <div className="eyebrow mb-1">KI-Analyse</div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--fg-1)' }}>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--fg-1)' }}>
             Deine Trading-Roadmap
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--fg-3)' }}>
@@ -337,7 +337,7 @@ export default function RoadmapPage() {
                 <p className="text-sm mt-1" style={{ color: 'var(--fg-3)' }}>{roadmap.level_description}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-3xl font-bold tabular-nums" style={{ color, fontFamily: 'Manrope, sans-serif' }}>
+                <p className="text-3xl font-bold tabular-nums" style={{ color }}>
                   {roadmap.score}
                 </p>
                 <p className="text-xs" style={{ color: 'var(--fg-4)' }}>/ 100</p>
@@ -480,7 +480,7 @@ export default function RoadmapPage() {
                 <Star className="h-3.5 w-3.5" style={{ color: 'var(--fg-3)' }} />
                 <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-4)' }}>Trades bis Meilenstein</p>
               </div>
-              <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--fg-1)', fontFamily: 'Manrope, sans-serif' }}>
+              <p className="text-xl font-bold tabular-nums num" style={{ color: 'var(--fg-1)' }}>
                 ~{roadmap.trades_to_next_milestone ?? '?'}
               </p>
             </div>

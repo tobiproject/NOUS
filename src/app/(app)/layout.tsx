@@ -13,6 +13,7 @@ import { MobileUpdateModal } from '@/components/layout/MobileUpdateModal'
 import { UpdateBanner } from '@/components/layout/UpdateBanner'
 import { FontSizeApplier } from '@/components/layout/FontSizeApplier'
 import { QuickAddTradeButton } from '@/components/layout/QuickAddTradeButton'
+import { DesktopHeader } from '@/components/layout/DesktopHeader'
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const supabase = await createServerSupabaseClient()
@@ -38,11 +39,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <MobileHeader />
         <div className="flex flex-1 overflow-hidden min-h-0">
           <AppSidebarClient />
+          <div className="flex flex-col flex-1 overflow-hidden min-h-0">
+            <DesktopHeader />
           <main className="flex-1 overflow-y-auto">
             <div className="px-4 py-4 md:px-5 lg:px-6 lg:py-5 w-full pb-safe-nav md:pb-6">
               {children}
             </div>
           </main>
+          </div>
         </div>
       </div>
       <MobileUpdateModal />

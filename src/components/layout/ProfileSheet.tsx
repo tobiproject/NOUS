@@ -51,7 +51,7 @@ export function ProfileSheet({ open, onClose, displayName, avatarUrl }: Props) {
           <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
             <div
               className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold shrink-0 overflow-hidden"
-              style={{ background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)' }}
+              style={{ background: avatarUrl ? 'transparent' : 'rgba(0,196,255,0.18)', color: 'var(--brand-blue)' }}
             >
               {avatarUrl ? (
                 <Image

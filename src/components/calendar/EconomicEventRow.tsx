@@ -58,7 +58,7 @@ export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols
     : []
   const isRelevant = matchedSymbols.length > 0
   // Hauptfarbe des ersten gematchten Symbols (für Event-Highlight)
-  const accentColor = isRelevant ? (watchlistColorMap[matchedSymbols[0]] ?? '#ff8210') : null
+  const accentColor = isRelevant ? (watchlistColorMap[matchedSymbols[0]] ?? '#00C4FF') : null
 
   return (
     <div
@@ -132,7 +132,7 @@ export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols
           )}
 
           {matchedSymbols.slice(0, 3).map(sym => {
-            const c = watchlistColorMap[sym] ?? '#ff8210'
+            const c = watchlistColorMap[sym] ?? '#00C4FF'
             return (
               <span
                 key={sym}
@@ -149,7 +149,7 @@ export function EconomicEventRow({ event, isPast, userTimezone, watchlistSymbols
             )
           })}
           {matchedSymbols.length > 3 && (
-            <span className="text-[10px] font-semibold" style={{ color: accentColor ?? '#ff8210' }}>
+            <span className="text-[10px] font-semibold" style={{ color: accentColor ?? '#00C4FF' }}>
               +{matchedSymbols.length - 3}
             </span>
           )}

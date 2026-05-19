@@ -17,8 +17,8 @@
     --popover: 0 0% 9%;                 /* #161616 */
     --popover-foreground: 0 0% 100%;
 
-    --primary: 29 100% 54%;            /* #ff8210 — brand orange */
-    --primary-foreground: 0 0% 100%;
+    --primary: 198 100% 50%;           /* #00C4FF — brand cyan */
+    --primary-foreground: 0 0% 5%;
 
     --secondary: 0 0% 12%;              /* #1e1e1e */
     --secondary-foreground: 0 0% 100%;
@@ -41,23 +41,23 @@
     /* chart colors */
     --chart-1: 169 91% 32%;            /* #089981 */
     --chart-2: 355 88% 58%;            /* #F23645 */
-    --chart-3: 29 100% 54%;            /* #ff8210 */
+    --chart-3: 198 100% 50%;           /* #00C4FF */
     --chart-4: 37 100% 50%;            /* #FF9800 */
     --chart-5: 187 100% 41%;           /* #00BCD4 */
 
     /* sidebar vars */
     --sidebar-background: 0 0% 7%;     /* #111111 */
     --sidebar-foreground: 0 0% 100%;   /* #ffffff */
-    --sidebar-primary: 29 100% 54%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 198 100% 50%;
+    --sidebar-primary-foreground: 0 0% 5%;
     --sidebar-accent: 0 0% 10%;        /* #1a1a1a */
     --sidebar-accent-foreground: 0 0% 88%;
     --sidebar-border: 0 0% 16%;        /* #282828 */
-    --sidebar-ring: 29 100% 54%;
+    --sidebar-ring: 198 100% 50%;
 
     /* raw tokens */
-    --brand-orange:      #ff8210;
-    --brand-orange-soft: rgba(255,130,16,0.12);
+    --brand-cyan:      #00C4FF;
+    --brand-cyan-soft: rgba(0,196,255,0.12);
     --brand-blue:        #2962FF;
     --brand-blue-soft:   rgba(41,98,255,0.12);
     --ai-purple:         #8B5CF6;
@@ -232,7 +232,7 @@
   .metric-long  { border-top: 2px solid var(--long); }
   .metric-short { border-top: 2px solid var(--short); }
   .metric-blue  { border-top: 2px solid var(--brand-blue); }
-  .metric-brand { border-top: 2px solid var(--brand-orange); }
+  .metric-brand { border-top: 2px solid var(--brand-cyan); }
 
   .glass-subtle {
     background: rgba(255, 255, 255, 0.04);

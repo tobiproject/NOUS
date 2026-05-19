@@ -438,7 +438,7 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
       {/* Assets: watchlist matches highlighted, generic assets dimmer */}
       <div className="flex flex-wrap gap-1.5">
         {matchedSymbols.map(asset => {
-          const c = watchlistColorMap[asset] ?? '#ff8210'
+          const c = watchlistColorMap[asset] ?? '#00C4FF'
           return (
             <span
               key={`wl-${asset}`}
@@ -574,7 +574,7 @@ export function EconomicEventDetail({ event, watchlistSymbols = [], matchedSymbo
       {event.trade_indicator && (
         <div
           className="flex items-center gap-2 rounded-md px-3 py-2 text-xs"
-          style={{ background: 'var(--brand-blue-soft)', border: '1px solid rgba(255,130,16,0.2)' }}
+          style={{ background: 'var(--brand-blue-soft)', border: '1px solid rgba(0,196,255,0.2)' }}
         >
           <TrendingUp size={12} style={{ color: 'var(--brand-blue)' }} />
           <span style={{ color: 'var(--fg-2)' }}>

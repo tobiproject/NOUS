@@ -25,7 +25,7 @@ const STEP_ICONS: Record<string, React.ElementType> = {
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string }> = {
   weekly:     { label: 'Wöchentlich',     color: '#a78bfa', bg: 'rgba(167,139,250,0.08)' },
-  daily:      { label: 'Täglich',         color: '#ff8210', bg: 'rgba(255,130,16,0.08)'  },
+  daily:      { label: 'Täglich',         color: '#00C4FF', bg: 'rgba(0,196,255,0.08)'  },
   per_trade:  { label: 'Pro Trade',       color: '#38bdf8', bg: 'rgba(56,189,248,0.08)'  },
   weekly_end: { label: 'Wochenabschluss', color: '#4ade80', bg: 'rgba(74,222,128,0.08)'  },
 }
@@ -49,15 +49,15 @@ function StepRow({ step, isActive, onManualComplete }: {
       className="flex items-start gap-4 px-5 py-4 rounded-xl transition-all"
       style={{
         background: isActive && !step.done
-          ? 'rgba(255,130,16,0.07)'
+          ? 'rgba(0,196,255,0.07)'
           : step.done
           ? 'rgba(74,222,128,0.03)'
           : 'var(--bg-2)',
         border: isActive && !step.done
-          ? '1px solid rgba(255,130,16,0.25)'
+          ? '1px solid rgba(0,196,255,0.25)'
           : '1px solid var(--border-raw)',
         borderLeft: isActive && !step.done
-          ? '3px solid #ff8210'
+          ? '3px solid #00C4FF'
           : step.done
           ? '3px solid #4ade80'
           : '3px solid transparent',
@@ -70,7 +70,7 @@ function StepRow({ step, isActive, onManualComplete }: {
           ? <CheckCircle2 className="h-5 w-5" style={{ color: '#4ade80' }} />
           : step.missed
           ? <Clock className="h-5 w-5" style={{ color: 'var(--fg-4)' }} />
-          : <Icon className="h-5 w-5" style={{ color: isActive ? '#ff8210' : 'var(--fg-3)' }} />
+          : <Icon className="h-5 w-5" style={{ color: isActive ? '#00C4FF' : 'var(--fg-3)' }} />
         }
       </div>
 
@@ -121,7 +121,7 @@ function StepRow({ step, isActive, onManualComplete }: {
           <button
             onClick={handleAction}
             className="mt-2 flex items-center gap-1 text-[13px] font-semibold transition-opacity hover:opacity-80"
-            style={{ color: '#ff8210' }}
+            style={{ color: '#00C4FF' }}
           >
             {step.id === 'trade_prepared' ? 'Als erledigt markieren' : 'Jetzt starten'}
             <ChevronRight className="h-3.5 w-3.5" />
@@ -184,12 +184,12 @@ export default function WorkflowPage() {
       >
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4" style={{ color: '#ff8210' }} />
+            <Flame className="h-4 w-4" style={{ color: '#00C4FF' }} />
             <span className="text-[14px] font-semibold" style={{ color: 'var(--fg-1)' }}>
               Fortschritt
             </span>
           </div>
-          <span className="text-[14px] font-bold tabular-nums" style={{ color: done === total && total > 0 ? '#4ade80' : '#ff8210' }}>
+          <span className="text-[14px] font-bold tabular-nums" style={{ color: done === total && total > 0 ? '#4ade80' : '#00C4FF' }}>
             {done}/{total} Schritte
           </span>
         </div>

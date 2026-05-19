@@ -161,7 +161,7 @@ export function EconomicEventList({ events, weekStart, weekEnd, isLoading, userT
                 </span>
               )}
               {dayMatchedSymbols.map(sym => {
-                const color = watchlistColorMap[sym] ?? '#ff8210'
+                const color = watchlistColorMap[sym] ?? '#00C4FF'
                 return (
                   <span
                     key={sym}

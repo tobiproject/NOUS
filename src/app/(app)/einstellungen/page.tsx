@@ -438,7 +438,7 @@ function ProfilTab() {
         >
           <div
             className="w-full h-full rounded-full flex items-center justify-center text-2xl font-bold"
-            style={{ background: 'rgba(255,130,16,0.18)', color: '#fff', overflow: 'hidden' }}
+            style={{ background: 'rgba(0,196,255,0.18)', color: '#fff', overflow: 'hidden' }}
           >
             {displayImg ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -2626,9 +2626,9 @@ function EinstellungenInner() {
                 onClick={() => handleTabChange(t.id)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors whitespace-nowrap"
                 style={{
-                  background: tab === t.id ? 'rgba(255,130,16,0.12)' : 'var(--bg-3)',
-                  color: tab === t.id ? '#ff8210' : 'var(--fg-2)',
-                  border: `1px solid ${tab === t.id ? 'rgba(255,130,16,0.3)' : 'var(--border-raw)'}`,
+                  background: tab === t.id ? 'rgba(0,196,255,0.12)' : 'var(--bg-3)',
+                  color: tab === t.id ? '#00C4FF' : 'var(--fg-2)',
+                  border: `1px solid ${tab === t.id ? 'rgba(0,196,255,0.3)' : 'var(--border-raw)'}`,
                 }}
               >
                 <t.icon className="h-3.5 w-3.5 shrink-0" />
@@ -2652,10 +2652,10 @@ function EinstellungenInner() {
                 onClick={() => handleTabChange(t.id)}
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors text-left"
                 style={{
-                  background: isActive ? 'rgba(255,130,16,0.1)' : 'transparent',
-                  color: isActive ? '#ff8210' : 'var(--fg-2)',
+                  background: isActive ? 'rgba(0,196,255,0.1)' : 'transparent',
+                  color: isActive ? '#00C4FF' : 'var(--fg-2)',
                   fontWeight: isActive ? 600 : 400,
-                  borderLeft: `2px solid ${isActive ? '#ff8210' : 'transparent'}`,
+                  borderLeft: `2px solid ${isActive ? '#00C4FF' : 'transparent'}`,
                   paddingLeft: isActive ? 10 : 12,
                 }}
               >

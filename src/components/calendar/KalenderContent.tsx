@@ -203,9 +203,9 @@ export function KalenderContent() {
                 onClick={() => handleNavTab(tab.id)}
                 className={cn('h-7 px-3 rounded text-xs font-medium transition-all whitespace-nowrap', !active && 'opacity-60 hover:opacity-90')}
                 style={{
-                  background: active ? 'rgba(255,130,16,0.15)' : 'var(--bg-2)',
-                  border: `1px solid ${active ? 'rgba(255,130,16,0.5)' : 'var(--border-raw)'}`,
-                  color: active ? '#ff8210' : 'var(--fg-3)',
+                  background: active ? 'rgba(0,196,255,0.15)' : 'var(--bg-2)',
+                  border: `1px solid ${active ? 'rgba(0,196,255,0.5)' : 'var(--border-raw)'}`,
+                  color: active ? '#00C4FF' : 'var(--fg-3)',
                 }}
               >
                 {tab.label}
@@ -259,9 +259,9 @@ export function KalenderContent() {
             onClick={toggleFilterPanel}
             className="relative flex items-center gap-1.5 h-7 px-2.5 rounded text-xs font-medium transition-all"
             style={{
-              background: filterActive ? 'rgba(255,130,16,0.12)' : 'var(--bg-2)',
-              border: `1px solid ${filterActive ? 'rgba(255,130,16,0.4)' : 'var(--border-raw)'}`,
-              color: filterActive ? '#ff8210' : 'var(--fg-3)',
+              background: filterActive ? 'rgba(0,196,255,0.12)' : 'var(--bg-2)',
+              border: `1px solid ${filterActive ? 'rgba(0,196,255,0.4)' : 'var(--border-raw)'}`,
+              color: filterActive ? '#00C4FF' : 'var(--fg-3)',
             }}
             aria-label="Filter"
           >
@@ -270,7 +270,7 @@ export function KalenderContent() {
             {activeFilterCount > 0 && (
               <span
                 className="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center ml-0.5"
-                style={{ background: '#ff8210', color: '#000' }}
+                style={{ background: '#00C4FF', color: '#000' }}
               >
                 {activeFilterCount}
               </span>
@@ -326,9 +326,9 @@ export function KalenderContent() {
                     onClick={() => toggleRegion(r.id)}
                     className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all', !active && 'opacity-40 hover:opacity-70')}
                     style={{
-                      background: active ? 'rgba(255,130,16,0.12)' : 'var(--bg-3)',
-                      border: `1px solid ${active ? 'rgba(255,130,16,0.4)' : 'var(--border-raw)'}`,
-                      color: active ? '#ff8210' : 'var(--fg-3)',
+                      background: active ? 'rgba(0,196,255,0.12)' : 'var(--bg-3)',
+                      border: `1px solid ${active ? 'rgba(0,196,255,0.4)' : 'var(--border-raw)'}`,
+                      color: active ? '#00C4FF' : 'var(--fg-3)',
                     }}
                   >
                     <span>{r.flag}</span>
@@ -349,9 +349,9 @@ export function KalenderContent() {
                 onClick={toggleWatchlist}
                 className={cn('flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-all', !watchlistOnly && 'opacity-40 hover:opacity-70')}
                 style={{
-                  background: watchlistOnly ? 'rgba(255,130,16,0.12)' : 'var(--bg-3)',
-                  border: `1px solid ${watchlistOnly ? 'rgba(255,130,16,0.4)' : 'var(--border-raw)'}`,
-                  color: watchlistOnly ? '#ff8210' : 'var(--fg-3)',
+                  background: watchlistOnly ? 'rgba(0,196,255,0.12)' : 'var(--bg-3)',
+                  border: `1px solid ${watchlistOnly ? 'rgba(0,196,255,0.4)' : 'var(--border-raw)'}`,
+                  color: watchlistOnly ? '#00C4FF' : 'var(--fg-3)',
                 }}
               >
                 <span style={{ fontSize: 9 }}>◆</span>

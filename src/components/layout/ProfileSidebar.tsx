@@ -216,7 +216,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
           <div className="relative mb-3 w-14">
             <div
               className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold overflow-hidden"
-              style={{ background: localAvatarUrl ? 'transparent' : 'rgba(255,130,16,0.18)', color: 'var(--brand-blue)' }}
+              style={{ background: localAvatarUrl ? 'transparent' : 'rgba(0,196,255,0.18)', color: 'var(--brand-blue)' }}
             >
               {localAvatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -326,12 +326,12 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
                     key={account.id}
                     onClick={() => { setActiveAccount(account); setAccountPickerOpen(false) }}
                     className="flex items-center gap-2.5 w-full px-3 py-2.5 active:bg-white/5 transition-colors"
-                    style={{ background: isActive ? 'rgba(255,130,16,0.1)' : 'transparent' }}
+                    style={{ background: isActive ? 'rgba(0,196,255,0.1)' : 'transparent' }}
                   >
                     <div
                       className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
                       style={{
-                        background: isActive ? 'rgba(255,130,16,0.25)' : 'rgba(255,255,255,0.12)',
+                        background: isActive ? 'rgba(0,196,255,0.25)' : 'rgba(255,255,255,0.12)',
                         color: isActive ? 'var(--brand-blue)' : 'rgba(255,255,255,0.7)',
                       }}
                     >
@@ -419,7 +419,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
         {/* Version / Update display */}
         <div className="relative px-3 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           {update ? (
-            <div className="mx-0 my-2 rounded-lg px-3 py-2.5" style={{ background: 'rgba(255,130,16,0.07)', border: '1px solid rgba(255,130,16,0.25)' }}>
+            <div className="mx-0 my-2 rounded-lg px-3 py-2.5" style={{ background: 'rgba(0,196,255,0.07)', border: '1px solid rgba(0,196,255,0.25)' }}>
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="h-3 w-3 shrink-0" style={{ color: 'var(--brand-blue)' }} />
@@ -438,7 +438,7 @@ export function ProfileSidebar({ open, onClose, displayName, avatarUrl, side = '
               </div>
               {[...update.features.slice(0, 2).map(c => ({ t: '+', c })), ...update.fixes.slice(0, 2).map(c => ({ t: '~', c }))].map(({ t, c }, i) => (
                 <div key={i} className="flex items-start gap-1">
-                  <span className="text-[10px] shrink-0 leading-relaxed" style={{ color: t === '+' ? 'rgba(255,130,16,0.7)' : 'rgba(255,255,255,0.3)' }}>{t}</span>
+                  <span className="text-[10px] shrink-0 leading-relaxed" style={{ color: t === '+' ? 'rgba(0,196,255,0.7)' : 'rgba(255,255,255,0.3)' }}>{t}</span>
                   <span className="text-[10px] truncate leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>{c}</span>
                 </div>
               ))}

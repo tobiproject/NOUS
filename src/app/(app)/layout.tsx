@@ -31,7 +31,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-col h-screen overflow-hidden" style={{
         background: `
           radial-gradient(ellipse 55% 45% at 12% 25%, rgba(41,98,255,0.09) 0%, transparent 65%),
-          radial-gradient(ellipse 45% 55% at 88% 75%, rgba(255,130,16,0.07) 0%, transparent 65%),
+          radial-gradient(ellipse 45% 55% at 88% 75%, rgba(0,196,255,0.07) 0%, transparent 65%),
           radial-gradient(ellipse 35% 40% at 55% 90%, rgba(8,153,129,0.06) 0%, transparent 60%),
           #0a0a0a
         `

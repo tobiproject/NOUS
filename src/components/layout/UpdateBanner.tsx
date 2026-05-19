@@ -29,8 +29,8 @@ export function UpdateBanner() {
         className="relative w-full max-w-md mx-4 rounded-2xl p-6"
         style={{
           background: 'var(--bg-2)',
-          border: '1px solid rgba(255,130,16,0.4)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,130,16,0.15)',
+          border: '1px solid rgba(0,196,255,0.4)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,196,255,0.15)',
         }}
       >
         {/* Close button */}
@@ -47,7 +47,7 @@ export function UpdateBanner() {
         <div className="flex items-center gap-3 mb-4">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'rgba(255,130,16,0.15)' }}
+            style={{ background: 'rgba(0,196,255,0.15)' }}
           >
             <Sparkles className="h-5 w-5" style={{ color: 'var(--brand-blue)' }} />
           </div>

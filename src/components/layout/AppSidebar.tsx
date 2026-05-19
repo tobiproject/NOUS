@@ -401,7 +401,7 @@ export function AppSidebar() {
   )
 
   function getDot(id: string): NavItemProps['dot'] {
-    if (id === 'wochenvorbereitung' && hasWeeklyPrepReminder) return { color: '#ff8210', pulse: true }
+    if (id === 'wochenvorbereitung' && hasWeeklyPrepReminder) return { color: '#00C4FF', pulse: true }
     if (workflowDoneIds.has(id)) return { color: '#2962FF' }
     if (id === 'tagesplan' && hasTodayPlan) return { color: '#2962FF' }
     return undefined

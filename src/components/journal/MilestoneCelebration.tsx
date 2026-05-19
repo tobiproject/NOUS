@@ -53,7 +53,7 @@ export function MilestoneCelebration({ milestone, onClose }: Props) {
       style={{
         background: 'var(--bg-2)',
         border: '1px solid var(--border-raw)',
-        boxShadow: '0 0 40px rgba(255,130,16,0.2)',
+        boxShadow: '0 0 40px rgba(0,196,255,0.2)',
       }}
     >
       <span className="text-3xl leading-none mt-0.5">{msg.emoji}</span>

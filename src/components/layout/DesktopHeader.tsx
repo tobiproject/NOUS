@@ -110,7 +110,7 @@ export function DesktopHeader() {
             type="text"
             placeholder="Suchen…"
             className="h-8 pl-8 pr-4 bg-transparent text-xs outline-none w-48"
-            style={{ color: 'rgba(255,255,255,0.7)', caretColor: '#ff8210' }}
+            style={{ color: 'rgba(255,255,255,0.7)', caretColor: '#00C4FF' }}
           />
         </div>
       </div>
@@ -134,7 +134,7 @@ export function DesktopHeader() {
             width: 30,
             height: 30,
             borderRadius: '50%',
-            background: avatarUrl ? 'transparent' : 'rgba(255,130,16,0.15)',
+            background: avatarUrl ? 'transparent' : 'rgba(0,196,255,0.15)',
             color: '#fff',
             fontSize: 11,
             fontWeight: 700,

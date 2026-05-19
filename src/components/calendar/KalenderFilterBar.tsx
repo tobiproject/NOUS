@@ -88,7 +88,7 @@ export function KalenderFilterBar({ filters, onChange }: Props) {
               )}
               style={{
                 background: active ? 'var(--brand-blue-soft)' : 'var(--bg-2)',
-                border: `1px solid ${active ? 'rgba(255,130,16,0.3)' : 'var(--border-raw)'}`,
+                border: `1px solid ${active ? 'rgba(0,196,255,0.3)' : 'var(--border-raw)'}`,
                 color: active ? 'var(--brand-blue)' : 'var(--fg-3)',
               }}
             >

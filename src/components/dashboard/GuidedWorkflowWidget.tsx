@@ -36,7 +36,7 @@ function StepIcon({ step }: { step: WorkflowStep }) {
   if (step.missed) {
     return <Clock className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--fg-4)' }} />
   }
-  return <Icon className="h-5 w-5 flex-shrink-0" style={{ color: '#ff8210' }} />
+  return <Icon className="h-5 w-5 flex-shrink-0" style={{ color: '#00C4FF' }} />
 }
 
 function StepBadge({ step }: { step: WorkflowStep }) {
@@ -97,9 +97,9 @@ function StepRow({ step, isActive, onManualComplete, isMobile }: StepRowProps) {
     <div
       className="flex items-start gap-3 px-4 py-3 rounded-lg transition-colors"
       style={{
-        background: isActive && !step.done ? 'rgba(255,130,16,0.07)' : undefined,
-        border: isActive && !step.done ? '1px solid rgba(255,130,16,0.22)' : '1px solid transparent',
-        borderLeft: isActive && !step.done ? '3px solid #ff8210' : '3px solid transparent',
+        background: isActive && !step.done ? 'rgba(0,196,255,0.07)' : undefined,
+        border: isActive && !step.done ? '1px solid rgba(0,196,255,0.22)' : '1px solid transparent',
+        borderLeft: isActive && !step.done ? '3px solid #00C4FF' : '3px solid transparent',
       }}
     >
       <div className="mt-0.5">

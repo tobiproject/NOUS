@@ -48,11 +48,11 @@ export function DesktopHeader() {
       <div className="flex items-center gap-2">
         <Link
           href="/journal"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+          className="dash-action-btn dash-action-btn-cyan text-xs"
           style={{
-            background: 'rgba(255,130,16,0.07)',
-            border: '1px solid rgba(255,130,16,0.25)',
-            color: '#ff8210',
+            background: 'rgba(0,196,255,0.08)',
+            border: '1px solid rgba(0,196,255,0.30)',
+            color: '#00C4FF',
           }}
         >
           <PlusCircle className="h-3.5 w-3.5" />
@@ -60,10 +60,10 @@ export function DesktopHeader() {
         </Link>
         <Link
           href="/kalender"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+          className="dash-action-btn dash-action-btn-ghost text-xs"
           style={{
             background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            border: '1px solid rgba(255,255,255,0.08)',
             color: 'rgba(255,255,255,0.5)',
           }}
         >
@@ -71,10 +71,10 @@ export function DesktopHeader() {
         </Link>
         <Link
           href="/wochenvorbereitung"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+          className="dash-action-btn dash-action-btn-ghost text-xs"
           style={{
             background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            border: '1px solid rgba(255,255,255,0.08)',
             color: 'rgba(255,255,255,0.5)',
           }}
         >
@@ -119,7 +119,7 @@ export function DesktopHeader() {
       <div className="flex items-center gap-2">
         <Link
           href="/einstellungen"
-          className="flex items-center justify-center h-8 w-8 rounded-lg transition-colors"
+          className="dash-action-btn dash-action-btn-ghost flex items-center justify-center h-8 w-8"
           style={{
             background: 'rgba(255,255,255,0.04)',
             border: '1px solid rgba(255,255,255,0.07)',

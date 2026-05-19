@@ -121,7 +121,7 @@ function NavItemRow({ item, isActive, dot, fillIcon }: NavItemProps) {
       <item.icon
         className="h-[15px] w-[15px] shrink-0"
         style={{
-          color: isActive ? '#ff8210' : fillIcon ? '#F59E0B' : 'inherit',
+          color: isActive ? '#00C4FF' : fillIcon ? '#F59E0B' : 'inherit',
           fill: fillIcon ? '#F59E0B' : undefined,
         }}
       />
@@ -236,7 +236,7 @@ function CollapsedNav({
                       className="relative flex items-center justify-center w-10 h-9 rounded-lg transition-colors"
                       style={{
                         background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
-                        color: isActive ? '#ff8210' : 'rgba(255,255,255,0.4)',
+                        color: isActive ? '#00C4FF' : 'rgba(255,255,255,0.4)',
                       }}
                     >
                       <item.icon className="h-[17px] w-[17px]"
@@ -438,7 +438,7 @@ export function AppSidebar() {
                   className="relative flex items-center justify-center w-10 h-9 rounded-lg mx-auto transition-colors"
                   style={{
                     background: settingsActive ? 'rgba(255,255,255,0.07)' : 'transparent',
-                    color: settingsActive ? '#ff8210' : 'rgba(255,255,255,0.4)',
+                    color: settingsActive ? '#00C4FF' : 'rgba(255,255,255,0.4)',
                   }}
                 >
                   <Settings className="h-[17px] w-[17px]" />
@@ -472,7 +472,7 @@ export function AppSidebar() {
             </div>
           ) : (
             <>
-              <Image src="/logo/nous-logo-slogan.svg" alt="NOUS" width={96} height={30} priority />
+              <Image src="/logo/nous-logo-full.svg" alt="NOUS" width={110} height={34} priority style={{ filter: 'brightness(0) invert(1)' }} />
               <button
                 onClick={toggleCollapsed}
                 className="flex items-center justify-center h-6 w-6 rounded-md transition-colors"
@@ -524,7 +524,7 @@ export function AppSidebar() {
                       key={acc.id}
                       onClick={() => { setActiveAccount(acc); setAccountMenuOpen(false) }}
                       className="w-full flex items-center px-3 py-2 text-xs text-left transition-colors"
-                      style={{ color: acc.id === activeAccount.id ? '#ff8210' : 'rgba(255,255,255,0.6)', fontWeight: acc.id === activeAccount.id ? 600 : 400 }}
+                      style={{ color: acc.id === activeAccount.id ? '#00C4FF' : 'rgba(255,255,255,0.6)', fontWeight: acc.id === activeAccount.id ? 600 : 400 }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                     >
@@ -559,7 +559,7 @@ export function AppSidebar() {
                       key={s.id}
                       onClick={() => selectStrategy(s.id)}
                       className="w-full flex items-center px-3 py-2 text-xs text-left transition-colors"
-                      style={{ color: s.id === activeStrategyId ? '#ff8210' : 'rgba(255,255,255,0.6)', fontWeight: s.id === activeStrategyId ? 600 : 400 }}
+                      style={{ color: s.id === activeStrategyId ? '#00C4FF' : 'rgba(255,255,255,0.6)', fontWeight: s.id === activeStrategyId ? 600 : 400 }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                     >
@@ -659,7 +659,7 @@ export function AppSidebar() {
                     className="relative flex items-center justify-center w-10 h-9 rounded-lg mx-auto transition-colors"
                     style={{
                       background: settingsActive ? 'rgba(255,255,255,0.07)' : 'transparent',
-                      color: settingsActive ? '#ff8210' : 'rgba(255,255,255,0.4)',
+                      color: settingsActive ? '#00C4FF' : 'rgba(255,255,255,0.4)',
                     }}
                   >
                     <Settings className="h-[17px] w-[17px]" />

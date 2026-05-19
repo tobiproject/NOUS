@@ -414,7 +414,7 @@ export function BottomNav() {
             >
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                style={{ background: 'rgba(41,98,255,0.18)', color: 'var(--brand-blue)' }}
+                style={{ background: 'rgba(0,196,255,0.15)', color: '#00C4FF' }}
               >
                 {activeAccount?.name?.[0]?.toUpperCase() ?? '·'}
               </div>

@@ -466,34 +466,44 @@ export function DashboardTestContent() {
 
       <div className="max-w-4xl mx-auto space-y-4 transition-all duration-300" style={{ background: pageBg, borderRadius: pageBg !== 'transparent' ? 20 : 0, padding: pageBg !== 'transparent' ? 24 : 0 }}>
 
-        {/* ── Page header: Logo + slogan + controls ── */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* N mark */}
-            <div className="flex items-center justify-center rounded-xl shrink-0"
-              style={{ width: 36, height: 36, background: `linear-gradient(135deg, ${C.brand}, #0080FF)`, boxShadow: `0 0 16px ${C.brandGlow}` }}>
-              <Image src="/logo/nous-mark-white.svg" alt="NOUS" width={22} height={22} style={{ filter: 'brightness(0) invert(1)' }} />
-            </div>
-            {/* Wordmark + slogan */}
-            <div>
-              <Image src="/logo/nous-wordmark-white.svg" alt="NOUS" width={56} height={16}
-                style={{ filter: dark ? 'none' : 'invert(1)', display: 'block', marginBottom: 2 }} />
-              <span className="text-xs font-semibold tracking-wide" style={{ color: C.brand, fontSize: 10 }}>
-                Turn Data into Decisions
-              </span>
-            </div>
+        {/* ── Page header: Big logo + controls ── */}
+        <div className="flex items-end justify-between gap-4 pt-2 pb-1">
+          {/* Full logo SVG — large */}
+          <div style={{ position: 'relative' }}>
+            {/* Subtle cyan glow behind the logo */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: `radial-gradient(ellipse 70% 60% at 40% 50%, ${C.brandGlow} 0%, transparent 70%)`,
+              filter: 'blur(24px)',
+              pointerEvents: 'none',
+            }} />
+            <Image
+              src="/logo/nous-logo-full.svg"
+              alt="NOUS — Turn Data into Decisions"
+              width={340}
+              height={106}
+              priority
+              style={{
+                filter: dark
+                  ? 'brightness(0) invert(1)'
+                  : 'brightness(0)',
+                display: 'block',
+                position: 'relative',
+              }}
+            />
           </div>
 
           {/* Right: Dark mode toggle + back link */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0 pb-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: textMuted }}>Dark mode</span>
+              <span className="text-xs" style={{ color: textMuted }}>Dark</span>
               <DarkToggle dark={dark} onToggle={() => setDark(d => !d)} />
             </div>
             <Link href="/dashboard"
               className="action-btn action-btn-secondary"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
-              ← Live Dashboard
+              ← Live
             </Link>
           </div>
         </div>

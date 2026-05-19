@@ -250,6 +250,40 @@
   .bg-brand-soft { background-color: var(--brand-blue-soft); }
 }
 
+/* ─── Dashboard pill tabs & action buttons ───────────────────────────────── */
+.dash-pill-tab {
+  padding: 6px 18px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  white-space: nowrap;
+}
+.dash-pill-tab:hover { opacity: 0.85; transform: translateY(-1px); }
+
+.dash-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 18px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
+}
+.dash-action-btn:hover { transform: translateY(-1px) scale(1.03); }
+.dash-action-btn-cyan:hover { box-shadow: 0 0 20px rgba(0,196,255,0.3); }
+.dash-action-btn-ghost:hover {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
 /* ─── Workflow ring celebrate animation ──────────────────────────────────── */
 @keyframes ring-celebrate {
   0%   { transform: scale(1); }
